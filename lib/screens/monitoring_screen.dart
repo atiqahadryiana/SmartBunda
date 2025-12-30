@@ -1,0 +1,406 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../models/alert_item.dart';
+import '../models/app_user.dart';
+import '../models/appointment.dart';
+import '../models/food_entry.dart';
+import '../models/system_settings.dart';
+import '../providers/app_providers.dart';
+import '../services/service_providers.dart';
+import '../widgets/empty_state.dart';
+import '../widgets/screen_header.dart';
+
+class MonitoringScreen extends ConsumerStatefulWidget {
+  const MonitoringScreen({
+    super.key,
+    required this.role,
+    this.showAppBar = false,
+  });
+
+  final UserRole role;
+  final bool showAppBar;
+
+  @override
+  ConsumerState<MonitoringScreen> createState() => _MonitoringScreenState();
+}
+
+class _MonitoringScreenState extends ConsumerState<MonitoringScreen> {
+  bool _didAutoRefresh = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final user = ref.watch(currentUserProvider);
+    final settingsAsync = ref.watch(systemSettingsProvider);
+
+    if (user == null) {
+      return Scaffold(
+        appBar: widget.showAppBar ? AppBar(title: const Text('Monitoring & alerts')) : null,
+        body: const Center(child: Text('Please sign in.')),
+      );
+    }
+
+    if (widget.role == UserRole.patient) {
+      final entriesAsync = ref.watch(entriesProvider);
+      final appointmentsAsync = ref.watch(appointmentsProvider);
+      final alertsAsync = ref.watch(alertsProvider);
+
+      return Scaffold(
+        appBar: widget.showAppBar ? AppBar(title: const Text('Monitoring & alerts')) : null,
+        body: Padding(
+          padding: const EdgeInsets.all(16),
+          child: settingsAsync.when(
+            data: (settings) {
+              final entries = entriesAsync.valueOrNull ?? const <FoodEntry>[];
+              final appointments = appointmentsAsync.valueOrNull ?? const <Appointment>[];
+              if (!_didAutoRefresh && entriesAsync.hasValue) {
+                _didAutoRefresh = true;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _refreshPatientAlerts(user, entries, appointments, settings);
+                });
+              }
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const ScreenHeader(
+                    title: 'Monitoring',
+                    subtitle: 'Review alerts and reminders based on your recent logs.',
+                    icon: Icons.monitor_heart_outlined,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      FilledButton.icon(
+                        onPressed: () =>
+                            _refreshPatientAlerts(user, entries, appointments, settings),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Refresh'),
+                      ),
+                      const SizedBox(width: 12),
+                      Text('Today ${_todayLabel()}'),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: alertsAsync.when(
+                      data: (alerts) {
+                        if (alerts.isEmpty) {
+                          return const EmptyState(
+                            icon: Icons.notifications_none_outlined,
+                            title: 'No notifications',
+                            message: 'You are all caught up for now.',
+                          );
+                        }
+                        final sorted = List<AlertItem>.from(alerts)
+                          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+                        return ListView.separated(
+                          itemCount: sorted.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 8),
+                          itemBuilder: (context, index) {
+                            final alert = sorted[index];
+                            final isRead = alert.status.toUpperCase() == 'READ';
+                            return Card(
+                              child: ListTile(
+                                leading: Icon(_iconForSeverity(alert.severity)),
+                                title: Text(alert.message),
+                                trailing: isRead
+                                    ? const Icon(Icons.check_circle, color: Colors.green)
+                                    : TextButton(
+                                        onPressed: () => ref
+                                            .read(alertRepositoryProvider)
+                                            .acknowledge(alert.id),
+                                        child: const Text('Mark read'),
+                                      ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                      loading: () => const Center(child: CircularProgressIndicator()),
+                      error: (e, _) => Center(child: Text('Error: $e')),
+                    ),
+                  ),
+                ],
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Error: $e')),
+          ),
+        ),
+      );
+    }
+
+    final allEntriesAsync = ref.watch(allEntriesProvider);
+    final allAppointmentsAsync = ref.watch(allAppointmentsProvider);
+    final usersAsync = ref.watch(usersProvider);
+
+    return Scaffold(
+      appBar: widget.showAppBar ? AppBar(title: const Text('Monitoring & alerts')) : null,
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: settingsAsync.when(
+          data: (settings) {
+            final entriesByUser = allEntriesAsync.valueOrNull ?? {};
+            final appointments = allAppointmentsAsync.valueOrNull ?? const <Appointment>[];
+            final users = usersAsync.valueOrNull ?? const <AppUser>[];
+            final patients = users.where((u) => u.role == UserRole.patient).toList();
+
+            final alertsByPatient = <String, List<AlertItem>>{};
+            for (final patient in patients) {
+              final alerts = _buildAlertsForUser(
+                patient,
+                entriesByUser[patient.id] ?? const <FoodEntry>[],
+                appointments,
+                settings,
+              );
+              if (alerts.isNotEmpty) {
+                alertsByPatient[patient.id] = alerts;
+              }
+            }
+
+            if (alertsByPatient.isEmpty) {
+              return const EmptyState(
+                icon: Icons.notifications_none_outlined,
+                title: 'No critical alerts',
+                message: 'All patients look stable right now.',
+              );
+            }
+
+            return ListView(
+              children: [
+                const ScreenHeader(
+                  title: 'Monitoring',
+                  subtitle: 'Review alerts for patients who need attention.',
+                  icon: Icons.monitor_heart_outlined,
+                ),
+                const SizedBox(height: 16),
+                ...alertsByPatient.entries.map((entry) {
+                  final patient = patients.firstWhere((p) => p.id == entry.key);
+                  return Card(
+                    child: ExpansionTile(
+                      leading: const Icon(Icons.monitor_heart_outlined),
+                      title: Text(patient.displayName ?? patient.email),
+                      subtitle: Text('${entry.value.length} notifications'),
+                      children: entry.value
+                          .map(
+                            (alert) => ListTile(
+                              leading: Icon(_iconForSeverity(alert.severity)),
+                              title: Text(alert.message),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  );
+                }),
+              ],
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Text('Error: $e')),
+        ),
+      ),
+    );
+  }
+
+  void _refreshPatientAlerts(
+    AppUser user,
+    List<FoodEntry> entries,
+    List<Appointment> appointments,
+    SystemSettings settings,
+  ) {
+    final alerts = _buildAlertsForUser(user, entries, appointments, settings);
+    ref.read(alertRepositoryProvider).replaceAlerts(user.id, alerts);
+  }
+
+  List<AlertItem> _buildAlertsForUser(
+    AppUser user,
+    List<FoodEntry> entries,
+    List<Appointment> appointments,
+    SystemSettings settings,
+  ) {
+    final todayEntries = entries.where(_isToday).toList();
+    final totals = _totals(todayEntries);
+    final alerts = <AlertItem>[];
+    final now = DateTime.now();
+
+    if (settings.mealLoggingEnabled &&
+        todayEntries.isEmpty &&
+        now.hour >= settings.defaultReminderHour) {
+      alerts.add(
+        AlertItem(
+          id: _alertId(user.id, AlertType.reminder, 'meal-${now.day}'),
+          userId: user.id,
+          message: 'No meals logged today. Add your intake for accurate tracking.',
+          severity: AlertSeverity.low,
+          type: AlertType.reminder,
+          createdAt: now,
+          status: 'SENT',
+        ),
+      );
+    }
+
+    if (totals.calories > 0 && totals.calories < settings.caloriesMin) {
+      alerts.add(
+        AlertItem(
+          id: _alertId(user.id, AlertType.deficiencyAlert, 'low-calorie-${now.day}'),
+          userId: user.id,
+          message:
+              'Today\'s calories are below the minimum target (${settings.caloriesMin} kcal).',
+          severity: AlertSeverity.medium,
+          type: AlertType.deficiencyAlert,
+          createdAt: now,
+          status: 'SENT',
+        ),
+      );
+    }
+
+    if (totals.calories > settings.caloriesMax) {
+      alerts.add(
+        AlertItem(
+          id: _alertId(user.id, AlertType.deficiencyAlert, 'high-calorie-${now.day}'),
+          userId: user.id,
+          message:
+              'Today\'s calories exceed the max target (${settings.caloriesMax} kcal).',
+          severity: AlertSeverity.medium,
+          type: AlertType.deficiencyAlert,
+          createdAt: now,
+          status: 'SENT',
+        ),
+      );
+    }
+
+    if (totals.protein > 0 && totals.protein < settings.proteinGMin) {
+      alerts.add(
+        AlertItem(
+          id: _alertId(user.id, AlertType.deficiencyAlert, 'low-protein-${now.day}'),
+          userId: user.id,
+          message:
+              'Protein is below the target (${settings.proteinGMin} g).',
+          severity: AlertSeverity.medium,
+          type: AlertType.deficiencyAlert,
+          createdAt: now,
+          status: 'SENT',
+        ),
+      );
+    }
+
+    if (totals.ironMg > 0 && totals.ironMg < settings.ironMgMin) {
+      alerts.add(
+        AlertItem(
+          id: _alertId(user.id, AlertType.deficiencyAlert, 'low-iron-${now.day}'),
+          userId: user.id,
+          message: 'Iron intake is below ${settings.ironMgMin} mg.',
+          severity: AlertSeverity.medium,
+          type: AlertType.deficiencyAlert,
+          createdAt: now,
+          status: 'SENT',
+        ),
+      );
+    }
+
+    if (totals.folateMcg > 0 && totals.folateMcg < settings.folateMcgMin) {
+      alerts.add(
+        AlertItem(
+          id: _alertId(user.id, AlertType.deficiencyAlert, 'low-folate-${now.day}'),
+          userId: user.id,
+          message: 'Folate intake is below ${settings.folateMcgMin} mcg.',
+          severity: AlertSeverity.medium,
+          type: AlertType.deficiencyAlert,
+          createdAt: now,
+          status: 'SENT',
+        ),
+      );
+    }
+
+    final upcoming = appointments.where((appt) {
+      if (appt.patientId != user.id && appt.providerId != user.id) return false;
+      if (appt.status.toUpperCase() != 'SCHEDULED') return false;
+      final diff = appt.dateTime.difference(now);
+      return diff.inHours >= 0 && diff.inHours <= 24;
+    }).toList();
+
+    for (final appt in upcoming) {
+      alerts.add(
+        AlertItem(
+          id: _alertId(user.id, AlertType.appointment, appt.id),
+          userId: user.id,
+          message:
+              'Upcoming appointment on ${appt.dateTime.month}/${appt.dateTime.day} at ${_timeLabel(appt.dateTime)}.',
+          severity: AlertSeverity.low,
+          type: AlertType.appointment,
+          createdAt: now,
+          status: 'SENT',
+        ),
+      );
+    }
+
+    return alerts;
+  }
+
+  bool _isToday(FoodEntry entry) {
+    final now = DateTime.now();
+    return entry.date.year == now.year &&
+        entry.date.month == now.month &&
+        entry.date.day == now.day;
+  }
+
+  _Totals _totals(List<FoodEntry> entries) {
+    var calories = 0;
+    var protein = 0;
+    double iron = 0;
+    double folate = 0;
+    for (final entry in entries) {
+      calories += entry.calories;
+      protein += entry.protein;
+      iron += entry.ironMg;
+      folate += entry.folateMcg;
+    }
+    return _Totals(
+      calories: calories,
+      protein: protein,
+      ironMg: iron,
+      folateMcg: folate,
+    );
+  }
+
+  String _alertId(String userId, AlertType type, String key) {
+    return '$userId-${type.name}-$key';
+  }
+
+  IconData _iconForSeverity(AlertSeverity severity) {
+    switch (severity) {
+      case AlertSeverity.low:
+        return Icons.info_outline;
+      case AlertSeverity.medium:
+        return Icons.warning_amber_outlined;
+      case AlertSeverity.high:
+        return Icons.error_outline;
+    }
+  }
+
+  String _timeLabel(DateTime dt) {
+    final hour = dt.hour.toString().padLeft(2, '0');
+    final minute = dt.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  String _todayLabel() {
+    final now = DateTime.now();
+    return '${now.month}/${now.day}';
+  }
+}
+
+class _Totals {
+  _Totals({
+    required this.calories,
+    required this.protein,
+    required this.ironMg,
+    required this.folateMcg,
+  });
+
+  final int calories;
+  final int protein;
+  final double ironMg;
+  final double folateMcg;
+}

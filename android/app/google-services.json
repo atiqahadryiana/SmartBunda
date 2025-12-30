@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "762965727838",
+    "project_id": "smartbunda-d7761",
+    "storage_bucket": "smartbunda-d7761.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:762965727838:android:4e5a06bbd6c5e966c072cf",
+        "android_client_info": {
+          "package_name": "com.example.smartbunda"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDAv1TEOsa3-Kj77FrNW6AAedOqlVIIzjY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
