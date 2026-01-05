@@ -25,7 +25,6 @@ class AuthShell extends StatelessWidget {
     final accentAlt = scheme.secondary;
     final deep = scheme.onSurface;
     final surface = scheme.surface;
-    final warm = Color.alphaBlend(accentAlt.withValues(alpha: 16), surface);
 
     final textTheme = GoogleFonts.poppinsTextTheme(base.textTheme);
     final titleStyle = GoogleFonts.poppins(
@@ -57,7 +56,7 @@ class AuthShell extends StatelessWidget {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: warm,
+        fillColor: Colors.white,
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),

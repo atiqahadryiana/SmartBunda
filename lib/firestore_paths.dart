@@ -11,7 +11,7 @@ class FS {
   static const nutritionTargets = "NutritionTargets";
   static const recommendations = "Recommendations";
   static const notifications = "Notifications";
-  static const alerts = "Notifications";
+  static const alerts = "Alerts";
   static const appointments = "Appointments";
   static const reports = "Reports";
   static const educationContent = "EducationContent";

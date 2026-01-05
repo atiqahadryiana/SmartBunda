@@ -91,48 +91,76 @@ class FirestoreDataStore implements DataStore {
   @override
   Stream<List<FoodEntry>> watchEntries(String userId) {
     final controller = StreamController<List<FoodEntry>>.broadcast();
-    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? logsSub;
-    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? itemsSub;
-    Map<String, DateTime> logDates = {};
-    List<Map<String, dynamic>> items = [];
+    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? daysSub;
+    final dayDates = <String, DateTime?>{};
+    final entriesByDay = <String, List<FoodEntry>>{};
+    final entrySubs =
+        <String, StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>{};
 
     void emit() {
-      final entries = items.map((item) {
-        final logId = item['logId'] as String? ?? '';
-        final logDate = logDates[logId];
-        return _entryFromMap(item, logDate: logDate);
-      }).toList()
+      final entries = entriesByDay.values.expand((e) => e).toList()
         ..sort((a, b) => b.date.compareTo(a.date));
       controller.add(entries);
     }
 
-    controller.onListen = () {
-      logsSub = _firestore
+    void subscribeDay(String dayId) {
+      entrySubs[dayId]?.cancel();
+      entrySubs[dayId] = _firestore
           .collection(FS.foodLogs)
-          .where('patientId', isEqualTo: userId)
+          .doc(userId)
+          .collection('Days')
+          .doc(dayId)
+          .collection('Entries')
           .snapshots()
           .listen((snapshot) {
-        logDates = {
-          for (final doc in snapshot.docs)
-            doc.id: _parseDate(doc.data()['logDate']) ?? DateTime.now(),
-        };
-        emit();
-      });
-      itemsSub = _firestore
-          .collection(FS.foodLogItems)
-          .where('patientId', isEqualTo: userId)
-          .snapshots()
-          .listen((snapshot) {
-        items = snapshot.docs
-            .map((doc) => {'id': doc.id, ...doc.data()})
+        final logDate = dayDates[dayId] ?? _parseDate(dayId);
+        entriesByDay[dayId] = snapshot.docs
+            .map(
+              (doc) => _entryFromLogEntryMap(
+                doc.data(),
+                id: doc.id,
+                userId: userId,
+                logDate: logDate,
+              ),
+            )
             .toList();
         emit();
+      });
+    }
+
+    controller.onListen = () {
+      daysSub = _firestore
+          .collection(FS.foodLogs)
+          .doc(userId)
+          .collection('Days')
+          .snapshots()
+          .listen((snapshot) {
+        final dayIds = snapshot.docs.map((doc) => doc.id).toSet();
+        for (final doc in snapshot.docs) {
+          dayDates[doc.id] = _asDate(doc.data()['date']) ?? _parseDate(doc.id);
+          if (!entrySubs.containsKey(doc.id)) {
+            subscribeDay(doc.id);
+          }
+        }
+        for (final dayId in entrySubs.keys.toList()) {
+          if (!dayIds.contains(dayId)) {
+            entrySubs.remove(dayId)?.cancel();
+            entriesByDay.remove(dayId);
+            dayDates.remove(dayId);
+          }
+        }
+        if (dayIds.isEmpty) {
+          entriesByDay.clear();
+          emit();
+        }
       });
     };
 
     controller.onCancel = () async {
-      await logsSub?.cancel();
-      await itemsSub?.cancel();
+      await daysSub?.cancel();
+      for (final sub in entrySubs.values) {
+        await sub.cancel();
+      }
     };
 
     return controller.stream;
@@ -142,58 +170,51 @@ class FirestoreDataStore implements DataStore {
   Future<void> addEntry(FoodEntry entry) async {
     final date = entry.date;
     final logDate = _formatDate(date);
-    var logId = entry.logId;
-    if (logId.isEmpty) {
-      final existing = await _firestore
-          .collection(FS.foodLogs)
-          .where('patientId', isEqualTo: entry.userId)
-          .where('logDate', isEqualTo: logDate)
-          .limit(1)
-          .get();
-      if (existing.docs.isNotEmpty) {
-        logId = existing.docs.first.id;
-      } else {
-        logId = DateTime.now().microsecondsSinceEpoch.toString();
-      }
-    }
-
-    final updated = entry.copyWith(logId: logId);
-    final logRef = _firestore.collection(FS.foodLogs).doc(logId);
-    final itemRef = _firestore.collection(FS.foodLogItems).doc(updated.id);
+    final logRef = _firestore.collection(FS.foodLogs).doc(entry.userId);
+    final dayRef = logRef.collection('Days').doc(logDate);
+    final itemRef = dayRef.collection('Entries').doc(entry.id);
     final batch = _firestore.batch();
     batch.set(
       logRef,
       {
-        'patientId': updated.userId,
-        'logDate': logDate,
-        'totalCalories': FieldValue.increment(updated.calories),
-        'totalNutrients.protein_g': FieldValue.increment(updated.protein),
-        'totalNutrients.iron_mg': FieldValue.increment(updated.ironMg),
-        'totalNutrients.folate_mcg': FieldValue.increment(updated.folateMcg),
+        'patientId': entry.userId,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      },
+      SetOptions(merge: true),
+    );
+    batch.set(
+      dayRef,
+      {
+        'date': logDate,
         'createdAt': FieldValue.serverTimestamp(),
       },
       SetOptions(merge: true),
     );
-    batch.set(itemRef, _entryToMap(updated));
+    batch.set(itemRef, _entryToLogEntryMap(entry));
     await batch.commit();
   }
 
   @override
   Stream<Map<String, List<FoodEntry>>> watchAllEntries() {
     final controller = StreamController<Map<String, List<FoodEntry>>>.broadcast();
-    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? logsSub;
-    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? itemsSub;
-    Map<String, DateTime> logDates = {};
-    List<Map<String, dynamic>> items = [];
+    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? entriesSub;
 
-    void emit() {
+    void emit(QuerySnapshot<Map<String, dynamic>> snapshot) {
       final byUser = <String, List<FoodEntry>>{};
-      for (final item in items) {
-        final userId = item['patientId'] as String? ?? item['userId'] as String? ?? '';
-        if (userId.isEmpty) continue;
-        final logId = item['logId'] as String? ?? '';
-        final logDate = logDates[logId];
-        final entry = _entryFromMap(item, logDate: logDate);
+      for (final doc in snapshot.docs) {
+        final userId = _userIdFromEntryRef(doc.reference) ??
+            _stringOrNull(doc.data()['patientId']) ??
+            _stringOrNull(doc.data()['userId']);
+        if (userId == null) continue;
+        final dayId = _dayIdFromEntryRef(doc.reference);
+        final logDate = _parseDate(dayId) ?? _asDate(doc.data()['date']);
+        final entry = _entryFromLogEntryMap(
+          doc.data(),
+          id: doc.id,
+          userId: userId,
+          logDate: logDate,
+        );
         byUser.putIfAbsent(userId, () => []).add(entry);
       }
       for (final entries in byUser.values) {
@@ -203,24 +224,14 @@ class FirestoreDataStore implements DataStore {
     }
 
     controller.onListen = () {
-      logsSub = _firestore.collection(FS.foodLogs).snapshots().listen((snapshot) {
-        logDates = {
-          for (final doc in snapshot.docs)
-            doc.id: _parseDate(doc.data()['logDate']) ?? DateTime.now(),
-        };
-        emit();
-      });
-      itemsSub = _firestore.collection(FS.foodLogItems).snapshots().listen((snapshot) {
-        items = snapshot.docs
-            .map((doc) => {'id': doc.id, ...doc.data()})
-            .toList();
-        emit();
-      });
+      entriesSub = _firestore
+          .collectionGroup('Entries')
+          .snapshots()
+          .listen(emit);
     };
 
     controller.onCancel = () async {
-      await logsSub?.cancel();
-      await itemsSub?.cancel();
+      await entriesSub?.cancel();
     };
 
     return controller.stream;
@@ -364,6 +375,8 @@ class FirestoreDataStore implements DataStore {
       'patientId': entry.userId,
       'logId': entry.logId,
       'foodId': entry.foodId,
+      'meal': entry.meal,
+      'foodName': entry.meal,
       'quantity': entry.quantity,
       'unit': entry.unit,
       'calories': entry.calories,
@@ -379,13 +392,19 @@ class FirestoreDataStore implements DataStore {
 
   FoodEntry _entryFromMap(Map<String, dynamic> json, {DateTime? logDate}) {
     final nutrients = (json['nutrients'] as Map?)?.cast<String, dynamic>() ?? {};
+    final meal = (json['meal'] as String?)?.trim();
+    final foodName = (json['foodName'] as String?)?.trim();
     return FoodEntry(
       id: json['id'] as String? ?? '',
       userId: json['patientId'] as String? ?? json['userId'] as String? ?? '',
       logId: json['logId'] as String? ?? '',
       foodId: json['foodId'] as String? ?? '',
       date: logDate ?? DateTime.now(),
-      meal: json['foodName'] as String? ?? (json['foodId'] as String? ?? 'Meal'),
+      meal: (meal != null && meal.isNotEmpty)
+          ? meal
+          : (foodName != null && foodName.isNotEmpty)
+              ? foodName
+              : (json['foodId'] as String? ?? 'Meal'),
       quantity: (json['quantity'] as num?)?.toDouble() ?? 1,
       unit: json['unit'] as String? ?? 'serving',
       calories: (json['calories'] as num?)?.toInt() ?? 0,
@@ -394,6 +413,68 @@ class FirestoreDataStore implements DataStore {
       fat: (nutrients['fat_g'] as num?)?.toInt() ?? 0,
       ironMg: (nutrients['iron_mg'] as num?)?.toDouble() ?? 0,
       folateMcg: (nutrients['folate_mcg'] as num?)?.toDouble() ?? 0,
+    );
+  }
+
+  Map<String, dynamic> _entryToLogEntryMap(FoodEntry entry) {
+    return {
+      'patientId': entry.userId,
+      'foodId': entry.foodId,
+      'meal': entry.meal,
+      'foodName': entry.meal,
+      'loggedAt': entry.date,
+      'portion': _portionLabel(entry.quantity, entry.unit),
+      'quantity': entry.quantity,
+      'unit': entry.unit,
+      'calories': entry.calories,
+      'nutrients': {
+        'protein_g': entry.protein,
+        'carb_g': entry.carbs,
+        'fat_g': entry.fat,
+        'iron_mg': entry.ironMg,
+        'folate_mcg': entry.folateMcg,
+      },
+      'source': entry.foodId == 'MANUAL' ? 'manual' : 'catalog',
+      'mealType': _mealTypeFromDate(entry.date),
+    };
+  }
+
+  FoodEntry _entryFromLogEntryMap(
+    Map<String, dynamic> json, {
+    required String id,
+    required String userId,
+    DateTime? logDate,
+  }) {
+    final nutrients = (json['nutrients'] as Map?)?.cast<String, dynamic>() ?? {};
+    final portion = _stringOrNull(json['portion']) ??
+        _stringOrNull(json['serving']) ??
+        _stringOrNull(json['servingSize']);
+    final meal = _stringOrNull(json['meal']) ??
+        _stringOrNull(json['foodName']) ??
+        _stringOrNull(json['name']) ??
+        'Meal';
+    final date = _asDate(json['loggedAt']) ??
+        _asDate(json['date']) ??
+        logDate ??
+        DateTime.now();
+    return FoodEntry(
+      id: id,
+      userId: userId,
+      logId: _stringOrNull(json['logId']) ?? '',
+      foodId: _stringOrNull(json['foodId']) ?? _stringOrNull(json['source']) ?? '',
+      date: date,
+      meal: meal,
+      quantity: _doubleFrom(json['quantity']) ?? _quantityFromPortion(portion) ?? 1,
+      unit: _stringOrNull(json['unit']) ?? _unitFromPortion(portion) ?? 'serving',
+      calories: _intFrom(json['calories']) ?? _intFrom(nutrients['calories']) ?? 0,
+      protein: _intFrom(nutrients['protein_g']) ?? _intFrom(json['protein']) ?? 0,
+      carbs: _intFrom(nutrients['carb_g']) ?? _intFrom(json['carbs']) ?? 0,
+      fat: _intFrom(nutrients['fat_g']) ?? _intFrom(json['fat']) ?? 0,
+      ironMg:
+          _doubleFrom(nutrients['iron_mg']) ?? _doubleFrom(json['ironMg']) ?? 0,
+      folateMcg: _doubleFrom(nutrients['folate_mcg']) ??
+          _doubleFrom(json['folateMcg']) ??
+          0,
     );
   }
 
@@ -459,5 +540,75 @@ class FirestoreDataStore implements DataStore {
     final month = date.month.toString().padLeft(2, '0');
     final day = date.day.toString().padLeft(2, '0');
     return '${date.year}-$month-$day';
+  }
+
+  String? _stringOrNull(dynamic raw) {
+    if (raw is! String) return null;
+    final trimmed = raw.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  int? _intFrom(dynamic raw) {
+    if (raw is int) return raw;
+    if (raw is num) return raw.toInt();
+    if (raw is String) return int.tryParse(raw);
+    return null;
+  }
+
+  double? _doubleFrom(dynamic raw) {
+    if (raw is double) return raw;
+    if (raw is num) return raw.toDouble();
+    if (raw is String) return double.tryParse(raw);
+    return null;
+  }
+
+  String _portionLabel(double quantity, String unit) {
+    final trimmedUnit = unit.trim();
+    final unitLabel = trimmedUnit.isEmpty ? 'serving' : trimmedUnit;
+    if (quantity == quantity.roundToDouble()) {
+      return '${quantity.toInt()} $unitLabel';
+    }
+    return '${quantity.toStringAsFixed(2)} $unitLabel';
+  }
+
+  double? _quantityFromPortion(String? portion) {
+    if (portion == null) return null;
+    final match = RegExp(r'^\s*(\d+(?:\.\d+)?)').firstMatch(portion);
+    if (match == null) return null;
+    return double.tryParse(match.group(1)!);
+  }
+
+  String? _unitFromPortion(String? portion) {
+    if (portion == null) return null;
+    final match = RegExp(r'^\s*\d+(?:\.\d+)?\s*(.*)$').firstMatch(portion);
+    if (match == null) return null;
+    final unit = match.group(1)!.trim();
+    return unit.isEmpty ? null : unit;
+  }
+
+  String? _userIdFromEntryRef(
+    DocumentReference<Map<String, dynamic>> ref,
+  ) {
+    final segments = ref.path.split('/');
+    final index = segments.indexOf(FS.foodLogs);
+    if (index == -1 || index + 1 >= segments.length) return null;
+    return segments[index + 1];
+  }
+
+  String? _dayIdFromEntryRef(
+    DocumentReference<Map<String, dynamic>> ref,
+  ) {
+    final segments = ref.path.split('/');
+    final index = segments.indexOf('Days');
+    if (index == -1 || index + 1 >= segments.length) return null;
+    return segments[index + 1];
+  }
+
+  String _mealTypeFromDate(DateTime date) {
+    final hour = date.hour;
+    if (hour < 11) return 'breakfast';
+    if (hour < 15) return 'lunch';
+    if (hour < 20) return 'dinner';
+    return 'snack';
   }
 }
