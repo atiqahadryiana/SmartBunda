@@ -6,6 +6,7 @@ import '../models/feedback_entry.dart';
 import '../providers/app_providers.dart';
 import '../services/service_providers.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/require_sign_in.dart';
 import '../widgets/screen_header.dart';
 
 class FeedbackScreen extends ConsumerStatefulWidget {
@@ -60,12 +61,18 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
-    if (user == null) {
-      return const Scaffold(
-        body: Center(child: Text('Sign in to send feedback.')),
-      );
-    }
+    final child = user == null
+        ? const SizedBox.shrink()
+        : _feedbackView(context, user);
+    return RequireSignIn(
+      title: 'Feedback',
+      showAppBar: true,
+      message: 'Please sign in to send feedback.',
+      child: child,
+    );
+  }
 
+  Widget _feedbackView(BuildContext context, AppUser user) {
     final isMonitor = user.role == UserRole.admin ||
         user.role == UserRole.doctor ||
         user.role == UserRole.nurse ||

@@ -2,20 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/app_user.dart';
+import '../providers/app_providers.dart';
 import '../services/service_providers.dart';
 import '../widgets/lazy_indexed_stack.dart';
 import 'admin_screen.dart';
+import 'admin_overview_screen.dart';
+import 'appointments_screen.dart';
 import 'education_screen.dart';
 import 'food_logging_hub_screen.dart';
 import 'login_screen.dart';
+import 'nurse_monitoring_screen.dart';
+import 'nurse_overview_screen.dart';
 import 'nutritionist_screen.dart';
+import 'nutrition_plan_management_screen.dart';
+import 'patient_profiles_screen.dart';
 import 'profile_screen.dart';
+import 'reports_screen.dart';
 import 'role_modules_screen.dart';
 import 'summary_screen.dart';
+import 'system_admin_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
-  const HomeScreen({super.key, required this.user});
-  final AppUser user;
+  const HomeScreen({super.key});
 
   @override
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
@@ -26,12 +34,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final role = widget.user.role;
-    final navItems = _navItemsForUser(widget.user);
+    final resolvedUser = ref.watch(currentUserProvider);
+    if (resolvedUser == null) {
+      return const LoginScreen();
+    }
+    final role = resolvedUser.role;
+    final navItems = _navItemsForUser(resolvedUser);
     final pages = navItems.map((item) => item.page).toList();
     final tabs = navItems.map((item) => item.destination).toList();
     final safeIndex = _index.clamp(0, pages.length - 1);
-    final name = widget.user.displayName ?? widget.user.email;
+    final name = resolvedUser.displayName ?? resolvedUser.email;
 
     return Scaffold(
       appBar: AppBar(
@@ -124,12 +136,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             permission: AccessPermission.foodLogging,
           ),
-          const _NavItem(
-            page: RoleModulesScreen(role: UserRole.patient),
+          _NavItem(
+            page: AppointmentsScreen(role: UserRole.patient),
             destination: NavigationDestination(
-              icon: Icon(Icons.grid_view_outlined),
-              label: 'Modules',
+              icon: Icon(Icons.event_available),
+              label: 'Appointments',
             ),
+            permission: AccessPermission.appointments,
+          ),
+          const _NavItem(
+            page: ReportsScreen(role: UserRole.patient),
+            destination: NavigationDestination(
+              icon: Icon(Icons.assessment_outlined),
+              label: 'Reports',
+            ),
+            permission: AccessPermission.reporting,
           ),
           const _NavItem(
             page: ProfileScreen(),
@@ -142,36 +163,151 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ]);
         break;
       case UserRole.doctor:
-      case UserRole.nurse:
-      case UserRole.dietitian:
         items.addAll([
-          _NavItem(
-            page: NutritionistScreen(role: user.role),
-            destination: const NavigationDestination(
-              icon: Icon(Icons.dashboard_outlined),
-              label: 'Dashboard',
+          const _NavItem(
+            page: PatientProfilesScreen(showAppBar: false),
+            destination: NavigationDestination(
+              icon: Icon(Icons.people_outline),
+              label: 'Patients',
+            ),
+            permission: AccessPermission.patientProfiles,
+          ),
+          const _NavItem(
+            page: NutritionistScreen(role: UserRole.doctor),
+            destination: NavigationDestination(
+              icon: Icon(Icons.analytics_outlined),
+              label: 'Analysis',
             ),
             permission: AccessPermission.nutritionAnalysis,
           ),
           _NavItem(
-            page: RoleModulesScreen(role: user.role),
+            page: NutritionPlanManagementScreen(
+              role: UserRole.doctor,
+              showAppBar: false,
+            ),
             destination: const NavigationDestination(
-              icon: Icon(Icons.grid_view_outlined),
-              label: 'Modules',
+              icon: Icon(Icons.playlist_add_check),
+              label: 'Plans',
+            ),
+            permission: AccessPermission.nutritionPlans,
+          ),
+          _NavItem(
+            page: AppointmentsScreen(role: UserRole.doctor),
+            destination: const NavigationDestination(
+              icon: Icon(Icons.event_available),
+              label: 'Appointments',
+            ),
+            permission: AccessPermission.appointments,
+          ),
+          const _NavItem(
+            page: ReportsScreen(role: UserRole.doctor),
+            destination: NavigationDestination(
+              icon: Icon(Icons.assessment_outlined),
+              label: 'Reports',
+            ),
+            permission: AccessPermission.reporting,
+          ),
+        ]);
+        break;
+      case UserRole.dietitian:
+        items.addAll([
+          const _NavItem(
+            page: PatientProfilesScreen(showAppBar: false),
+            destination: NavigationDestination(
+              icon: Icon(Icons.people_outline),
+              label: 'Patients',
+            ),
+            permission: AccessPermission.patientProfiles,
+          ),
+          const _NavItem(
+            page: NutritionistScreen(role: UserRole.dietitian),
+            destination: NavigationDestination(
+              icon: Icon(Icons.analytics_outlined),
+              label: 'Analysis',
+            ),
+            permission: AccessPermission.nutritionAnalysis,
+          ),
+          _NavItem(
+            page: NutritionPlanManagementScreen(
+              role: UserRole.dietitian,
+              showAppBar: false,
+            ),
+            destination: const NavigationDestination(
+              icon: Icon(Icons.playlist_add_check),
+              label: 'Plans',
+            ),
+            permission: AccessPermission.nutritionPlans,
+          ),
+          _NavItem(
+            page: AppointmentsScreen(role: UserRole.dietitian),
+            destination: const NavigationDestination(
+              icon: Icon(Icons.event_available),
+              label: 'Appointments',
+            ),
+            permission: AccessPermission.appointments,
+          ),
+          const _NavItem(
+            page: ReportsScreen(role: UserRole.dietitian),
+            destination: NavigationDestination(
+              icon: Icon(Icons.assessment_outlined),
+              label: 'Reports',
+            ),
+            permission: AccessPermission.reporting,
+          ),
+        ]);
+        break;
+      case UserRole.nurse:
+        items.addAll([
+          const _NavItem(
+            page: NurseOverviewScreen(),
+            destination: NavigationDestination(
+              icon: Icon(Icons.dashboard_outlined),
+              label: 'Overview',
             ),
           ),
           const _NavItem(
-            page: ProfileScreen(),
+            page: PatientProfilesScreen(showAppBar: false),
             destination: NavigationDestination(
-              icon: Icon(Icons.person),
-              label: 'Profile',
+              icon: Icon(Icons.people_outline),
+              label: 'Patients',
             ),
             permission: AccessPermission.patientProfiles,
+          ),
+          _NavItem(
+            page: AppointmentsScreen(role: UserRole.nurse),
+            destination: NavigationDestination(
+              icon: Icon(Icons.event_available),
+              label: 'Appointments',
+            ),
+            permission: AccessPermission.appointments,
+          ),
+          const _NavItem(
+            page: NurseMonitoringScreen(),
+            destination: NavigationDestination(
+              icon: Icon(Icons.monitor_heart_outlined),
+              label: 'Monitoring',
+            ),
+            permission: AccessPermission.monitoringAlerts,
+          ),
+          const _NavItem(
+            page: ReportsScreen(role: UserRole.nurse),
+            destination: NavigationDestination(
+              icon: Icon(Icons.analytics_outlined),
+              label: 'Reports',
+            ),
+            permission: AccessPermission.reporting,
           ),
         ]);
         break;
       case UserRole.admin:
         items.addAll([
+          const _NavItem(
+            page: AdminOverviewScreen(),
+            destination: NavigationDestination(
+              icon: Icon(Icons.dashboard_outlined),
+              label: 'Overview',
+            ),
+          ),
           const _NavItem(
             page: AdminScreen(),
             destination: NavigationDestination(
@@ -181,19 +317,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             permission: AccessPermission.userManagement,
           ),
           const _NavItem(
-            page: RoleModulesScreen(role: UserRole.admin),
-            destination: NavigationDestination(
-              icon: Icon(Icons.grid_view_outlined),
-              label: 'Modules',
+            page: SystemAdminScreen(
+              showSettings: false,
+              showData: true,
+              showHealth: true,
+              title: 'Data',
+              subtitle: 'Backups, content, and system health.',
             ),
+            destination: NavigationDestination(
+              icon: Icon(Icons.storage_outlined),
+              label: 'Data',
+            ),
+            permission: AccessPermission.systemAdministration,
           ),
           const _NavItem(
-            page: ProfileScreen(),
+            page: ReportsScreen(role: UserRole.admin),
             destination: NavigationDestination(
-              icon: Icon(Icons.person),
-              label: 'Profile',
+              icon: Icon(Icons.assessment_outlined),
+              label: 'Report',
             ),
-            permission: AccessPermission.patientProfiles,
+            permission: AccessPermission.reporting,
           ),
         ]);
         break;

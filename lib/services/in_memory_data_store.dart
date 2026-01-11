@@ -266,6 +266,7 @@ class InMemoryDataStore implements DataStore {
       'currentWeightKg': profile.currentWeightKg,
       'bloodType': profile.bloodType,
       'medicalConditions': profile.medicalConditions.map(_conditionToString).toList(),
+      if (profile.conditionNotes != null) 'conditionNotes': profile.conditionNotes,
     };
   }
 
@@ -277,6 +278,7 @@ class InMemoryDataStore implements DataStore {
       currentWeightKg: (json['currentWeightKg'] as num?)?.toDouble() ?? 0,
       bloodType: json['bloodType'] as String? ?? '',
       medicalConditions: _conditionsFromJson(json['medicalConditions']),
+      conditionNotes: json['conditionNotes'] as String?,
     );
   }
 
@@ -348,6 +350,7 @@ class InMemoryDataStore implements DataStore {
       'ironMg': entry.ironMg,
       'folateMcg': entry.folateMcg,
       'notes': entry.notes,
+      'mealType': entry.mealType,
     };
   }
 
@@ -368,6 +371,7 @@ class InMemoryDataStore implements DataStore {
       ironMg: (json['ironMg'] as num?)?.toDouble() ?? 0,
       folateMcg: (json['folateMcg'] as num?)?.toDouble() ?? 0,
       notes: json['notes'] as String?,
+      mealType: json['mealType'] as String?,
     );
   }
 

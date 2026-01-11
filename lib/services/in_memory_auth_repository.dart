@@ -671,7 +671,8 @@ class InMemoryAuthRepository implements AuthRepository {
   }
 
   UserRole _roleFromString(String? value) {
-    switch (value) {
+    final normalized = value?.trim().toLowerCase();
+    switch (normalized) {
       case 'admin':
         return UserRole.admin;
       case 'doctor':

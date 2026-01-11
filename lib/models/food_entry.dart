@@ -15,6 +15,7 @@ class FoodEntry {
     this.ironMg = 0,
     this.folateMcg = 0,
     this.notes,
+    this.mealType,
   });
 
   final String id;
@@ -32,6 +33,7 @@ class FoodEntry {
   final double ironMg;
   final double folateMcg;
   final String? notes;
+  final String? mealType;
 
   FoodEntry copyWith({
     String? id,
@@ -49,6 +51,7 @@ class FoodEntry {
     double? ironMg,
     double? folateMcg,
     String? notes,
+    String? mealType,
   }) {
     return FoodEntry(
       id: id ?? this.id,
@@ -66,6 +69,7 @@ class FoodEntry {
       ironMg: ironMg ?? this.ironMg,
       folateMcg: folateMcg ?? this.folateMcg,
       notes: notes ?? this.notes,
+      mealType: mealType ?? this.mealType,
     );
   }
 }

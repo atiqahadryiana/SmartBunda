@@ -16,19 +16,6 @@ class FirestoreAppointmentRepository implements AppointmentRepository {
   Stream<List<Appointment>> watchAppointmentsForUser(String userId) {
     final controller = StreamController<List<Appointment>>.broadcast();
     StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? patientSub;
-    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? providerSub;
-    List<Appointment> patientAppts = const [];
-    List<Appointment> providerAppts = const [];
-
-    void emit() {
-      final byId = <String, Appointment>{};
-      for (final appt in [...patientAppts, ...providerAppts]) {
-        byId[appt.id] = appt;
-      }
-      final merged = byId.values.toList()
-        ..sort((a, b) => b.dateTime.compareTo(a.dateTime));
-      controller.add(merged);
-    }
 
     controller.onListen = () {
       patientSub = _firestore
@@ -36,22 +23,14 @@ class FirestoreAppointmentRepository implements AppointmentRepository {
           .where('patientId', isEqualTo: userId)
           .snapshots()
           .listen((snapshot) {
-        patientAppts = snapshot.docs.map((doc) => _fromMap(doc.data())).toList();
-        emit();
-      });
-      providerSub = _firestore
-          .collection(FS.appointments)
-          .where('providerId', isEqualTo: userId)
-          .snapshots()
-          .listen((snapshot) {
-        providerAppts = snapshot.docs.map((doc) => _fromMap(doc.data())).toList();
-        emit();
+        final items = snapshot.docs.map((doc) => _fromMap(doc.data())).toList()
+          ..sort((a, b) => b.dateTime.compareTo(a.dateTime));
+        controller.add(items);
       });
     };
 
     controller.onCancel = () async {
       await patientSub?.cancel();
-      await providerSub?.cancel();
     };
 
     return controller.stream;

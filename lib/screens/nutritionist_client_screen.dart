@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/app_user.dart';
 import '../models/food_entry.dart';
 import '../models/pregnancy.dart';
 import '../models/profile.dart';
+import '../providers/app_providers.dart';
+import '../services/service_providers.dart';
 import '../utils/nutrition_guides.dart';
+import '../widgets/require_sign_in.dart';
 import '../widgets/screen_header.dart';
 
-class NutritionistClientScreen extends StatelessWidget {
+class NutritionistClientScreen extends ConsumerWidget {
   const NutritionistClientScreen({
     super.key,
     required this.client,
@@ -68,7 +72,9 @@ class NutritionistClientScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final viewer = ref.watch(currentUserProvider);
+    final canEditFeedback = viewer?.role == UserRole.doctor;
     final name = client.displayName ?? client.email;
     final sorted = List<FoodEntry>.from(entries)
       ..sort((a, b) => b.date.compareTo(a.date));
@@ -90,138 +96,195 @@ class NutritionistClientScreen extends StatelessWidget {
       if (lowProteinDays >= 2) 'Protein below target on $lowProteinDays of last 3 days.',
     ];
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Client: $name'),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const ScreenHeader(
-            title: 'Client overview',
-            subtitle: 'Review profile, targets, and recent logs.',
-            icon: Icons.person_outline,
-          ),
-          const SizedBox(height: 12),
-          Card(
-            child: ListTile(
-              title: Text(name),
-              subtitle: Text(client.email),
-              trailing: Text(_roleLabel(client.role)),
+    return RequireSignIn(
+      title: 'Client overview',
+      showAppBar: true,
+      message: 'Please sign in to view client details.',
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Client: $name'),
+        ),
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            const ScreenHeader(
+              title: 'Client overview',
+              subtitle: 'Review profile, targets, and recent logs.',
+              icon: Icons.person_outline,
             ),
-          ),
-          const SizedBox(height: 8),
-          _ProfileCard(profile: profile, pregnancy: pregnancy),
-          const SizedBox(height: 16),
-          Text('Targets', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('${targets.calories} kcal, ${targets.protein} g protein'),
-                  Text('Iron ${targets.ironMg.toInt()} mg, Folate ${targets.folateMcg.toInt()} mcg'),
-                ],
+            const SizedBox(height: 12),
+            Card(
+              child: ListTile(
+                title: Text(name),
+                subtitle: Text(client.email),
+                trailing: Text(_roleLabel(client.role)),
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Text('Today', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('${todayTotals.calories} / ${targets.calories} kcal'),
-                  Text('${todayTotals.protein} / ${targets.protein} g protein'),
-                  const SizedBox(height: 8),
-                  _GapRow(
-                    label: 'Iron',
-                    intake: todayTotals.ironMg,
-                    target: targets.ironMg,
-                  ),
-                  _GapRow(
-                    label: 'Folate',
-                    intake: todayTotals.folateMcg,
-                    target: targets.folateMcg,
-                  ),
-                ],
+            const SizedBox(height: 8),
+            _ProfileCard(profile: profile, pregnancy: pregnancy),
+            const SizedBox(height: 12),
+            _ConditionFeedbackCard(
+              profile: profile,
+              canEdit: canEditFeedback,
+              onEdit: () => _showConditionDialog(context, ref),
+            ),
+            const SizedBox(height: 16),
+            Text('Targets', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('${targets.calories} kcal, ${targets.protein} g protein'),
+                    Text('Iron ${targets.ironMg.toInt()} mg, Folate ${targets.folateMcg.toInt()} mcg'),
+                  ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Text('Insights', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          if (insights.isEmpty)
-            const Text('No red flags in the last few days.')
-          else
+            const SizedBox(height: 16),
+            Text('Today', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('${todayTotals.calories} / ${targets.calories} kcal'),
+                    Text('${todayTotals.protein} / ${targets.protein} g protein'),
+                    const SizedBox(height: 8),
+                    _GapRow(
+                      label: 'Iron',
+                      intake: todayTotals.ironMg,
+                      target: targets.ironMg,
+                    ),
+                    _GapRow(
+                      label: 'Folate',
+                      intake: todayTotals.folateMcg,
+                      target: targets.folateMcg,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text('Insights', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            if (insights.isEmpty)
+              const Text('No red flags in the last few days.')
+            else
+              Card(
+                child: Column(
+                  children: insights
+                      .map(
+                        (text) => ListTile(
+                          leading: const Icon(Icons.flag_outlined),
+                          title: Text(text),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+            const SizedBox(height: 16),
+            Text('Last 7 days', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
             Card(
               child: Column(
-                children: insights
-                    .map(
-                      (text) => ListTile(
-                        leading: const Icon(Icons.flag_outlined),
-                        title: Text(text),
-                      ),
-                    )
-                    .toList(),
+                children: week.map((day) {
+                  final status = day.totals.calories >= targets.calories * 0.8
+                      ? 'On track'
+                      : 'Low';
+                  final color =
+                      status == 'On track' ? Colors.green.shade600 : Colors.orange;
+                  return ListTile(
+                    dense: true,
+                    title: Text('${day.day.month}/${day.day.day}'),
+                    subtitle: Text(
+                      '${day.totals.calories} kcal - ${day.totals.protein} g protein',
+                    ),
+                    trailing: Text(status, style: TextStyle(color: color)),
+                  );
+                }).toList(),
               ),
             ),
-          const SizedBox(height: 16),
-          Text('Last 7 days', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Card(
-            child: Column(
-              children: week.map((day) {
-                final status = day.totals.calories >= targets.calories * 0.8
-                    ? 'On track'
-                    : 'Low';
-                final color =
-                    status == 'On track' ? Colors.green.shade600 : Colors.orange;
-                return ListTile(
-                  dense: true,
-                  title: Text('${day.day.month}/${day.day.day}'),
-                  subtitle: Text(
-                    '${day.totals.calories} kcal - ${day.totals.protein} g protein',
-                  ),
-                  trailing: Text(status, style: TextStyle(color: color)),
-                );
-              }).toList(),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text('Recent meals', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          if (sorted.isEmpty)
-            const Text('No meals logged yet.')
-          else
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: sorted.length > 10 ? 10 : sorted.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                final entry = sorted[index];
-                return Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.restaurant_menu_outlined),
-                    title: Text(entry.meal),
-                    subtitle: Text('${entry.calories} kcal'),
-                  ),
-                );
-              },
-            ),
-        ],
+            const SizedBox(height: 16),
+            Text('Recent meals', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            if (sorted.isEmpty)
+              const Text('No meals logged yet.')
+            else
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: sorted.length > 10 ? 10 : sorted.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final entry = sorted[index];
+                  return Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.restaurant_menu_outlined),
+                      title: Text(entry.meal),
+                      subtitle: Text('${entry.calories} kcal'),
+                    ),
+                  );
+                },
+              ),
+          ],
+        ),
       ),
     );
   }
 
   String _roleLabel(UserRole role) {
     return role.label;
+  }
+
+  Future<void> _showConditionDialog(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    if (profile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile missing.')),
+      );
+      return;
+    }
+    final controller = TextEditingController(text: profile?.conditionNotes ?? '');
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Condition feedback'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'Notes for patient condition',
+          ),
+          maxLines: 4,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).maybePop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final text = controller.text.trim();
+              await ref.read(dataStoreProvider).saveProfile(
+                    profile!.copyWith(
+                      conditionNotes: text.isEmpty ? null : text,
+                    ),
+                  );
+              if (context.mounted) {
+                Navigator.of(context).maybePop();
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -307,6 +370,46 @@ class _GapRow extends StatelessWidget {
           Expanded(child: Text('$label: ${intake.toStringAsFixed(1)}$targetText')),
           Text(status, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
         ],
+      ),
+    );
+  }
+}
+
+class _ConditionFeedbackCard extends StatelessWidget {
+  const _ConditionFeedbackCard({
+    required this.profile,
+    required this.canEdit,
+    required this.onEdit,
+  });
+
+  final Profile? profile;
+  final bool canEdit;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final notes = profile?.conditionNotes?.trim() ?? '';
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Condition feedback', style: Theme.of(context).textTheme.titleSmall),
+                if (canEdit)
+                  TextButton(
+                    onPressed: onEdit,
+                    child: Text(notes.isEmpty ? 'Add' : 'Update'),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(notes.isEmpty ? 'No feedback yet.' : notes),
+          ],
+        ),
       ),
     );
   }

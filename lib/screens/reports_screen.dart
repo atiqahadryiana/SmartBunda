@@ -7,11 +7,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/activity_log.dart';
 import '../models/app_user.dart';
 import '../models/food_entry.dart';
+import '../models/firestore_doc.dart';
 import '../models/pregnancy.dart';
 import '../providers/app_providers.dart';
 import '../services/service_providers.dart';
 import '../utils/nutrition_guides.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/require_sign_in.dart';
 import '../widgets/screen_header.dart';
 
 class ReportsScreen extends ConsumerWidget {
@@ -26,13 +28,19 @@ class ReportsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (role == UserRole.admin) {
-      return _AdminAnalyticsView(showAppBar: showAppBar);
-    }
-    if (role == UserRole.patient) {
-      return _PatientReportView(showAppBar: showAppBar);
-    }
-    return _ClinicianReportView(showAppBar: showAppBar);
+    final user = ref.watch(currentUserProvider);
+    final effectiveRole = user?.role ?? role;
+    final view = effectiveRole == UserRole.admin
+        ? _AdminAnalyticsView(showAppBar: showAppBar)
+        : effectiveRole == UserRole.patient
+            ? _PatientReportView(showAppBar: showAppBar)
+            : _ClinicianReportView(showAppBar: showAppBar);
+    return RequireSignIn(
+      title: 'Reports',
+      showAppBar: showAppBar,
+      message: 'Please sign in to view reports.',
+      child: view,
+    );
   }
 }
 
@@ -45,6 +53,8 @@ class _PatientReportView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final entriesAsync = ref.watch(entriesProvider);
     final pregnancyAsync = ref.watch(pregnancyProvider);
+    final reportsAsync = ref.watch(reportsProvider);
+    final user = ref.watch(currentUserProvider);
 
     return Scaffold(
       appBar: showAppBar ? AppBar(title: const Text('Reports')) : null,
@@ -90,11 +100,31 @@ class _PatientReportView extends ConsumerWidget {
                 FilledButton.icon(
                   onPressed: () => _exportPatientReport(
                     context,
+                    ref,
+                    user?.id,
                     summary,
                     targets,
                   ),
                   icon: const Icon(Icons.share),
                   label: const Text('Export report'),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Saved reports',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                reportsAsync.when(
+                  data: (reports) {
+                    if (reports.isEmpty) {
+                      return const Text('No saved reports yet.');
+                    }
+                    return Column(
+                      children: reports.map(_reportTile).toList(),
+                    );
+                  },
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => Text('Error loading reports: $e'),
                 ),
               ],
             );
@@ -133,6 +163,8 @@ class _PatientReportView extends ConsumerWidget {
 
   Future<void> _exportPatientReport(
     BuildContext context,
+    WidgetRef ref,
+    String? userId,
     _EntryTotals summary,
     _Targets targets,
   ) async {
@@ -143,6 +175,12 @@ class _PatientReportView extends ConsumerWidget {
       'proteinTarget': targets.protein,
       'generatedAt': DateTime.now().toIso8601String(),
     };
+    if (userId != null) {
+      await ref.read(contentRepositoryProvider).saveReport(
+            patientId: userId,
+            data: payload,
+          );
+    }
     final json = const JsonEncoder.withIndent('  ').convert(payload);
     await Clipboard.setData(ClipboardData(text: json));
     if (context.mounted) {
@@ -150,6 +188,25 @@ class _PatientReportView extends ConsumerWidget {
         const SnackBar(content: Text('Report copied to clipboard')),
       );
     }
+  }
+
+  Widget _reportTile(FirestoreDoc doc) {
+    final createdAt = doc.timestamp;
+    final createdLabel =
+        createdAt == null ? 'Saved report' : 'Saved ${createdAt.toLocal()}';
+    final calories = doc.data['avgCalories'];
+    final protein = doc.data['avgProtein'];
+    final summary = [
+      if (calories != null) 'Calories: $calories',
+      if (protein != null) 'Protein: $protein',
+    ].join(' | ');
+    return Card(
+      child: ListTile(
+        leading: const Icon(Icons.assessment_outlined),
+        title: Text(doc.title ?? createdLabel),
+        subtitle: summary.isEmpty ? Text(createdLabel) : Text('$createdLabel | $summary'),
+      ),
+    );
   }
 }
 

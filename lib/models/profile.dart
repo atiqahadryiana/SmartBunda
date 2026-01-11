@@ -8,6 +8,7 @@ class Profile {
     required this.currentWeightKg,
     required this.bloodType,
     this.medicalConditions = const <MedicalCondition>{},
+    this.conditionNotes,
   });
 
   final String patientId;
@@ -16,6 +17,7 @@ class Profile {
   final double currentWeightKg;
   final String bloodType;
   final Set<MedicalCondition> medicalConditions;
+  final String? conditionNotes;
 
   double get bmi {
     final heightM = heightCm / 100;
@@ -41,6 +43,7 @@ class Profile {
     double? currentWeightKg,
     String? bloodType,
     Set<MedicalCondition>? medicalConditions,
+    String? conditionNotes,
   }) {
     return Profile(
       patientId: patientId ?? this.patientId,
@@ -49,6 +52,7 @@ class Profile {
       currentWeightKg: currentWeightKg ?? this.currentWeightKg,
       bloodType: bloodType ?? this.bloodType,
       medicalConditions: medicalConditions ?? this.medicalConditions,
+      conditionNotes: conditionNotes ?? this.conditionNotes,
     );
   }
 

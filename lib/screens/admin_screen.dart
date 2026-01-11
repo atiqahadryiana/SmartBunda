@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../models/activity_log.dart';
 import '../models/app_user.dart';
 import '../models/food_entry.dart';
 import '../providers/app_providers.dart';
 import '../services/auth_repository.dart';
 import '../services/service_providers.dart';
+import '../widgets/require_sign_in.dart';
 import '../widgets/screen_header.dart';
 
 class AdminScreen extends ConsumerWidget {
@@ -18,179 +18,150 @@ class AdminScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final usersAsync = ref.watch(usersProvider);
     final allEntriesAsync = ref.watch(allEntriesProvider);
-    final logsAsync = ref.watch(activityLogsProvider);
     final authRepo = ref.watch(authRepositoryProvider);
 
-    return Scaffold(
-      appBar: showAppBar ? AppBar(title: const Text('User management')) : null,
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          ScreenHeader(
-            title: 'User management',
-            subtitle: 'Create accounts, approve staff, and update access.',
-            icon: Icons.admin_panel_settings,
-            action: FilledButton.icon(
-              onPressed: () => _showCreateUserDialog(context, ref),
-              icon: const Icon(Icons.person_add_alt_1),
-              label: const Text('Create user'),
+    return RequireSignIn(
+      title: 'User management',
+      showAppBar: showAppBar,
+      message: 'Please sign in to manage users.',
+      child: Scaffold(
+        appBar: showAppBar ? AppBar(title: const Text('User management')) : null,
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            ScreenHeader(
+              title: 'User management',
+              subtitle: 'Create accounts, approve staff, and update access.',
+              icon: Icons.admin_panel_settings,
+              action: FilledButton.icon(
+                onPressed: () => _showCreateUserDialog(context, ref),
+                icon: const Icon(Icons.person_add_alt_1),
+                label: const Text('Create user'),
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Card(
-            child: ExpansionTile(
-              leading: const Icon(Icons.assignment),
-              title: const Text('Pending staff approvals'),
-              children: [
-                FutureBuilder<List<PendingApproval>>(
-                  future: authRepo.pendingApprovals(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const ListTile(title: Text('Loading pending approvals...'));
-                    }
-                    final pending = snapshot.data ?? [];
-                    if (pending.isEmpty) {
-                      return const ListTile(title: Text('No pending registrations'));
-                    }
-                    return Column(
-                      children: pending
-                          .map(
-                            (approval) => ListTile(
-                              title: Text(approval.email),
-                              subtitle: Text(_approvalDetails(approval)),
-                              trailing: Wrap(
-                                spacing: 8,
-                                children: [
-                                  TextButton(
-                                    onPressed: () async {
-                                      await authRepo.rejectUser(approval.email);
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text('Rejected ${approval.email}'),
-                                          ),
-                                        );
-                                      }
-                                    },
-                                    child: const Text('Reject'),
-                                  ),
-                                  FilledButton(
-                                    onPressed: () async {
-                                      await authRepo.approveUser(email: approval.email);
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              'Approved ${approval.email} as ${approval.role.label}',
+            const SizedBox(height: 16),
+            Card(
+              child: ExpansionTile(
+                leading: const Icon(Icons.assignment),
+                title: const Text('Pending staff approvals'),
+                children: [
+                  FutureBuilder<List<PendingApproval>>(
+                    future: authRepo.pendingApprovals(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const ListTile(title: Text('Loading pending approvals...'));
+                      }
+                      final pending = snapshot.data ?? [];
+                      if (pending.isEmpty) {
+                        return const ListTile(title: Text('No pending registrations'));
+                      }
+                      return Column(
+                        children: pending
+                            .map(
+                              (approval) => ListTile(
+                                title: Text(approval.email),
+                                subtitle: Text(_approvalDetails(approval)),
+                                trailing: Wrap(
+                                  spacing: 8,
+                                  children: [
+                                    TextButton(
+                                      onPressed: () async {
+                                        await authRepo.rejectUser(approval.email);
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Rejected ${approval.email}'),
                                             ),
-                                          ),
-                                        );
-                                      }
-                                    },
-                                    child: const Text('Approve'),
-                                  ),
-                                ],
+                                          );
+                                        }
+                                      },
+                                      child: const Text('Reject'),
+                                    ),
+                                    FilledButton(
+                                      onPressed: () async {
+                                        await authRepo.approveUser(email: approval.email);
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'Approved ${approval.email} as ${approval.role.label}',
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      },
+                                      child: const Text('Approve'),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          )
-                          .toList(),
-                    );
-                  },
-                ),
-              ],
+                            )
+                            .toList(),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Card(
-            child: ExpansionTile(
-              leading: const Icon(Icons.history),
-              title: const Text('Recent activity logs'),
-              children: [
-                logsAsync.when(
-                  data: (logs) {
-                    if (logs.isEmpty) {
-                      return const ListTile(title: Text('No activity logged yet.'));
-                    }
-                    final sorted = List.of(logs)
-                      ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
-                    return Column(
-                      children: sorted.take(6).map((log) {
-                        return ListTile(
-                          title: Text(log.type.label),
-                          subtitle: Text(log.message),
-                          trailing: Text(
-                            '${log.timestamp.month}/${log.timestamp.day}',
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        );
-                      }).toList(),
-                    );
-                  },
-                  loading: () => const ListTile(title: Text('Loading logs...')),
-                  error: (e, _) => ListTile(title: Text('Error: $e')),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text('Users', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          usersAsync.when(
-            data: (users) {
-              final entries = allEntriesAsync.valueOrNull ?? {};
-              return Column(
-                children: users.map((user) {
-                  final list = entries[user.id] ?? <FoodEntry>[];
-                  final todayTotals = _todayTotals(list);
-                  return Card(
-                    child: ListTile(
-                      title: Text(user.displayName ?? user.email),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Role: ${user.role.label}'),
-                          Text('Status: ${user.isActive ? 'Active' : 'Inactive'}'),
-                          if (list.isNotEmpty)
-                            Text(
-                              'Today: ${todayTotals.calories} kcal | P ${todayTotals.protein}g',
-                              style: const TextStyle(fontSize: 12),
+            const SizedBox(height: 12),
+            Text('Users', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            usersAsync.when(
+              data: (users) {
+                final entries = allEntriesAsync.valueOrNull ?? {};
+                return Column(
+                  children: users.map((user) {
+                    final list = entries[user.id] ?? <FoodEntry>[];
+                    final todayTotals = _todayTotals(list);
+                    return Card(
+                      child: ListTile(
+                        title: Text(user.displayName ?? user.email),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Role: ${user.role.label}'),
+                            Text('Status: ${user.isActive ? 'Active' : 'Inactive'}'),
+                            if (list.isNotEmpty)
+                              Text(
+                                'Today: ${todayTotals.calories} kcal | P ${todayTotals.protein}g',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                          ],
+                        ),
+                        trailing: PopupMenuButton<String>(
+                          onSelected: (value) {
+                            if (value == 'edit') {
+                              _showEditUserDialog(context, ref, user);
+                            } else if (value == 'reset') {
+                              _showResetPasswordDialog(context, ref, user.email);
+                            } else if (value == 'toggle') {
+                              ref
+                                  .read(authRepositoryProvider)
+                                  .setUserActive(userId: user.id, isActive: !user.isActive);
+                            }
+                          },
+                          itemBuilder: (_) => [
+                            const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                            const PopupMenuItem(value: 'reset', child: Text('Reset password')),
+                            PopupMenuItem(
+                              value: 'toggle',
+                              child: Text(user.isActive ? 'Deactivate' : 'Activate'),
                             ),
-                        ],
+                          ],
+                        ),
                       ),
-                      trailing: PopupMenuButton<String>(
-                        onSelected: (value) {
-                          if (value == 'edit') {
-                            _showEditUserDialog(context, ref, user);
-                          } else if (value == 'reset') {
-                            _showResetPasswordDialog(context, ref, user.email);
-                          } else if (value == 'toggle') {
-                            ref
-                                .read(authRepositoryProvider)
-                                .setUserActive(userId: user.id, isActive: !user.isActive);
-                          }
-                        },
-                        itemBuilder: (_) => [
-                          const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                          const PopupMenuItem(value: 'reset', child: Text('Reset password')),
-                          PopupMenuItem(
-                            value: 'toggle',
-                            child: Text(user.isActive ? 'Deactivate' : 'Activate'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
-          ),
-        ],
+                    );
+                  }).toList(),
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('Error: $e')),
+            ),
+          ],
+        ),
       ),
     );
   }
-
   String _approvalDetails(PendingApproval approval) {
     final details = <String>[
       '${approval.role.label} awaiting approval',
@@ -407,3 +378,5 @@ class _Totals {
   final int calories;
   final int protein;
 }
+
+

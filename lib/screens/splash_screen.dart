@@ -18,7 +18,7 @@ class _SplashGateState extends ConsumerState<SplashGate> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
     return authState.when(
-      data: (user) => user == null ? const LoginScreen() : HomeScreen(user: user),
+      data: (user) => user == null ? const LoginScreen() : const HomeScreen(),
       loading: () => const LoginScreen(),
       error: (e, _) => const LoginScreen(),
     );

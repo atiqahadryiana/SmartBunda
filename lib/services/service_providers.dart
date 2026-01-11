@@ -9,6 +9,7 @@ import 'data_store.dart';
 import 'firebase_auth_repository.dart';
 import 'firestore_alert_repository.dart';
 import 'firestore_appointment_repository.dart';
+import 'firestore_content_repository.dart';
 import 'firestore_data_store.dart';
 import 'firestore_nutrition_plan_repository.dart';
 import 'food_catalog_repository.dart';
@@ -48,6 +49,10 @@ final foodDatabaseProvider = Provider<FoodCatalogRepository>((ref) {
   final repo = FoodCatalogRepository(FoodDatabase());
   ref.onDispose(repo.dispose);
   return repo;
+});
+
+final contentRepositoryProvider = Provider<FirestoreContentRepository>((ref) {
+  return FirestoreContentRepository();
 });
 
 final systemAdminRepositoryProvider = Provider<SystemAdminRepository>((ref) {

@@ -5,10 +5,12 @@ import '../models/alert_item.dart';
 import '../models/app_user.dart';
 import '../models/appointment.dart';
 import '../models/food_entry.dart';
+import '../models/firestore_doc.dart';
 import '../models/system_settings.dart';
 import '../providers/app_providers.dart';
 import '../services/service_providers.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/require_sign_in.dart';
 import '../widgets/screen_header.dart';
 
 class MonitoringScreen extends ConsumerStatefulWidget {
@@ -31,174 +33,214 @@ class _MonitoringScreenState extends ConsumerState<MonitoringScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
+    final effectiveRole = user?.role ?? widget.role;
     final settingsAsync = ref.watch(systemSettingsProvider);
+    return RequireSignIn(
+      title: 'Monitoring & alerts',
+      showAppBar: widget.showAppBar,
+      message: 'Please sign in to view monitoring alerts.',
+      child: Builder(
+        builder: (context) {
+          if (user == null) {
+            return const SizedBox.shrink();
+          }
+          if (effectiveRole == UserRole.patient) {
+            final entriesAsync = ref.watch(entriesProvider);
+            final appointmentsAsync = ref.watch(appointmentsProvider);
+            final alertsAsync = ref.watch(alertsProvider);
+            final notificationsAsync = ref.watch(notificationsProvider);
 
-    if (user == null) {
-      return Scaffold(
-        appBar: widget.showAppBar ? AppBar(title: const Text('Monitoring & alerts')) : null,
-        body: const Center(child: Text('Please sign in.')),
-      );
-    }
+            return Scaffold(
+              appBar: widget.showAppBar ? AppBar(title: const Text('Monitoring & alerts')) : null,
+              body: Padding(
+                padding: const EdgeInsets.all(16),
+                child: settingsAsync.when(
+                  data: (settings) {
+                    final entries = entriesAsync.valueOrNull ?? const <FoodEntry>[];
+                    final appointments = appointmentsAsync.valueOrNull ?? const <Appointment>[];
+                    if (!_didAutoRefresh && entriesAsync.hasValue) {
+                      _didAutoRefresh = true;
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _refreshPatientAlerts(user, entries, appointments, settings);
+                      });
+                    }
 
-    if (widget.role == UserRole.patient) {
-      final entriesAsync = ref.watch(entriesProvider);
-      final appointmentsAsync = ref.watch(appointmentsProvider);
-      final alertsAsync = ref.watch(alertsProvider);
-
-      return Scaffold(
-        appBar: widget.showAppBar ? AppBar(title: const Text('Monitoring & alerts')) : null,
-        body: Padding(
-          padding: const EdgeInsets.all(16),
-          child: settingsAsync.when(
-            data: (settings) {
-              final entries = entriesAsync.valueOrNull ?? const <FoodEntry>[];
-              final appointments = appointmentsAsync.valueOrNull ?? const <Appointment>[];
-              if (!_didAutoRefresh && entriesAsync.hasValue) {
-                _didAutoRefresh = true;
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  _refreshPatientAlerts(user, entries, appointments, settings);
-                });
-              }
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const ScreenHeader(
-                    title: 'Monitoring',
-                    subtitle: 'Review alerts and reminders based on your recent logs.',
-                    icon: Icons.monitor_heart_outlined,
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      FilledButton.icon(
-                        onPressed: () =>
-                            _refreshPatientAlerts(user, entries, appointments, settings),
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Refresh'),
-                      ),
-                      const SizedBox(width: 12),
-                      Text('Today ${_todayLabel()}'),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: alertsAsync.when(
-                      data: (alerts) {
-                        if (alerts.isEmpty) {
-                          return const EmptyState(
-                            icon: Icons.notifications_none_outlined,
-                            title: 'No notifications',
-                            message: 'You are all caught up for now.',
-                          );
-                        }
-                        final sorted = List<AlertItem>.from(alerts)
-                          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-                        return ListView.separated(
-                          itemCount: sorted.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 8),
-                          itemBuilder: (context, index) {
-                            final alert = sorted[index];
-                            final isRead = alert.status.toUpperCase() == 'READ';
-                            return Card(
-                              child: ListTile(
-                                leading: Icon(_iconForSeverity(alert.severity)),
-                                title: Text(alert.message),
-                                trailing: isRead
-                                    ? const Icon(Icons.check_circle, color: Colors.green)
-                                    : TextButton(
-                                        onPressed: () => ref
-                                            .read(alertRepositoryProvider)
-                                            .acknowledge(alert.id),
-                                        child: const Text('Mark read'),
-                                      ),
-                              ),
-                            );
-                          },
-                        );
-                      },
-                      loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (e, _) => Center(child: Text('Error: $e')),
-                    ),
-                  ),
-                ],
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
-          ),
-        ),
-      );
-    }
-
-    final allEntriesAsync = ref.watch(allEntriesProvider);
-    final allAppointmentsAsync = ref.watch(allAppointmentsProvider);
-    final usersAsync = ref.watch(usersProvider);
-
-    return Scaffold(
-      appBar: widget.showAppBar ? AppBar(title: const Text('Monitoring & alerts')) : null,
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: settingsAsync.when(
-          data: (settings) {
-            final entriesByUser = allEntriesAsync.valueOrNull ?? {};
-            final appointments = allAppointmentsAsync.valueOrNull ?? const <Appointment>[];
-            final users = usersAsync.valueOrNull ?? const <AppUser>[];
-            final patients = users.where((u) => u.role == UserRole.patient).toList();
-
-            final alertsByPatient = <String, List<AlertItem>>{};
-            for (final patient in patients) {
-              final alerts = _buildAlertsForUser(
-                patient,
-                entriesByUser[patient.id] ?? const <FoodEntry>[],
-                appointments,
-                settings,
-              );
-              if (alerts.isNotEmpty) {
-                alertsByPatient[patient.id] = alerts;
-              }
-            }
-
-            if (alertsByPatient.isEmpty) {
-              return const EmptyState(
-                icon: Icons.notifications_none_outlined,
-                title: 'No critical alerts',
-                message: 'All patients look stable right now.',
-              );
-            }
-
-            return ListView(
-              children: [
-                const ScreenHeader(
-                  title: 'Monitoring',
-                  subtitle: 'Review alerts for patients who need attention.',
-                  icon: Icons.monitor_heart_outlined,
-                ),
-                const SizedBox(height: 16),
-                ...alertsByPatient.entries.map((entry) {
-                  final patient = patients.firstWhere((p) => p.id == entry.key);
-                  return Card(
-                    child: ExpansionTile(
-                      leading: const Icon(Icons.monitor_heart_outlined),
-                      title: Text(patient.displayName ?? patient.email),
-                      subtitle: Text('${entry.value.length} notifications'),
-                      children: entry.value
-                          .map(
-                            (alert) => ListTile(
-                              leading: Icon(_iconForSeverity(alert.severity)),
-                              title: Text(alert.message),
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const ScreenHeader(
+                          title: 'Monitoring',
+                          subtitle: 'Review alerts and reminders based on your recent logs.',
+                          icon: Icons.monitor_heart_outlined,
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            FilledButton.icon(
+                              onPressed: () =>
+                                  _refreshPatientAlerts(user, entries, appointments, settings),
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Refresh'),
                             ),
-                          )
-                          .toList(),
-                    ),
-                  );
-                }),
-              ],
+                            const SizedBox(width: 12),
+                            Text('Today ${_todayLabel()}'),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Expanded(
+                          child: alertsAsync.when(
+                            data: (alerts) {
+                              return notificationsAsync.when(
+                                data: (notifications) {
+                                  final sortedAlerts = List<AlertItem>.from(alerts)
+                                    ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+                                  final sortedNotifications =
+                                      List<FirestoreDoc>.from(notifications);
+                                  return ListView(
+                                    children: [
+                                      Text(
+                                        'Alerts',
+                                        style: Theme.of(context).textTheme.titleMedium,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      if (sortedAlerts.isEmpty)
+                                        const EmptyState(
+                                          icon: Icons.notifications_none_outlined,
+                                          title: 'No alerts',
+                                          message: 'You are all caught up for now.',
+                                        )
+                                      else
+                                        ...sortedAlerts.map((alert) {
+                                          final isRead = alert.status.toUpperCase() == 'READ';
+                                          return Card(
+                                            child: ListTile(
+                                              leading: Icon(_iconForSeverity(alert.severity)),
+                                              title: Text(alert.message),
+                                              trailing: isRead
+                                                  ? const Icon(Icons.check_circle, color: Colors.green)
+                                                  : TextButton(
+                                                      onPressed: () => ref
+                                                          .read(alertRepositoryProvider)
+                                                          .acknowledge(alert.id),
+                                                      child: const Text('Mark read'),
+                                                    ),
+                                            ),
+                                          );
+                                        }),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'Notifications',
+                                        style: Theme.of(context).textTheme.titleMedium,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      if (sortedNotifications.isEmpty)
+                                        const Text('No notifications yet.')
+                                      else
+                                        ...sortedNotifications.map(
+                                          (doc) => Card(
+                                            child: ListTile(
+                                              leading: const Icon(Icons.notifications_none_outlined),
+                                              title: Text(_docTitle(doc)),
+                                              subtitle: doc.subtitle != null
+                                                  ? Text(doc.subtitle!)
+                                                  : null,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  );
+                                },
+                                loading: () => const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                                error: (e, _) => Center(child: Text('Error: $e')),
+                              );
+                            },
+                            loading: () => const Center(child: CircularProgressIndicator()),
+                            error: (e, _) => Center(child: Text('Error: $e')),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => Center(child: Text('Error: $e')),
+                ),
+              ),
             );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('Error: $e')),
-        ),
+          }
+
+          final allEntriesAsync = ref.watch(allEntriesProvider);
+          final allAppointmentsAsync = ref.watch(allAppointmentsProvider);
+          final usersAsync = ref.watch(usersProvider);
+
+          return Scaffold(
+            appBar: widget.showAppBar ? AppBar(title: const Text('Monitoring & alerts')) : null,
+            body: Padding(
+              padding: const EdgeInsets.all(16),
+              child: settingsAsync.when(
+                data: (settings) {
+                  final entriesByUser = allEntriesAsync.valueOrNull ?? {};
+                  final appointments = allAppointmentsAsync.valueOrNull ?? const <Appointment>[];
+                  final users = usersAsync.valueOrNull ?? const <AppUser>[];
+                  final patients = users.where((u) => u.role == UserRole.patient).toList();
+
+                  final alertsByPatient = <String, List<AlertItem>>{};
+                  for (final patient in patients) {
+                    final alerts = _buildAlertsForUser(
+                      patient,
+                      entriesByUser[patient.id] ?? const <FoodEntry>[],
+                      appointments,
+                      settings,
+                    );
+                    if (alerts.isNotEmpty) {
+                      alertsByPatient[patient.id] = alerts;
+                    }
+                  }
+
+                  if (alertsByPatient.isEmpty) {
+                    return const EmptyState(
+                      icon: Icons.notifications_none_outlined,
+                      title: 'No critical alerts',
+                      message: 'All patients look stable right now.',
+                    );
+                  }
+
+                  return ListView(
+                    children: [
+                      const ScreenHeader(
+                        title: 'Monitoring',
+                        subtitle: 'Review alerts for patients who need attention.',
+                        icon: Icons.monitor_heart_outlined,
+                      ),
+                      const SizedBox(height: 16),
+                      ...alertsByPatient.entries.map((entry) {
+                        final patient = patients.firstWhere((p) => p.id == entry.key);
+                        return Card(
+                          child: ExpansionTile(
+                            leading: const Icon(Icons.monitor_heart_outlined),
+                            title: Text(patient.displayName ?? patient.email),
+                            subtitle: Text('${entry.value.length} notifications'),
+                            children: entry.value
+                                .map(
+                                  (alert) => ListTile(
+                                    leading: Icon(_iconForSeverity(alert.severity)),
+                                    title: Text(alert.message),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        );
+                      }),
+                    ],
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(child: Text('Error: $e')),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -388,6 +430,22 @@ class _MonitoringScreenState extends ConsumerState<MonitoringScreen> {
   String _todayLabel() {
     final now = DateTime.now();
     return '${now.month}/${now.day}';
+  }
+
+  String _docTitle(FirestoreDoc doc) {
+    final data = doc.data;
+    final text = _stringOrNull(data['title']) ??
+        _stringOrNull(data['message']) ??
+        _stringOrNull(data['name']) ??
+        doc.title ??
+        doc.id;
+    return text;
+  }
+
+  String? _stringOrNull(dynamic raw) {
+    if (raw is! String) return null;
+    final trimmed = raw.trim();
+    return trimmed.isEmpty ? null : trimmed;
   }
 }
 

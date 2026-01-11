@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/profile.dart';
 import '../providers/app_providers.dart';
 import '../utils/nutrition_guides.dart';
+import '../widgets/require_sign_in.dart';
 import '../widgets/screen_header.dart';
 
 class NutritionFactsScreen extends ConsumerWidget {
@@ -24,35 +25,40 @@ class NutritionFactsScreen extends ConsumerWidget {
       _RowData('Folate', '${targets.folateMcg} mcg'),
     ];
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Nutrition facts')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ScreenHeader(
-              title: 'Nutrition facts',
-              subtitle: 'Based on your trimester${_conditionNote(profile)}.',
-              icon: Icons.fact_check_outlined,
-            ),
-            const SizedBox(height: 16),
-            Card(
-              child: Column(
-                children: rows
-                    .map((r) => ListTile(
-                          title: Text(r.label),
-                          trailing: Text(r.value),
-                        ))
-                    .toList(),
+    return RequireSignIn(
+      title: 'Nutrition facts',
+      showAppBar: true,
+      message: 'Please sign in to view nutrition facts.',
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Nutrition facts')),
+        body: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ScreenHeader(
+                title: 'Nutrition facts',
+                subtitle: 'Based on your trimester${_conditionNote(profile)}.',
+                icon: Icons.fact_check_outlined,
               ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'These are general targets for pregnancy. Consult your care team for personal guidance.',
-              style: TextStyle(color: Colors.black54),
-            ),
-          ],
+              const SizedBox(height: 16),
+              Card(
+                child: Column(
+                  children: rows
+                      .map((r) => ListTile(
+                            title: Text(r.label),
+                            trailing: Text(r.value),
+                          ))
+                      .toList(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'These are general targets for pregnancy. Consult your care team for personal guidance.',
+                style: TextStyle(color: Colors.black54),
+              ),
+            ],
+          ),
         ),
       ),
     );

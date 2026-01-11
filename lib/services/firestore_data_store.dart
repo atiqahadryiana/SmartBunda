@@ -92,13 +92,17 @@ class FirestoreDataStore implements DataStore {
   Stream<List<FoodEntry>> watchEntries(String userId) {
     final controller = StreamController<List<FoodEntry>>.broadcast();
     StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? daysSub;
+    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? fallbackSub;
     final dayDates = <String, DateTime?>{};
-    final entriesByDay = <String, List<FoodEntry>>{};
+    final dayEntryPaths = <String, Set<String>>{};
+    final dayPaths = <String>{};
+    final entriesByPath = <String, FoodEntry>{};
+    final fallbackPaths = <String>{};
     final entrySubs =
         <String, StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>{};
 
     void emit() {
-      final entries = entriesByDay.values.expand((e) => e).toList()
+      final entries = entriesByPath.values.toList()
         ..sort((a, b) => b.date.compareTo(a.date));
       controller.add(entries);
     }
@@ -113,19 +117,60 @@ class FirestoreDataStore implements DataStore {
           .collection('Entries')
           .snapshots()
           .listen((snapshot) {
+        final previousPaths = dayEntryPaths[dayId];
+        if (previousPaths != null) {
+          for (final path in previousPaths) {
+            dayPaths.remove(path);
+            if (!fallbackPaths.contains(path)) {
+              entriesByPath.remove(path);
+            }
+          }
+        }
         final logDate = dayDates[dayId] ?? _parseDate(dayId);
-        entriesByDay[dayId] = snapshot.docs
-            .map(
-              (doc) => _entryFromLogEntryMap(
-                doc.data(),
-                id: doc.id,
-                userId: userId,
-                logDate: logDate,
-              ),
-            )
-            .toList();
+        final newPaths = <String>{};
+        for (final doc in snapshot.docs) {
+          final path = doc.reference.path;
+          newPaths.add(path);
+          entriesByPath[path] = _entryFromLogEntryMap(
+            doc.data(),
+            id: doc.id,
+            userId: userId,
+            logDate: logDate,
+          );
+        }
+        dayEntryPaths[dayId] = newPaths;
+        dayPaths.addAll(newPaths);
         emit();
       });
+    }
+
+    void updateFallback(QuerySnapshot<Map<String, dynamic>> snapshot) {
+      for (final path in fallbackPaths) {
+        if (!dayPaths.contains(path)) {
+          entriesByPath.remove(path);
+        }
+      }
+      fallbackPaths.clear();
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final resolvedUserId = _stringOrNull(data['patientId']) ??
+            _stringOrNull(data['userId']) ??
+            _userIdFromEntryRef(doc.reference);
+        if (resolvedUserId != userId) {
+          continue;
+        }
+        final path = doc.reference.path;
+        fallbackPaths.add(path);
+        final dayId = _dayIdFromEntryRef(doc.reference);
+        final logDate = _parseDate(dayId) ?? _asDate(data['date']);
+        entriesByPath[path] = _entryFromLogEntryMap(
+          data,
+          id: doc.id,
+          userId: userId,
+          logDate: logDate,
+        );
+      }
+      emit();
     }
 
     controller.onListen = () {
@@ -145,19 +190,30 @@ class FirestoreDataStore implements DataStore {
         for (final dayId in entrySubs.keys.toList()) {
           if (!dayIds.contains(dayId)) {
             entrySubs.remove(dayId)?.cancel();
-            entriesByDay.remove(dayId);
+            final paths = dayEntryPaths.remove(dayId);
+            if (paths != null) {
+              for (final path in paths) {
+                dayPaths.remove(path);
+                if (!fallbackPaths.contains(path)) {
+                  entriesByPath.remove(path);
+                }
+              }
+            }
             dayDates.remove(dayId);
           }
         }
-        if (dayIds.isEmpty) {
-          entriesByDay.clear();
-          emit();
-        }
+        emit();
       });
+      fallbackSub = _firestore
+          .collectionGroup('Entries')
+          .where('patientId', isEqualTo: userId)
+          .snapshots()
+          .listen(updateFallback);
     };
 
     controller.onCancel = () async {
       await daysSub?.cancel();
+      await fallbackSub?.cancel();
       for (final sub in entrySubs.values) {
         await sub.cancel();
       }
@@ -173,6 +229,8 @@ class FirestoreDataStore implements DataStore {
     final logRef = _firestore.collection(FS.foodLogs).doc(entry.userId);
     final dayRef = logRef.collection('Days').doc(logDate);
     final itemRef = dayRef.collection('Entries').doc(entry.id);
+    final logItemRef =
+        _firestore.collection(FS.foodLogItems).doc('${entry.userId}_${entry.id}');
     final batch = _firestore.batch();
     batch.set(
       logRef,
@@ -192,6 +250,16 @@ class FirestoreDataStore implements DataStore {
       SetOptions(merge: true),
     );
     batch.set(itemRef, _entryToLogEntryMap(entry));
+    batch.set(
+      logItemRef,
+      {
+        ..._entryToLogEntryMap(entry),
+        'userId': entry.userId,
+        'entryId': entry.id,
+        'dayId': logDate,
+        'createdAt': FieldValue.serverTimestamp(),
+      },
+    );
     await batch.commit();
   }
 
@@ -305,6 +373,7 @@ class FirestoreDataStore implements DataStore {
       'currentWeightKg': profile.currentWeightKg,
       'bloodType': profile.bloodType,
       'medicalConditions': profile.medicalConditions.map(_conditionToString).toList(),
+      if (profile.conditionNotes != null) 'conditionNotes': profile.conditionNotes,
     };
   }
 
@@ -316,6 +385,7 @@ class FirestoreDataStore implements DataStore {
       currentWeightKg: (json['currentWeightKg'] as num?)?.toDouble() ?? 0,
       bloodType: json['bloodType'] as String? ?? '',
       medicalConditions: _conditionsFromJson(json['medicalConditions']),
+      conditionNotes: _stringOrNull(json['conditionNotes']),
     );
   }
 
@@ -370,52 +440,6 @@ class FirestoreDataStore implements DataStore {
     );
   }
 
-  Map<String, dynamic> _entryToMap(FoodEntry entry) {
-    return {
-      'patientId': entry.userId,
-      'logId': entry.logId,
-      'foodId': entry.foodId,
-      'meal': entry.meal,
-      'foodName': entry.meal,
-      'quantity': entry.quantity,
-      'unit': entry.unit,
-      'calories': entry.calories,
-      'nutrients': {
-        'protein_g': entry.protein,
-        'carb_g': entry.carbs,
-        'fat_g': entry.fat,
-        'iron_mg': entry.ironMg,
-        'folate_mcg': entry.folateMcg,
-      },
-    };
-  }
-
-  FoodEntry _entryFromMap(Map<String, dynamic> json, {DateTime? logDate}) {
-    final nutrients = (json['nutrients'] as Map?)?.cast<String, dynamic>() ?? {};
-    final meal = (json['meal'] as String?)?.trim();
-    final foodName = (json['foodName'] as String?)?.trim();
-    return FoodEntry(
-      id: json['id'] as String? ?? '',
-      userId: json['patientId'] as String? ?? json['userId'] as String? ?? '',
-      logId: json['logId'] as String? ?? '',
-      foodId: json['foodId'] as String? ?? '',
-      date: logDate ?? DateTime.now(),
-      meal: (meal != null && meal.isNotEmpty)
-          ? meal
-          : (foodName != null && foodName.isNotEmpty)
-              ? foodName
-              : (json['foodId'] as String? ?? 'Meal'),
-      quantity: (json['quantity'] as num?)?.toDouble() ?? 1,
-      unit: json['unit'] as String? ?? 'serving',
-      calories: (json['calories'] as num?)?.toInt() ?? 0,
-      protein: (nutrients['protein_g'] as num?)?.toInt() ?? 0,
-      carbs: (nutrients['carb_g'] as num?)?.toInt() ?? 0,
-      fat: (nutrients['fat_g'] as num?)?.toInt() ?? 0,
-      ironMg: (nutrients['iron_mg'] as num?)?.toDouble() ?? 0,
-      folateMcg: (nutrients['folate_mcg'] as num?)?.toDouble() ?? 0,
-    );
-  }
-
   Map<String, dynamic> _entryToLogEntryMap(FoodEntry entry) {
     return {
       'patientId': entry.userId,
@@ -435,7 +459,7 @@ class FirestoreDataStore implements DataStore {
         'folate_mcg': entry.folateMcg,
       },
       'source': entry.foodId == 'MANUAL' ? 'manual' : 'catalog',
-      'mealType': _mealTypeFromDate(entry.date),
+      'mealType': entry.mealType ?? _mealTypeFromDate(entry.date),
     };
   }
 
@@ -457,6 +481,9 @@ class FirestoreDataStore implements DataStore {
         _asDate(json['date']) ??
         logDate ??
         DateTime.now();
+    final mealType = _stringOrNull(json['mealType']) ??
+        _stringOrNull(json['meal_type']) ??
+        _mealTypeFromDate(date);
     return FoodEntry(
       id: id,
       userId: userId,
@@ -465,16 +492,69 @@ class FirestoreDataStore implements DataStore {
       date: date,
       meal: meal,
       quantity: _doubleFrom(json['quantity']) ?? _quantityFromPortion(portion) ?? 1,
-      unit: _stringOrNull(json['unit']) ?? _unitFromPortion(portion) ?? 'serving',
-      calories: _intFrom(json['calories']) ?? _intFrom(nutrients['calories']) ?? 0,
-      protein: _intFrom(nutrients['protein_g']) ?? _intFrom(json['protein']) ?? 0,
-      carbs: _intFrom(nutrients['carb_g']) ?? _intFrom(json['carbs']) ?? 0,
-      fat: _intFrom(nutrients['fat_g']) ?? _intFrom(json['fat']) ?? 0,
-      ironMg:
-          _doubleFrom(nutrients['iron_mg']) ?? _doubleFrom(json['ironMg']) ?? 0,
-      folateMcg: _doubleFrom(nutrients['folate_mcg']) ??
-          _doubleFrom(json['folateMcg']) ??
+      unit: _stringOrNull(json['unit']) ?? _unitFromPortion(portion) ?? '',
+      calories: _intFrom(
+            _firstNonNull([
+              json['calories'],
+              json['caloriesPerServing'],
+              json['calories_per_serving'],
+              nutrients['calories'],
+            ]),
+          ) ??
           0,
+      protein: _intFrom(
+            _firstNonNull([
+              nutrients['protein_g'],
+              nutrients['protein'],
+              json['proteinG'],
+              json['protein_g'],
+              json['protein'],
+            ]),
+          ) ??
+          0,
+      carbs: _intFrom(
+            _firstNonNull([
+              nutrients['carb_g'],
+              nutrients['carbs'],
+              nutrients['carb'],
+              json['carbG'],
+              json['carb_g'],
+              json['carbs'],
+              json['carb'],
+            ]),
+          ) ??
+          0,
+      fat: _intFrom(
+            _firstNonNull([
+              nutrients['fat_g'],
+              nutrients['fat'],
+              json['fatG'],
+              json['fat_g'],
+              json['fat'],
+            ]),
+          ) ??
+          0,
+      ironMg: _doubleFrom(
+            _firstNonNull([
+              nutrients['iron_mg'],
+              nutrients['iron'],
+              json['ironMg'],
+              json['iron_mg'],
+              json['iron'],
+            ]),
+          ) ??
+          0,
+      folateMcg: _doubleFrom(
+            _firstNonNull([
+              nutrients['folate_mcg'],
+              nutrients['folate'],
+              json['folateMcg'],
+              json['folate_mcg'],
+              json['folate'],
+            ]),
+          ) ??
+          0,
+      mealType: mealType,
     );
   }
 
@@ -555,6 +635,13 @@ class FirestoreDataStore implements DataStore {
     return null;
   }
 
+  dynamic _firstNonNull(List<dynamic> values) {
+    for (final value in values) {
+      if (value != null) return value;
+    }
+    return null;
+  }
+
   double? _doubleFrom(dynamic raw) {
     if (raw is double) return raw;
     if (raw is num) return raw.toDouble();
@@ -564,11 +651,13 @@ class FirestoreDataStore implements DataStore {
 
   String _portionLabel(double quantity, String unit) {
     final trimmedUnit = unit.trim();
-    final unitLabel = trimmedUnit.isEmpty ? 'serving' : trimmedUnit;
+    final unitLabel = trimmedUnit;
     if (quantity == quantity.roundToDouble()) {
-      return '${quantity.toInt()} $unitLabel';
+      return unitLabel.isEmpty ? '${quantity.toInt()}' : '${quantity.toInt()} $unitLabel';
     }
-    return '${quantity.toStringAsFixed(2)} $unitLabel';
+    return unitLabel.isEmpty
+        ? quantity.toStringAsFixed(2)
+        : '${quantity.toStringAsFixed(2)} $unitLabel';
   }
 
   double? _quantityFromPortion(String? portion) {

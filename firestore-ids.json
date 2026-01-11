@@ -1,0 +1,60 @@
+{
+  "generatedAt": "2026-01-05T13:41:10.526Z",
+  "projectId": "smartbunda-d7761",
+  "collections": {
+    "Alerts": {
+      "error": "Missing or insufficient permissions."
+    },
+    "Appointments": {
+      "error": "Missing or insufficient permissions."
+    },
+    "AuditLogs": {
+      "error": "Missing or insufficient permissions."
+    },
+    "EducationContent": {
+      "error": "Missing or insufficient permissions."
+    },
+    "Feedback": {
+      "error": "Missing or insufficient permissions."
+    },
+    "FoodLogItems": {
+      "error": "Missing or insufficient permissions."
+    },
+    "FoodLogs": {
+      "error": "Missing or insufficient permissions."
+    },
+    "Foods": {
+      "error": "Missing or insufficient permissions."
+    },
+    "HydrationLogs": {
+      "error": "Missing or insufficient permissions."
+    },
+    "Notifications": {
+      "error": "Missing or insufficient permissions."
+    },
+    "NutritionPlans": {
+      "error": "Missing or insufficient permissions."
+    },
+    "NutritionTargets": {
+      "error": "Missing or insufficient permissions."
+    },
+    "PatientProfiles": {
+      "error": "Missing or insufficient permissions."
+    },
+    "Pregnancies": {
+      "error": "Missing or insufficient permissions."
+    },
+    "Recommendations": {
+      "error": "Missing or insufficient permissions."
+    },
+    "Reports": {
+      "error": "Missing or insufficient permissions."
+    },
+    "SystemSettings": {
+      "error": "Missing or insufficient permissions."
+    },
+    "Users": {
+      "error": "Missing or insufficient permissions."
+    }
+  }
+}

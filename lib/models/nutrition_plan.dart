@@ -100,7 +100,7 @@ class NutritionPlan {
   }
 
   static NutritionPlanStatus _statusFromString(String? value) {
-    switch (value) {
+    switch (value?.toLowerCase()) {
       case 'inactive':
         return NutritionPlanStatus.inactive;
       case 'pending':

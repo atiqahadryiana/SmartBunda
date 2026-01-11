@@ -23,10 +23,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   UserRole _role = UserRole.patient;
   bool _loading = false;
   String? _error;
-  bool _requiresLicense(UserRole role) {
-    return role == UserRole.doctor ||
-        role == UserRole.nurse ||
-        role == UserRole.dietitian;
+  bool _requiresMmc(UserRole role) {
+    return role == UserRole.doctor || role == UserRole.dietitian;
+  }
+
+  bool _requiresJlm(UserRole role) {
+    return role == UserRole.nurse;
   }
 
   @override
@@ -41,7 +43,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
-    final requiresLicense = _requiresLicense(_role);
+    final requiresMmc = _requiresMmc(_role);
+    final requiresJlm = _requiresJlm(_role);
     setState(() {
       _loading = true;
       _error = null;
@@ -52,8 +55,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         password: _passwordController.text,
         role: _role,
         displayName: _nameController.text.trim(),
-        mmcNumber: requiresLicense ? _mmcController.text.trim() : null,
-        jlmNumber: requiresLicense ? _jlmController.text.trim() : null,
+        mmcNumber: requiresMmc ? _mmcController.text.trim() : null,
+        jlmNumber: requiresJlm ? _jlmController.text.trim() : null,
       );
       if (mounted) {
         await Navigator.of(context).maybePop();
@@ -69,7 +72,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final requiresLicense = _requiresLicense(_role);
+    final requiresMmc = _requiresMmc(_role);
+    final requiresJlm = _requiresJlm(_role);
+    final requiresLicense = requiresMmc || requiresJlm;
     return AuthShell(
       title: 'Create account',
       subtitle: 'Join Smartbunda to personalize nutrition tracking and care.',
@@ -140,26 +145,36 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<UserRole>(
                   initialValue: _role,
+                  isExpanded: true,
                   items: const [
                     DropdownMenuItem(
                       value: UserRole.patient,
-                      child: Text('Patient'),
+                      child: Text('Patient', overflow: TextOverflow.ellipsis),
                     ),
                     DropdownMenuItem(
                       value: UserRole.doctor,
-                      child: Text('Doctor (needs admin approval)'),
+                      child: Text(
+                        'Doctor',
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     DropdownMenuItem(
                       value: UserRole.nurse,
-                      child: Text('Nurse (needs admin approval)'),
+                      child: Text(
+                        'Nurse',
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     DropdownMenuItem(
                       value: UserRole.dietitian,
-                      child: Text('Dietitian / Nutritionist (needs admin approval)'),
+                      child: Text(
+                        'Dietitian / Nutritionist',
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     DropdownMenuItem(
                       value: UserRole.admin,
-                      child: Text('Admin'),
+                      child: Text('Admin', overflow: TextOverflow.ellipsis),
                     ),
                   ],
                   onChanged: (value) {
@@ -190,27 +205,29 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        TextFormField(
-                          controller: _mmcController,
-                          decoration: const InputDecoration(
-                            labelText: 'MMC number',
-                            prefixIcon: Icon(Icons.badge_outlined),
+                        if (requiresMmc)
+                          TextFormField(
+                            controller: _mmcController,
+                            decoration: const InputDecoration(
+                              labelText: 'MMC number',
+                              prefixIcon: Icon(Icons.badge_outlined),
+                            ),
+                            validator: (v) => v != null && v.trim().isNotEmpty
+                                ? null
+                                : 'Required for this role',
                           ),
-                          validator: (v) => v != null && v.trim().isNotEmpty
-                              ? null
-                              : 'Required for this role',
-                        ),
-                        const SizedBox(height: 8),
-                        TextFormField(
-                          controller: _jlmController,
-                          decoration: const InputDecoration(
-                            labelText: 'JLM number',
-                            prefixIcon: Icon(Icons.confirmation_number_outlined),
+                        if (requiresMmc && requiresJlm) const SizedBox(height: 8),
+                        if (requiresJlm)
+                          TextFormField(
+                            controller: _jlmController,
+                            decoration: const InputDecoration(
+                              labelText: 'JLM number',
+                              prefixIcon: Icon(Icons.confirmation_number_outlined),
+                            ),
+                            validator: (v) => v != null && v.trim().isNotEmpty
+                                ? null
+                                : 'Required for this role',
                           ),
-                          validator: (v) => v != null && v.trim().isNotEmpty
-                              ? null
-                              : 'Required for this role',
-                        ),
                         const SizedBox(height: 6),
                         Text(
                           'Admin approval is required before staff accounts can sign in.',

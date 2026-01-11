@@ -532,7 +532,8 @@ class FirebaseAuthRepository implements AuthRepository {
   }
 
   UserRole _roleFromString(String? value) {
-    switch (value?.toLowerCase()) {
+    final normalized = value?.trim().toLowerCase();
+    switch (normalized) {
       case 'admin':
         return UserRole.admin;
       case 'doctor':

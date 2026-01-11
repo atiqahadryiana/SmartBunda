@@ -7,6 +7,7 @@ import '../providers/app_providers.dart';
 import '../services/service_providers.dart';
 import '../utils/nutrition_guides.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/require_sign_in.dart';
 import '../widgets/screen_header.dart';
 
 class HydrationScreen extends ConsumerStatefulWidget {
@@ -66,155 +67,159 @@ class _HydrationScreenState extends ConsumerState<HydrationScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
-    if (user == null) {
-      return const Scaffold(
-        body: Center(child: Text('Sign in to track hydration.')),
-      );
-    }
 
     final pregnancyAsync = ref.watch(pregnancyProvider);
     final hydrationAsync = ref.watch(hydrationEntriesProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Hydration')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: hydrationAsync.when(
-          data: (entries) {
-            final pregnancy = pregnancyAsync.valueOrNull;
-            final target = _waterTarget(pregnancy);
-            final today = DateTime.now();
-            final todayEntries = entries
-                .where((e) => _isSameDay(e.date, today))
-                .toList()
-              ..sort((a, b) => b.date.compareTo(a.date));
-            final total = todayEntries.fold<int>(0, (sum, e) => sum + e.amountMl);
-            final progress = target == 0 ? 0.0 : (total / target).clamp(0.0, 1.0);
-            final history = _lastDays(entries, 7);
+    final child = user == null
+        ? const SizedBox.shrink()
+        : Scaffold(
+            appBar: AppBar(title: const Text('Hydration')),
+            body: Padding(
+              padding: const EdgeInsets.all(16),
+              child: hydrationAsync.when(
+                data: (entries) {
+                  final pregnancy = pregnancyAsync.valueOrNull;
+                  final target = _waterTarget(pregnancy);
+                  final today = DateTime.now();
+                  final todayEntries = entries
+                      .where((e) => _isSameDay(e.date, today))
+                      .toList()
+                    ..sort((a, b) => b.date.compareTo(a.date));
+                  final total = todayEntries.fold<int>(0, (sum, e) => sum + e.amountMl);
+                  final progress = target == 0 ? 0.0 : (total / target).clamp(0.0, 1.0);
+                  final history = _lastDays(entries, 7);
 
-            return ListView(
-              children: [
-                const ScreenHeader(
-                  title: 'Hydration',
-                  subtitle: 'Log water throughout the day to hit your daily target.',
-                  icon: Icons.water_drop_outlined,
-                ),
-                const SizedBox(height: 16),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Today', style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 6),
-                        Text('$total / $target ml'),
-                        const SizedBox(height: 8),
-                        LinearProgressIndicator(value: progress),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text('Quick add', style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    FilledButton.tonal(
-                      onPressed: () => _addWater(250),
-                      child: const Text('+250 ml'),
-                    ),
-                    FilledButton.tonal(
-                      onPressed: () => _addWater(500),
-                      child: const Text('+500 ml'),
-                    ),
-                    FilledButton.tonal(
-                      onPressed: () => _addWater(750),
-                      child: const Text('+750 ml'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _customCtrl,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Custom amount (ml)',
+                  return ListView(
+                    children: [
+                      const ScreenHeader(
+                        title: 'Hydration',
+                        subtitle: 'Log water throughout the day to hit your daily target.',
+                        icon: Icons.water_drop_outlined,
+                      ),
+                      const SizedBox(height: 16),
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Today', style: Theme.of(context).textTheme.titleMedium),
+                              const SizedBox(height: 6),
+                              Text('$total / $target ml'),
+                              const SizedBox(height: 8),
+                              LinearProgressIndicator(value: progress),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    FilledButton(
-                      onPressed: () {
-                        final value = int.tryParse(_customCtrl.text);
-                        if (value == null || value <= 0) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Enter a valid amount in ml')),
-                          );
-                          return;
-                        }
-                        _customCtrl.clear();
-                        FocusScope.of(context).unfocus();
-                        _addWater(value);
-                      },
-                      child: const Text('Add'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Text('Today log', style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 8),
-                if (todayEntries.isEmpty)
-                  const EmptyState(
-                    icon: Icons.water_drop_outlined,
-                    title: 'No water logged yet',
-                    message: 'Use the quick add buttons to log your first drink.',
-                  )
-                else
-                  ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: todayEntries.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
-                    itemBuilder: (context, index) {
-                      final entry = todayEntries[index];
-                      return Card(
-                        child: ListTile(
-                          leading: const Icon(Icons.water_drop_outlined),
-                          title: Text('${entry.amountMl} ml'),
-                          subtitle: Text(_timeLabel(entry.date)),
-                        ),
-                      );
-                    },
-                  ),
-                const SizedBox(height: 16),
-                Text('Last 7 days', style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 8),
-                Card(
-                  child: Column(
-                    children: history
-                        .map(
-                          (day) => ListTile(
-                            dense: true,
-                            title: Text('${day.day.month}/${day.day.day}'),
-                            trailing: Text('${day.totalMl} ml'),
+                      const SizedBox(height: 12),
+                      Text('Quick add', style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          FilledButton.tonal(
+                            onPressed: () => _addWater(250),
+                            child: const Text('+250 ml'),
                           ),
+                          FilledButton.tonal(
+                            onPressed: () => _addWater(500),
+                            child: const Text('+500 ml'),
+                          ),
+                          FilledButton.tonal(
+                            onPressed: () => _addWater(750),
+                            child: const Text('+750 ml'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _customCtrl,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'Custom amount (ml)',
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          FilledButton(
+                            onPressed: () {
+                              final value = int.tryParse(_customCtrl.text);
+                              if (value == null || value <= 0) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Enter a valid amount in ml')),
+                                );
+                                return;
+                              }
+                              _customCtrl.clear();
+                              FocusScope.of(context).unfocus();
+                              _addWater(value);
+                            },
+                            child: const Text('Add'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Text('Today log', style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      if (todayEntries.isEmpty)
+                        const EmptyState(
+                          icon: Icons.water_drop_outlined,
+                          title: 'No water logged yet',
+                          message: 'Use the quick add buttons to log your first drink.',
                         )
-                        .toList(),
-                  ),
-                ),
-              ],
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('Error: $e')),
-        ),
-      ),
+                      else
+                        ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: todayEntries.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 8),
+                          itemBuilder: (context, index) {
+                            final entry = todayEntries[index];
+                            return Card(
+                              child: ListTile(
+                                leading: const Icon(Icons.water_drop_outlined),
+                                title: Text('${entry.amountMl} ml'),
+                                subtitle: Text(_timeLabel(entry.date)),
+                              ),
+                            );
+                          },
+                        ),
+                      const SizedBox(height: 16),
+                      Text('Last 7 days', style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      Card(
+                        child: Column(
+                          children: history
+                              .map(
+                                (day) => ListTile(
+                                  dense: true,
+                                  title: Text('${day.day.month}/${day.day.day}'),
+                                  trailing: Text('${day.totalMl} ml'),
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(child: Text('Error: $e')),
+              ),
+            ),
+          );
+
+    return RequireSignIn(
+      title: 'Hydration',
+      showAppBar: true,
+      message: 'Please sign in to track hydration.',
+      child: child,
     );
   }
 }

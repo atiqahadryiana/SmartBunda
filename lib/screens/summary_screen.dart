@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../models/food_entry.dart';
+import '../models/firestore_doc.dart';
 import '../models/pregnancy.dart';
 import '../models/profile.dart';
 import '../providers/app_providers.dart';
 import '../utils/nutrition_guides.dart';
+import '../widgets/require_sign_in.dart';
 import '../widgets/screen_header.dart';
-import 'profile_screen.dart';
+import 'edit_profile_screen.dart';
 
 class SummaryScreen extends ConsumerStatefulWidget {
   const SummaryScreen({super.key, this.showAppBar = false});
@@ -28,15 +30,20 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
     final entries = ref.watch(entriesProvider);
     final profileAsync = ref.watch(profileProvider);
     final pregnancyAsync = ref.watch(pregnancyProvider);
+    final recommendationsAsync = ref.watch(recommendationsProvider);
     const maxDayOffset = 30.0;
 
     final dayLabel = DateFormat.MMMd().format(_selectedDate);
 
-    return Scaffold(
-      appBar: widget.showAppBar ? AppBar(title: const Text('Summary')) : null,
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+    return RequireSignIn(
+      title: 'Summary',
+      showAppBar: widget.showAppBar,
+      message: 'Please sign in to view your summary.',
+      child: Scaffold(
+        appBar: widget.showAppBar ? AppBar(title: const Text('Summary')) : null,
+        body: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ScreenHeader(
@@ -78,7 +85,7 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => const ProfileScreen(showAppBar: true),
+                      builder: (_) => const EditProfileScreen(showAppBar: true),
                     ),
                   ),
                 ),
@@ -109,46 +116,20 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
                   final targets = _targets(pregnancy);
                   final totals = _totals(todays);
                   final gaps = _gaps(totals, targets);
-                  final recs = _recommendations(profile, gaps);
+                  final dbRecs = _recommendationsFromDocs(
+                    recommendationsAsync.valueOrNull ?? const <FirestoreDoc>[],
+                  );
+                  final computedRecs = _recommendations(profile, gaps);
+                  final recs = dbRecs.isNotEmpty ? dbRecs : computedRecs;
                   return SingleChildScrollView(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _MetricCard(
-                          label: 'Calories',
-                          value: '${totals.calories} / ${targets.calories} kcal',
-                          color: const Color(0xFFF48FB1),
-                        ),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _MetricCard(
-                                label: 'Protein',
-                                value: '${totals.protein} / ${targets.protein} g',
-                                color: Colors.pinkAccent,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _MetricCard(
-                                label: 'Carbs',
-                                value: '${totals.carbs} g',
-                                color: Colors.pink.shade200,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _MetricCard(
-                                label: 'Fat',
-                                value: '${totals.fat} g',
-                                color: Colors.purpleAccent,
-                              ),
-                            ),
-                          ],
+                        _NutrientSplitCard(
+                          totals: totals,
+                          targets: targets,
                         ),
                         const SizedBox(height: 12),
-                        _MicroGaps(gaps: gaps),
-                        const SizedBox(height: 16),
                         Text(
                           'Recommendations',
                           style: Theme.of(context).textTheme.titleMedium,
@@ -182,7 +163,7 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
                                         child: ListTile(
                                           title: Text(e.meal),
                                           subtitle: Text(
-                                            '${e.calories} kcal | P ${e.protein}g | C ${e.carbs}g | F ${e.fat}g',
+                                            '${e.calories} kcal | P ${e.protein}g | C ${e.carbs}g | F ${e.fat}g | ${_mealTypeLabel(e.mealType ?? _mealTypeFromDate(e.date))}',
                                           ),
                                           trailing: Text(DateFormat.Md().format(e.date)),
                                         ),
@@ -199,6 +180,7 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
               ),
             ),
           ],
+          ),
         ),
       ),
     );
@@ -230,11 +212,15 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
 
   _EntryTotals _targets(Pregnancy? pregnancy) {
     final defaults = recommendedFor(pregnancy);
+    final carbTarget =
+        (defaults.calories * 0.5 / 4).round(); // 50% calories from carbs
+    final fatTarget =
+        (defaults.calories * 0.3 / 9).round(); // 30% calories from fat
     return _EntryTotals(
       calories: defaults.calories,
       protein: defaults.protein,
-      carbs: 0,
-      fat: 0,
+      carbs: carbTarget,
+      fat: fatTarget,
       ironMg: defaults.ironMg.toDouble(),
       folateMcg: defaults.folateMcg.toDouble(),
     );
@@ -266,42 +252,356 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
     }
     return recs;
   }
+
+  List<String> _recommendationsFromDocs(List<FirestoreDoc> docs) {
+    final recs = <String>[];
+    for (final doc in docs) {
+      final data = doc.data;
+      final text = _stringOrNull(data['recommendation']) ??
+          _stringOrNull(data['text']) ??
+          _stringOrNull(data['message']) ??
+          _stringOrNull(data['title']) ??
+          _stringOrNull(data['name']) ??
+          doc.title ??
+          doc.id;
+      if (text.isNotEmpty) {
+        recs.add(text);
+      }
+    }
+    return recs;
+  }
+
+  String? _stringOrNull(dynamic raw) {
+    if (raw is! String) return null;
+    final trimmed = raw.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  String _mealTypeFromDate(DateTime date) {
+    final hour = date.hour;
+    if (hour < 11) return 'breakfast';
+    if (hour < 15) return 'lunch';
+    if (hour < 20) return 'dinner';
+    return 'supper';
+  }
+
+  String _mealTypeLabel(String? value) {
+    final normalized = value?.trim().toLowerCase();
+    switch (normalized) {
+      case 'breakfast':
+        return 'Breakfast';
+      case 'lunch':
+        return 'Lunch';
+      case 'dinner':
+        return 'Dinner';
+      case 'supper':
+        return 'Supper';
+      default:
+        return 'Meal';
+    }
+  }
 }
 
-class _MetricCard extends StatelessWidget {
-  const _MetricCard({
-    required this.label,
-    required this.value,
-    required this.color,
+class _NutrientSplitCard extends StatelessWidget {
+  const _NutrientSplitCard({
+    required this.totals,
+    required this.targets,
   });
 
-  final String label;
-  final String value;
-  final Color color;
+  final _EntryTotals totals;
+  final _EntryTotals targets;
 
   @override
   Widget build(BuildContext context) {
-    final textColor = color.withValues(alpha: 230);
+    final segments = _nutrientSegments(totals, targets);
+    final total = segments.fold<double>(0, (sum, s) => sum + s.value);
+    final empty = total <= 0;
+    final titleStyle = Theme.of(context).textTheme.titleMedium;
+    final muted = Theme.of(context).colorScheme.onSurface.withValues(alpha: 140);
+
     return Card(
-      color: color.withValues(alpha: 31),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: const TextStyle(color: Colors.black54)),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: textColor,
-              ),
+            Text('Nutrient progress mix', style: titleStyle),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                SizedBox(
+                  width: 120,
+                  height: 120,
+                  child: _MacroPieChart(
+                    segments: segments,
+                    empty: empty,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (empty)
+                        Text(
+                          'No nutrients logged yet.',
+                          style: TextStyle(color: muted),
+                        )
+                      else ...[
+                        Text('Progress by target', style: TextStyle(color: muted)),
+                        const SizedBox(height: 6),
+                        ...segments.map(
+                          (segment) => _MacroLegendItem(
+                            label: segment.label,
+                            intake: segment.intake,
+                            target: segment.target,
+                            color: segment.color,
+                            percent: total == 0 ? 0 : (segment.value / total * 100),
+                            unit: segment.unit,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
             ),
           ],
         ),
       ),
+    );
+  }
+
+  List<_MacroSegment> _nutrientSegments(
+    _EntryTotals totals,
+    _EntryTotals targets,
+  ) {
+    return [
+      _MacroSegment(
+        label: 'Calories',
+        value: 0,
+        intake: totals.calories.toDouble(),
+        target: targets.calories.toDouble(),
+        unit: 'kcal',
+        color: Colors.pink.shade300,
+      ),
+      _MacroSegment(
+        label: 'Protein',
+        value: 0,
+        intake: totals.protein.toDouble(),
+        target: targets.protein.toDouble(),
+        unit: 'g',
+        color: Colors.pinkAccent,
+      ),
+      _MacroSegment(
+        label: 'Carbs',
+        value: 0,
+        intake: totals.carbs.toDouble(),
+        target: targets.carbs.toDouble(),
+        unit: 'g',
+        color: Colors.pinkAccent.withValues(alpha: 160),
+      ),
+      _MacroSegment(
+        label: 'Fat',
+        value: 0,
+        intake: totals.fat.toDouble(),
+        target: targets.fat.toDouble(),
+        unit: 'g',
+        color: Colors.purpleAccent,
+      ),
+      _MacroSegment(
+        label: 'Iron',
+        value: 0,
+        intake: totals.ironMg,
+        target: targets.ironMg,
+        unit: 'mg',
+        color: Colors.deepPurpleAccent,
+      ),
+      _MacroSegment(
+        label: 'Folate',
+        value: 0,
+        intake: totals.folateMcg,
+        target: targets.folateMcg,
+        unit: 'mcg',
+        color: Colors.purple.shade300,
+      ),
+    ].map(_withProgress).whereType<_MacroSegment>().toList();
+  }
+
+  _MacroSegment? _withProgress(_MacroSegment segment) {
+    if (segment.target <= 0) return null;
+    final progress = (segment.intake / segment.target).clamp(0.0, 1.2);
+    return segment.copyWith(value: progress);
+  }
+}
+
+class _MacroLegendItem extends StatelessWidget {
+  const _MacroLegendItem({
+    required this.label,
+    required this.intake,
+    required this.target,
+    required this.color,
+    required this.percent,
+    required this.unit,
+  });
+
+  final String label;
+  final double intake;
+  final double target;
+  final Color color;
+  final double percent;
+  final String unit;
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = Theme.of(context).colorScheme.onSurface.withValues(alpha: 150);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(child: Text(label)),
+          Text(
+            '${intake.toStringAsFixed(0)} / ${target.toStringAsFixed(0)} $unit',
+            style: TextStyle(color: muted),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '${percent.toStringAsFixed(0)}%',
+            style: TextStyle(color: muted),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MacroPieChart extends StatelessWidget {
+  const _MacroPieChart({
+    required this.segments,
+    required this.empty,
+  });
+
+  final List<_MacroSegment> segments;
+  final bool empty;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = segments.fold<double>(0, (sum, s) => sum + s.value);
+    final muted = Theme.of(context).colorScheme.onSurface.withValues(alpha: 120);
+    final average = segments.isEmpty ? 0 : (total / segments.length * 100);
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        CustomPaint(
+          size: const Size(120, 120),
+          painter: _PieChartPainter(
+            segments: segments,
+            empty: empty,
+          ),
+        ),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              empty ? '0%' : '${average.toStringAsFixed(0)}%',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            Text('avg', style: TextStyle(color: muted)),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _PieChartPainter extends CustomPainter {
+  _PieChartPainter({
+    required this.segments,
+    required this.empty,
+  });
+
+  final List<_MacroSegment> segments;
+  final bool empty;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 6;
+    final stroke = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 16
+      ..strokeCap = StrokeCap.round;
+    final background = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 16
+      ..color = Colors.black12
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawCircle(center, radius, background);
+
+    if (empty) return;
+
+    final total = segments.fold<double>(0, (sum, s) => sum + s.value);
+    if (total <= 0) return;
+
+    var startAngle = -1.5707963267948966;
+    for (final segment in segments) {
+      if (segment.value <= 0) continue;
+      final sweep = (segment.value / total) * 6.283185307179586;
+      stroke.color = segment.color;
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        startAngle,
+        sweep,
+        false,
+        stroke,
+      );
+      startAngle += sweep;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _PieChartPainter oldDelegate) {
+    return oldDelegate.segments != segments || oldDelegate.empty != empty;
+  }
+}
+
+class _MacroSegment {
+  const _MacroSegment({
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.intake,
+    required this.target,
+    required this.unit,
+  });
+
+  final String label;
+  final double value;
+  final Color color;
+  final double intake;
+  final double target;
+  final String unit;
+
+  _MacroSegment copyWith({
+    double? value,
+  }) {
+    return _MacroSegment(
+      label: label,
+      value: value ?? this.value,
+      color: color,
+      intake: intake,
+      target: target,
+      unit: unit,
     );
   }
 }
@@ -337,32 +637,4 @@ class _Gap {
   double get ratio => target == 0 ? 1 : intake / target;
   bool get isLow => ratio < 0.8;
   bool get isOnTrack => ratio >= 0.8;
-}
-
-class _MicroGaps extends StatelessWidget {
-  const _MicroGaps({required this.gaps});
-  final List<_Gap> gaps;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: gaps.map((g) {
-        final status = g.isOnTrack ? 'On track' : 'Low';
-        final color = g.isOnTrack ? Colors.green.shade600 : Colors.orange;
-        final targetText = g.target == 0 ? '' : ' / ${g.target.toStringAsFixed(0)}';
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text('${g.label}: ${g.intake.toStringAsFixed(1)}$targetText'),
-              ),
-              Text(status, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
 }

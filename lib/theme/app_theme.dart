@@ -14,25 +14,28 @@ class ThemeProvider extends ChangeNotifier {
 }
 
 class AppTheme {
-  static const Color primaryMint = Color(0xFF2EC4B6);
-  static const Color accentCoral = Color(0xFFFF6B6B);
-  static const Color accentSun = Color(0xFFFFD166);
-  static const Color surfaceBase = Color(0xFFFFF7F2);
+  static const Color primaryPink = Color(0xFFFF4D8D);
+  static const Color secondaryPink = Color(0xFFFFA1C2);
+  static const Color tertiaryPeach = Color(0xFFFFC7A8);
+  static const Color surfaceBase = Color(0xFFFFF4F8);
+  static const Color surfaceElevated = Color(0xFFFFFBFD);
 
   static final ColorScheme _lightScheme = ColorScheme.fromSeed(
-    seedColor: primaryMint,
+    seedColor: primaryPink,
     brightness: Brightness.light,
   ).copyWith(
-    primary: primaryMint,
-    secondary: accentCoral,
-    tertiary: accentSun,
-    surface: const Color(0xFFFFFEF9),
+    primary: primaryPink,
+    secondary: secondaryPink,
+    tertiary: tertiaryPeach,
+    surface: surfaceBase,
+    surfaceVariant: const Color(0xFFFFE4EE),
+    outlineVariant: const Color(0xFFF5C5D7),
   );
 
   static ThemeData lightTheme = ThemeData(
     colorScheme: _lightScheme,
     brightness: Brightness.light,
-    scaffoldBackgroundColor: _lightScheme.surface,
+    scaffoldBackgroundColor: surfaceBase,
     useMaterial3: true,
     textTheme: GoogleFonts.poppinsTextTheme().apply(
       bodyColor: _lightScheme.onSurface,
@@ -45,14 +48,14 @@ class AppTheme {
       centerTitle: false,
     ),
     cardTheme: CardThemeData(
-      color: _lightScheme.surface,
+      color: surfaceElevated,
       elevation: 1,
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: Colors.white,
+      fillColor: surfaceElevated,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),

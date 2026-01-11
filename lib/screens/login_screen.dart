@@ -145,7 +145,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   void _goHome(AppUser user) {
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => HomeScreen(user: user)),
+      MaterialPageRoute(builder: (_) => const HomeScreen()),
       (route) => false,
     );
   }

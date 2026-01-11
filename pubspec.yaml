@@ -19,6 +19,9 @@ dependencies:
   cloud_firestore: ^6.1.1
   firebase_storage: ^13.0.5
   google_fonts: ^6.2.1
+  image_picker: ^1.1.2
+  file_picker: ^8.0.0
+  excel: ^4.0.2
 
 dev_dependencies:
   flutter_test:

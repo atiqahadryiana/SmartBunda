@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-
 import '../widgets/screen_header.dart';
 import 'hydration_screen.dart';
 import 'log_screen.dart';
-import 'summary_screen.dart';
 
 class FoodLoggingHubScreen extends StatelessWidget {
   const FoodLoggingHubScreen({super.key, this.showAppBar = false});
@@ -35,12 +33,6 @@ class FoodLoggingHubScreen extends StatelessWidget {
             title: 'Hydration log',
             subtitle: 'Track water intake and reminders.',
             onTap: () => _open(context, const HydrationScreen()),
-          ),
-          _ModuleCard(
-            icon: Icons.assessment_outlined,
-            title: 'Nutrition summary',
-            subtitle: 'Review daily and weekly nutrition totals.',
-            onTap: () => _open(context, const SummaryScreen(showAppBar: true)),
           ),
         ],
       ),

@@ -1,0 +1,157 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function userRole() {
+      return get(/databases/$(database)/documents/Users/$(request.auth.uid)).data.role;
+    }
+
+    function isStaff() {
+      return signedIn() && (userRole() in [
+        'admin',
+        'doctor',
+        'nurse',
+        'dietitian',
+        'ADMIN',
+        'DOCTOR',
+        'NURSE',
+        'DIETITIAN'
+      ]);
+    }
+
+    function planOwner(planId) {
+      return get(/databases/$(database)/documents/NutritionPlans/$(planId)).data.patientId;
+    }
+
+    function isPlanOwner(planId) {
+      return signedIn() && planOwner(planId) == request.auth.uid;
+    }
+
+    match /Users/{userId} {
+      allow read: if signedIn();
+      allow create: if isOwner(userId) || isStaff();
+      allow update, delete: if isOwner(userId) || isStaff();
+    }
+
+    match /Foods/{foodId} {
+      allow read: if signedIn();
+      allow write: if isStaff();
+    }
+
+    match /FoodLogs/{userId} {
+      allow read, write: if isOwner(userId) || isStaff();
+      match /Days/{dayId} {
+        allow read, write: if isOwner(userId) || isStaff();
+        match /Entries/{entryId} {
+          allow read, write: if isOwner(userId) || isStaff();
+        }
+      }
+    }
+
+    match /FoodLogItems/{id} {
+      allow read, write: if signedIn() &&
+        (request.auth.uid == resource.data.userId ||
+         request.auth.uid == request.resource.data.userId ||
+         isStaff());
+    }
+
+    match /PatientProfiles/{userId} {
+      allow read, write: if isOwner(userId) || isStaff();
+    }
+
+    match /Pregnancies/{pregId} {
+      allow create: if signedIn() &&
+        (request.auth.uid == request.resource.data.patientId || isStaff());
+      allow read, update, delete: if signedIn() &&
+        (request.auth.uid == resource.data.patientId || isStaff());
+    }
+
+    match /HydrationLogs/{logId} {
+      allow read, write: if signedIn() &&
+        (request.auth.uid == resource.data.userId ||
+         request.auth.uid == request.resource.data.userId ||
+         isStaff());
+    }
+
+    match /Feedback/{id} {
+      allow read, write: if signedIn() &&
+        (request.auth.uid == resource.data.userId ||
+         request.auth.uid == request.resource.data.userId ||
+         isStaff());
+    }
+
+    match /Alerts/{id} {
+      allow read, write: if signedIn() &&
+        (request.auth.uid == resource.data.patientId ||
+         request.auth.uid == request.resource.data.patientId ||
+         isStaff());
+    }
+
+    match /Appointments/{id} {
+      allow read: if signedIn() &&
+        (isStaff() ||
+         request.auth.uid == resource.data.patientId ||
+         request.auth.uid == resource.data.providerId);
+      allow create: if signedIn() &&
+        (isStaff() ||
+         request.auth.uid == request.resource.data.patientId ||
+         request.auth.uid == request.resource.data.providerId);
+      allow update, delete: if signedIn() &&
+        (isStaff() ||
+         request.auth.uid == resource.data.patientId ||
+         request.auth.uid == resource.data.providerId);
+    }
+
+    match /NutritionPlans/{id} {
+      allow read: if signedIn() &&
+        (isStaff() || request.auth.uid == resource.data.patientId);
+      allow write: if isStaff();
+    }
+
+    match /NutritionTargets/{id} {
+      allow read: if signedIn() &&
+        (isStaff() || isPlanOwner(resource.data.planId));
+      allow write: if isStaff();
+    }
+
+    match /Recommendations/{id} {
+      allow read: if signedIn();
+      allow write: if isStaff();
+    }
+
+    match /Notifications/{id} {
+      allow read: if signedIn();
+      allow write: if isStaff();
+    }
+
+    match /Reports/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn() &&
+        (request.auth.uid == request.resource.data.patientId || isStaff());
+      allow update, delete: if signedIn() &&
+        (request.auth.uid == resource.data.patientId || isStaff());
+    }
+
+    match /EducationContent/{id} {
+      allow read: if signedIn();
+      allow write: if isStaff();
+    }
+
+    match /AuditLogs/{id} {
+      allow read: if isStaff();
+      allow write: if signedIn();
+    }
+
+    match /SystemSettings/{docId} {
+      allow read: if signedIn();
+      allow write: if isStaff();
+    }
+  }
+}

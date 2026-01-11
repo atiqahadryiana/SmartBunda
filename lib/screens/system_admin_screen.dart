@@ -4,14 +4,29 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/system_settings.dart';
 import '../providers/app_providers.dart';
 import '../services/service_providers.dart';
+import '../widgets/require_sign_in.dart';
 import '../widgets/screen_header.dart';
 import 'activity_log_screen.dart';
+import 'content_management_screen.dart';
 import 'food_catalog_screen.dart';
 
 class SystemAdminScreen extends ConsumerWidget {
-  const SystemAdminScreen({super.key, this.showAppBar = false});
+  const SystemAdminScreen({
+    super.key,
+    this.showAppBar = false,
+    this.showSettings = true,
+    this.showData = true,
+    this.showHealth = true,
+    this.title,
+    this.subtitle,
+  });
 
   final bool showAppBar;
+  final bool showSettings;
+  final bool showData;
+  final bool showHealth;
+  final String? title;
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -23,117 +38,138 @@ class SystemAdminScreen extends ConsumerWidget {
     final plansAsync = ref.watch(allPlansProvider);
     final alertsAsync = ref.watch(allAlertsProvider);
 
-    return Scaffold(
-      appBar: showAppBar ? AppBar(title: const Text('System administration')) : null,
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const ScreenHeader(
-            title: 'System administration',
-            subtitle: 'Manage settings, backups, and system health.',
-            icon: Icons.settings_suggest,
-          ),
-          const SizedBox(height: 16),
-          Text('Settings', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          settingsAsync.when(
-            data: (settings) => _SettingsCard(settings: settings),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Text('Error: $e'),
-          ),
-          const SizedBox(height: 16),
-          Text('Data & backup', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 12,
-            runSpacing: 8,
-            children: [
-              FilledButton.icon(
-                onPressed: () => _createBackup(context, ref),
-                icon: const Icon(Icons.backup_outlined),
-                label: const Text('Create backup'),
-              ),
-              OutlinedButton(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const FoodCatalogScreen()),
-                ),
-                child: const Text('Manage food database'),
-              ),
-              OutlinedButton(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ActivityLogScreen(showAppBar: true)),
-                ),
-                child: const Text('View activity logs'),
+    final headerTitle = title ?? 'System administration';
+    final headerSubtitle =
+        subtitle ?? 'Manage settings, backups, and system health.';
+    return RequireSignIn(
+      title: headerTitle,
+      showAppBar: showAppBar,
+      message: 'Please sign in to manage system settings.',
+      child: Scaffold(
+        appBar: showAppBar ? AppBar(title: Text(headerTitle)) : null,
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            ScreenHeader(
+              title: headerTitle,
+              subtitle: headerSubtitle,
+              icon: Icons.settings_suggest,
+            ),
+            if (showSettings) ...[
+              const SizedBox(height: 16),
+              Text('Settings', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 8),
+              settingsAsync.when(
+                data: (settings) => _SettingsCard(settings: settings),
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Text('Error: $e'),
               ),
             ],
-          ),
-          const SizedBox(height: 12),
-          backupsAsync.when(
-            data: (backups) {
-              if (backups.isEmpty) {
-                return const Text('No backups yet.');
-              }
-              return Column(
-                children: backups
-                    .map(
-                      (backup) => Card(
-                        child: ListTile(
-                          title: Text(backup.label),
-                          subtitle: Text(
-                            '${backup.createdAt.month}/${backup.createdAt.day} ${backup.createdAt.hour.toString().padLeft(2, '0')}:${backup.createdAt.minute.toString().padLeft(2, '0')}',
-                          ),
-                          trailing: Wrap(
-                            spacing: 8,
-                            children: [
-                              TextButton(
-                                onPressed: () =>
-                                    ref.read(systemAdminRepositoryProvider).restoreBackup(backup),
-                                child: const Text('Restore'),
-                              ),
-                              TextButton(
-                                onPressed: () => ref
-                                    .read(systemAdminRepositoryProvider)
-                                    .deleteBackup(backup.id),
-                                child: const Text('Delete'),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    )
-                    .toList(),
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Text('Error: $e'),
-          ),
-          const SizedBox(height: 16),
-          Text('System health', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          usersAsync.when(
-            data: (users) {
-              final entryCount = entriesAsync.valueOrNull?.values.fold<int>(
-                    0,
-                    (sum, list) => sum + list.length,
-                  ) ??
-                  0;
-              final appointmentCount = appointmentsAsync.valueOrNull?.length ?? 0;
-              final planCount = plansAsync.valueOrNull?.length ?? 0;
-              final alertCount = alertsAsync.valueOrNull?.length ?? 0;
-              return Column(
+            if (showData) ...[
+              const SizedBox(height: 16),
+              Text('Data & backup', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
                 children: [
-                  _HealthTile(label: 'Users', value: users.length),
-                  _HealthTile(label: 'Food entries', value: entryCount),
-                  _HealthTile(label: 'Appointments', value: appointmentCount),
-                  _HealthTile(label: 'Nutrition plans', value: planCount),
-                  _HealthTile(label: 'Active alerts', value: alertCount),
+                  FilledButton.icon(
+                    onPressed: () => _createBackup(context, ref),
+                    icon: const Icon(Icons.backup_outlined),
+                    label: const Text('Create backup'),
+                  ),
+                  OutlinedButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const FoodCatalogScreen()),
+                    ),
+                    child: const Text('Manage food database'),
+                  ),
+                  OutlinedButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ContentManagementScreen()),
+                    ),
+                    child: const Text('Manage content'),
+                  ),
+                  OutlinedButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ActivityLogScreen(showAppBar: true)),
+                    ),
+                    child: const Text('View activity logs'),
+                  ),
                 ],
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Text('Error: $e'),
-          ),
-        ],
+              ),
+              const SizedBox(height: 12),
+              backupsAsync.when(
+                data: (backups) {
+                  if (backups.isEmpty) {
+                    return const Text('No backups yet.');
+                  }
+                  return Column(
+                    children: backups
+                        .map(
+                          (backup) => Card(
+                            child: ListTile(
+                              title: Text(backup.label),
+                              subtitle: Text(
+                                '${backup.createdAt.month}/${backup.createdAt.day} ${backup.createdAt.hour.toString().padLeft(2, '0')}:${backup.createdAt.minute.toString().padLeft(2, '0')}',
+                              ),
+                              trailing: Wrap(
+                                spacing: 8,
+                                children: [
+                                  TextButton(
+                                    onPressed: () => ref
+                                        .read(systemAdminRepositoryProvider)
+                                        .restoreBackup(backup),
+                                    child: const Text('Restore'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => ref
+                                        .read(systemAdminRepositoryProvider)
+                                        .deleteBackup(backup.id),
+                                    child: const Text('Delete'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Text('Error: $e'),
+              ),
+            ],
+            if (showHealth) ...[
+              const SizedBox(height: 16),
+              Text('System health', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 8),
+              usersAsync.when(
+                data: (users) {
+                  final entryCount = entriesAsync.valueOrNull?.values.fold<int>(
+                        0,
+                        (sum, list) => sum + list.length,
+                      ) ??
+                      0;
+                  final appointmentCount = appointmentsAsync.valueOrNull?.length ?? 0;
+                  final planCount = plansAsync.valueOrNull?.length ?? 0;
+                  final alertCount = alertsAsync.valueOrNull?.length ?? 0;
+                  return Column(
+                    children: [
+                      _HealthTile(label: 'Users', value: users.length),
+                      _HealthTile(label: 'Food entries', value: entryCount),
+                      _HealthTile(label: 'Appointments', value: appointmentCount),
+                      _HealthTile(label: 'Nutrition plans', value: planCount),
+                      _HealthTile(label: 'Active alerts', value: alertCount),
+                    ],
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Text('Error: $e'),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

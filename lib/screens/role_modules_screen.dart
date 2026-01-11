@@ -29,7 +29,8 @@ class RoleModulesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUser = ref.watch(currentUserProvider);
-    final modules = _modulesForRole(role);
+    final resolvedRole = currentUser?.role ?? role;
+    final modules = _modulesForRole(resolvedRole);
     final visible = currentUser == null
         ? modules
         : modules
@@ -48,14 +49,14 @@ class RoleModulesScreen extends ConsumerWidget {
           )
         : (supportModules.isNotEmpty ? supportModules.first : null);
     return Scaffold(
-      appBar: showAppBar ? AppBar(title: Text('${role.label} modules')) : null,
+      appBar: showAppBar ? AppBar(title: Text('${resolvedRole.label} modules')) : null,
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           Text('Getting started', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 4),
           Text(
-            _roleGuidance(role),
+            _roleGuidance(resolvedRole),
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -113,6 +114,20 @@ class RoleModulesScreen extends ConsumerWidget {
             builder: (_) => const AdminScreen(showAppBar: true),
             sprintIndex: 1,
             permission: AccessPermission.userManagement,
+          ),
+          _module(
+            title: 'Appointments',
+            description: 'Review and schedule clinic visits.',
+            icon: Icons.event_available,
+            builder: (_) => AppointmentsScreen(role: role, showAppBar: true),
+            permission: AccessPermission.appointments,
+          ),
+          _module(
+            title: 'Reporting & analytics',
+            description: 'System reports and usage insights.',
+            icon: Icons.assessment_outlined,
+            builder: (_) => ReportsScreen(role: role, showAppBar: true),
+            permission: AccessPermission.reporting,
           ),
           _module(
             title: 'System administration',

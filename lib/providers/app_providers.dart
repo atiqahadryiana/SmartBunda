@@ -8,6 +8,7 @@ import '../models/backup_snapshot.dart';
 import '../models/feedback_entry.dart';
 import '../models/food_catalog_entry.dart';
 import '../models/food_entry.dart';
+import '../models/firestore_doc.dart';
 import '../models/hydration_entry.dart';
 import '../models/nutrition_plan.dart';
 import '../models/pregnancy.dart';
@@ -111,4 +112,42 @@ final systemSettingsProvider = StreamProvider<SystemSettings>((ref) {
 
 final backupsProvider = StreamProvider<List<BackupSnapshot>>((ref) {
   return ref.watch(systemAdminRepositoryProvider).watchBackups();
+});
+
+final educationContentProvider = StreamProvider<List<FirestoreDoc>>((ref) {
+  return ref.watch(contentRepositoryProvider).watchEducationContent();
+});
+
+final allEducationContentProvider = StreamProvider<List<FirestoreDoc>>((ref) {
+  return ref.watch(contentRepositoryProvider).watchEducationContent(activeOnly: false);
+});
+
+final recommendationsProvider = StreamProvider<List<FirestoreDoc>>((ref) {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return const Stream.empty();
+  return ref.watch(contentRepositoryProvider).watchRecommendations(userId: user.id);
+});
+
+final allRecommendationsProvider = StreamProvider<List<FirestoreDoc>>((ref) {
+  return ref.watch(contentRepositoryProvider).watchRecommendations(activeOnly: false);
+});
+
+final notificationsProvider = StreamProvider<List<FirestoreDoc>>((ref) {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return const Stream.empty();
+  return ref.watch(contentRepositoryProvider).watchNotifications(userId: user.id);
+});
+
+final allNotificationsProvider = StreamProvider<List<FirestoreDoc>>((ref) {
+  return ref.watch(contentRepositoryProvider).watchNotifications(activeOnly: false);
+});
+
+final reportsProvider = StreamProvider<List<FirestoreDoc>>((ref) {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return const Stream.empty();
+  return ref.watch(contentRepositoryProvider).watchReports(userId: user.id);
+});
+
+final allReportsProvider = StreamProvider<List<FirestoreDoc>>((ref) {
+  return ref.watch(contentRepositoryProvider).watchReports();
 });
