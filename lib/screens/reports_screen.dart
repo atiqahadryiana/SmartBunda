@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../localization/app_strings.dart';
 import '../models/activity_log.dart';
 import '../models/app_user.dart';
 import '../models/food_entry.dart';
@@ -28,6 +29,7 @@ class ReportsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final strings = AppStrings.of(context);
     final user = ref.watch(currentUserProvider);
     final effectiveRole = user?.role ?? role;
     final view = effectiveRole == UserRole.admin
@@ -36,9 +38,9 @@ class ReportsScreen extends ConsumerWidget {
             ? _PatientReportView(showAppBar: showAppBar)
             : _ClinicianReportView(showAppBar: showAppBar);
     return RequireSignIn(
-      title: 'Reports',
+      title: strings.t('Reports'),
       showAppBar: showAppBar,
-      message: 'Please sign in to view reports.',
+      message: strings.t('Please sign in to view reports.'),
       child: view,
     );
   }
@@ -51,13 +53,14 @@ class _PatientReportView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final strings = AppStrings.of(context);
     final entriesAsync = ref.watch(entriesProvider);
     final pregnancyAsync = ref.watch(pregnancyProvider);
     final reportsAsync = ref.watch(reportsProvider);
     final user = ref.watch(currentUserProvider);
 
     return Scaffold(
-      appBar: showAppBar ? AppBar(title: const Text('Reports')) : null,
+      appBar: showAppBar ? AppBar(title: Text(strings.t('Reports'))) : null,
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: entriesAsync.when(
@@ -73,15 +76,16 @@ class _PatientReportView extends ConsumerWidget {
                 : (summary.protein / targets.protein * 100);
             return ListView(
               children: [
-                const ScreenHeader(
-                  title: 'Weekly report',
-                  subtitle: 'Track your average intake and progress over the last 7 days.',
+                ScreenHeader(
+                  title: strings.t('Weekly report'),
+                  subtitle:
+                      strings.t('Track your average intake and progress over the last 7 days.'),
                   icon: Icons.assessment_outlined,
                 ),
                 const SizedBox(height: 16),
                 Card(
                   child: ListTile(
-                    title: const Text('Average intake'),
+                    title: Text(strings.t('Average intake')),
                     subtitle: Text(
                       '${summary.calories} kcal | ${summary.protein} g protein',
                     ),
@@ -89,7 +93,7 @@ class _PatientReportView extends ConsumerWidget {
                 ),
                 Card(
                   child: ListTile(
-                    title: const Text('Target adherence'),
+                    title: Text(strings.t('Target adherence')),
                     subtitle: Text(
                       '${caloriePct.toStringAsFixed(0)}% calories, '
                       '${proteinPct.toStringAsFixed(0)}% protein',
@@ -106,25 +110,25 @@ class _PatientReportView extends ConsumerWidget {
                     targets,
                   ),
                   icon: const Icon(Icons.share),
-                  label: const Text('Export report'),
+                  label: Text(strings.t('Export report')),
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Saved reports',
+                  strings.t('Saved reports'),
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 8),
                 reportsAsync.when(
                   data: (reports) {
                     if (reports.isEmpty) {
-                      return const Text('No saved reports yet.');
+                      return Text(strings.t('No saved reports yet.'));
                     }
                     return Column(
-                      children: reports.map(_reportTile).toList(),
+                      children: reports.map((doc) => _reportTile(context, doc)).toList(),
                     );
                   },
                   loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => Text('Error loading reports: $e'),
+                  error: (e, _) => Text(strings.errorLoadingReports('$e')),
                 ),
               ],
             );
@@ -168,6 +172,7 @@ class _PatientReportView extends ConsumerWidget {
     _EntryTotals summary,
     _Targets targets,
   ) async {
+    final strings = AppStrings.of(context);
     final payload = {
       'avgCalories': summary.calories,
       'avgProtein': summary.protein,
@@ -185,20 +190,22 @@ class _PatientReportView extends ConsumerWidget {
     await Clipboard.setData(ClipboardData(text: json));
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Report copied to clipboard')),
+        SnackBar(content: Text(strings.t('Report copied to clipboard'))),
       );
     }
   }
 
-  Widget _reportTile(FirestoreDoc doc) {
+  Widget _reportTile(BuildContext context, FirestoreDoc doc) {
+    final strings = AppStrings.of(context);
     final createdAt = doc.timestamp;
-    final createdLabel =
-        createdAt == null ? 'Saved report' : 'Saved ${createdAt.toLocal()}';
+    final createdLabel = createdAt == null
+        ? strings.t('Saved report')
+        : strings.savedAtLabel(createdAt.toLocal());
     final calories = doc.data['avgCalories'];
     final protein = doc.data['avgProtein'];
     final summary = [
-      if (calories != null) 'Calories: $calories',
-      if (protein != null) 'Protein: $protein',
+      if (calories != null) '${strings.t('Calories')}: $calories',
+      if (protein != null) '${strings.t('Protein')}: $protein',
     ].join(' | ');
     return Card(
       child: ListTile(
@@ -217,12 +224,13 @@ class _ClinicianReportView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final strings = AppStrings.of(context);
     final usersAsync = ref.watch(usersProvider);
     final entriesAsync = ref.watch(allEntriesProvider);
     final pregnanciesAsync = ref.watch(allPregnanciesProvider);
 
     return Scaffold(
-      appBar: showAppBar ? AppBar(title: const Text('Reports')) : null,
+      appBar: showAppBar ? AppBar(title: Text(strings.t('Reports'))) : null,
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: usersAsync.when(
@@ -231,17 +239,18 @@ class _ClinicianReportView extends ConsumerWidget {
             final entriesByUser = entriesAsync.valueOrNull ?? {};
             final pregnancies = pregnanciesAsync.valueOrNull ?? {};
             if (patients.isEmpty) {
-              return const EmptyState(
+              return EmptyState(
                 icon: Icons.assessment_outlined,
-                title: 'No patient reports yet',
-                message: 'Reports will appear once patients start logging meals.',
+                title: strings.t('No patient reports yet'),
+                message: strings.t('Reports will appear once patients start logging meals.'),
               );
             }
             return ListView(
               children: [
-                const ScreenHeader(
-                  title: 'Reports overview',
-                  subtitle: 'Tap a patient to review their last 7 days of intake.',
+                ScreenHeader(
+                  title: strings.t('Reports overview'),
+                  subtitle:
+                      strings.t('Tap a patient to review their last 7 days of intake.'),
                   icon: Icons.assessment_outlined,
                 ),
                 const SizedBox(height: 16),
@@ -260,7 +269,7 @@ class _ClinicianReportView extends ConsumerWidget {
                         leading: const Icon(Icons.assessment_outlined),
                         title: Text(patient.displayName ?? patient.email),
                         subtitle:
-                            Text('${compliance.toStringAsFixed(0)}% compliance (last 7 days)'),
+                            Text(strings.complianceLast7Days(compliance.toStringAsFixed(0))),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () => _showPatientReport(context, patient, entries, pregnancy),
                       ),
@@ -300,30 +309,31 @@ class _ClinicianReportView extends ConsumerWidget {
     List<FoodEntry> entries,
     Pregnancy? pregnancy,
   ) {
+    final strings = AppStrings.of(context);
     final totals = entries.fold<int>(0, (sum, e) => sum + e.calories);
     final count = entries.length;
     final targets = recommendedFor(pregnancy);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Report: ${patient.displayName ?? patient.email}'),
+        title: Text(strings.reportFor(patient.displayName ?? patient.email)),
         content: SizedBox(
           width: 360,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Entries logged: $count'),
-              Text('Total calories logged: $totals'),
+              Text(strings.entriesLogged(count)),
+              Text(strings.totalCaloriesLogged(totals)),
               const SizedBox(height: 8),
-              Text('Targets: ${targets.calories} kcal, ${targets.protein} g'),
+              Text(strings.targetsSummary(targets.calories, targets.protein)),
             ],
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).maybePop(),
-            child: const Text('Close'),
+            child: Text(strings.t('Close')),
           ),
         ],
       ),
@@ -338,11 +348,12 @@ class _AdminAnalyticsView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final strings = AppStrings.of(context);
     final usersAsync = ref.watch(usersProvider);
     final logsAsync = ref.watch(activityLogsProvider);
 
     return Scaffold(
-      appBar: showAppBar ? AppBar(title: const Text('Analytics')) : null,
+      appBar: showAppBar ? AppBar(title: Text(strings.t('Analytics'))) : null,
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: usersAsync.when(
@@ -355,33 +366,33 @@ class _AdminAnalyticsView extends ConsumerWidget {
                 0;
             return ListView(
               children: [
-                const ScreenHeader(
-                  title: 'System usage',
-                  subtitle: 'High-level metrics across all users.',
+                ScreenHeader(
+                  title: strings.t('System usage'),
+                  subtitle: strings.t('High-level metrics across all users.'),
                   icon: Icons.analytics_outlined,
                 ),
                 const SizedBox(height: 16),
                 Card(
                   child: ListTile(
-                    title: const Text('Total users'),
+                    title: Text(strings.t('Total users')),
                     trailing: Text('${users.length}'),
                   ),
                 ),
                 Card(
                   child: ListTile(
-                    title: const Text('Active accounts'),
+                    title: Text(strings.t('Active accounts')),
                     trailing: Text('$active'),
                   ),
                 ),
                 Card(
                   child: ListTile(
-                    title: const Text('Inactive accounts'),
+                    title: Text(strings.t('Inactive accounts')),
                     trailing: Text('$inactive'),
                   ),
                 ),
                 Card(
                   child: ListTile(
-                    title: const Text('Total logins'),
+                    title: Text(strings.t('Total logins')),
                     trailing: Text('$logins'),
                   ),
                 ),

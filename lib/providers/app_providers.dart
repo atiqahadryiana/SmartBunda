@@ -19,7 +19,10 @@ import '../services/service_providers.dart';
 final currentUserProvider = Provider<AppUser?>((ref) {
   final auth = ref.watch(authStateProvider);
   final repo = ref.watch(authRepositoryProvider);
-  return auth.maybeWhen(data: (user) => user, orElse: () => repo.currentUser);
+  return auth.maybeWhen(
+    data: (user) => user ?? repo.currentUser,
+    orElse: () => repo.currentUser,
+  );
 });
 
 final profileProvider = StreamProvider<Profile?>((ref) {

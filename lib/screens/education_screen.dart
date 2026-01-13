@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../localization/app_strings.dart';
 import '../models/firestore_doc.dart';
 import '../providers/app_providers.dart';
 import '../widgets/require_sign_in.dart';
@@ -15,18 +16,19 @@ class EducationScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final contentAsync = ref.watch(educationContentProvider);
+    final strings = AppStrings.of(context);
     return RequireSignIn(
-      title: 'Education & content',
+      title: strings.t('Education & content'),
       showAppBar: true,
-      message: 'Please sign in to view education content.',
+      message: strings.t('Please sign in to view education content.'),
       child: Scaffold(
-        appBar: AppBar(title: const Text('Education & content')),
+        appBar: AppBar(title: Text(strings.t('Education & content'))),
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            const ScreenHeader(
-              title: 'Education',
-              subtitle: 'Browse guides, tips, and trimester content.',
+            ScreenHeader(
+              title: strings.t('Education'),
+              subtitle: strings.t('Browse guides, tips, and trimester content.'),
               icon: Icons.menu_book_outlined,
             ),
             const SizedBox(height: 16),
@@ -38,13 +40,14 @@ class EducationScreen extends ConsumerWidget {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('From database', style: Theme.of(context).textTheme.titleMedium),
+                    Text(strings.t('From database'),
+                        style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 8),
                     ...items.map(
                       (doc) => _EducationCard(
                         icon: Icons.menu_book_outlined,
                         title: doc.title ?? doc.id,
-                        subtitle: doc.subtitle ?? 'Tap to view details.',
+                        subtitle: doc.subtitle ?? strings.t('Tap to view details.'),
                         onTap: () => _openDoc(context, doc),
                       ),
                     ),
@@ -58,50 +61,50 @@ class EducationScreen extends ConsumerWidget {
               ),
               error: (e, _) => Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: Text('Error loading content: $e'),
+                child: Text(strings.errorLoadingContent('$e')),
               ),
             ),
             _EducationCard(
               icon: Icons.menu_book_outlined,
-              title: 'Trimester nutrition guide',
-              subtitle: 'Recommended targets based on gestation stage.',
+              title: strings.t('Trimester nutrition guide'),
+              subtitle: strings.t('Recommended targets based on gestation stage.'),
               onTap: () => _open(context, const NutritionFactsScreen()),
             ),
             _EducationCard(
               icon: Icons.restaurant_outlined,
-              title: 'Healthy meal suggestions',
-              subtitle: 'Balanced meal ideas and snack tips.',
+              title: strings.t('Healthy meal suggestions'),
+              subtitle: strings.t('Balanced meal ideas and snack tips.'),
               onTap: () => _open(
                 context,
-                const ModuleOverviewScreen(
-                  title: 'Healthy meal suggestions',
-                  description: 'Curated meal ideas for each trimester.',
+                ModuleOverviewScreen(
+                  title: strings.t('Healthy meal suggestions'),
+                  description: strings.t('Curated meal ideas for each trimester.'),
                   icon: Icons.restaurant_outlined,
                   features: [
-                    'Iron-rich meals with leafy greens and lean proteins',
-                    'Calcium-forward snacks and dairy alternatives',
-                    'Balanced plates with complex carbs and fiber',
+                    strings.t('Iron-rich meals with leafy greens and lean proteins'),
+                    strings.t('Calcium-forward snacks and dairy alternatives'),
+                    strings.t('Balanced plates with complex carbs and fiber'),
                   ],
-                  footer: 'Personalize recommendations with your care team.',
+                  footer: strings.t('Personalize recommendations with your care team.'),
                 ),
               ),
             ),
             _EducationCard(
               icon: Icons.lightbulb_outline,
-              title: 'Pregnancy nutrition FAQs',
-              subtitle: 'Quick guidance and common questions.',
+              title: strings.t('Pregnancy nutrition FAQs'),
+              subtitle: strings.t('Quick guidance and common questions.'),
               onTap: () => _open(
                 context,
-                const ModuleOverviewScreen(
-                  title: 'Pregnancy nutrition FAQs',
-                  description: 'Common questions answered in one place.',
+                ModuleOverviewScreen(
+                  title: strings.t('Pregnancy nutrition FAQs'),
+                  description: strings.t('Common questions answered in one place.'),
                   icon: Icons.lightbulb_outline,
                   features: [
-                    'How much water should I drink daily?',
-                    'What foods support healthy iron levels?',
-                    'Safe caffeine limits during pregnancy',
+                    strings.t('How much water should I drink daily?'),
+                    strings.t('What foods support healthy iron levels?'),
+                    strings.t('Safe caffeine limits during pregnancy'),
                   ],
-                  footer: 'Always consult your clinician for medical advice.',
+                  footer: strings.t('Always consult your clinician for medical advice.'),
                 ),
               ),
             ),
@@ -118,6 +121,7 @@ class EducationScreen extends ConsumerWidget {
   }
 
   void _openDoc(BuildContext context, FirestoreDoc doc) {
+    final strings = AppStrings.of(context);
     final entries = doc.data.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
     showDialog(
@@ -143,7 +147,7 @@ class EducationScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).maybePop(),
-            child: const Text('Close'),
+            child: Text(strings.t('Close')),
           ),
         ],
       ),

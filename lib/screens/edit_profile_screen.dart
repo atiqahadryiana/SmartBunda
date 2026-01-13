@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../localization/app_strings.dart';
 import '../models/app_user.dart';
 import '../models/pregnancy.dart';
 import '../models/profile.dart';
@@ -27,7 +28,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   late final TextEditingController _weekCtrl;
   late final TextEditingController _eddCtrl;
   late final TextEditingController _riskCtrl;
-  int _trimester = 2;
   bool _hasAnemia = false;
   bool _hasGdm = false;
   bool _saving = false;
@@ -107,7 +107,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   void _syncPregnancy(Pregnancy pregnancy) {
     _weekCtrl.text = pregnancy.gestationalWeek.toString();
-    _trimester = pregnancy.trimester;
     _eddCtrl.text = pregnancy.edd;
     _riskCtrl.text = pregnancy.riskLevel;
   }
@@ -123,26 +122,36 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   String? _validateWeek(String? value) {
+    final strings = AppStrings.of(context);
     if (value == null || value.trim().isEmpty) return null;
     final week = int.tryParse(value);
     if (week == null || week < 1 || week > 42) {
-      return 'Week must be 1 to 42';
+      return strings.weekRangeError;
     }
     return null;
   }
 
   String? _validateDate(String? value) {
+    final strings = AppStrings.of(context);
     if (value == null || value.trim().isEmpty) return null;
     final trimmed = value.trim();
     final pattern = RegExp(r'^\d{4}-\d{2}-\d{2}$');
     if (!pattern.hasMatch(trimmed)) {
-      return 'Use YYYY-MM-DD';
+      return strings.useYmd;
     }
     final parsed = DateTime.tryParse(trimmed);
     if (parsed == null) {
-      return 'Invalid date';
+      return strings.invalidDate;
     }
     return null;
+  }
+
+  String _trimesterFromWeekLabel(AppStrings strings) {
+    final week = int.tryParse(_weekCtrl.text.trim());
+    final trimester = week == null ? null : Pregnancy.trimesterFromWeek(week);
+    if (trimester == null) return '--';
+    final label = strings.trimesterLabel(trimester);
+    return strings.isMalay ? 'Trimester $label' : '$label trimester';
   }
 
   Future<void> _pickEdd(BuildContext context) async {
@@ -166,6 +175,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
+    final strings = AppStrings.of(context);
     final profileAsync = ref.watch(profileProvider);
     final pregnancyAsync = ref.watch(pregnancyProvider);
     final bmi = _currentBmi();
@@ -174,9 +184,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         ? const SizedBox.shrink()
         : _editView(context, user, profileAsync, pregnancyAsync, bmi);
     return RequireSignIn(
-      title: 'Edit profile',
+      title: strings.editProfile,
       showAppBar: widget.showAppBar,
-      message: 'Please sign in to edit your profile.',
+      message: strings.signInToEditProfile,
       child: child,
     );
   }
@@ -188,16 +198,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     AsyncValue<Pregnancy?> pregnancyAsync,
     double? bmi,
   ) {
+    final strings = AppStrings.of(context);
     if (user.role != UserRole.patient) {
       return Scaffold(
-        appBar: widget.showAppBar ? AppBar(title: const Text('Account')) : null,
+        appBar: widget.showAppBar ? AppBar(title: Text(strings.accountTitle)) : null,
         body: Padding(
           padding: const EdgeInsets.all(16),
           child: ListView(
             children: [
-              const ScreenHeader(
-                title: 'Account',
-                subtitle: 'Manage your profile details and role settings.',
+              ScreenHeader(
+                title: strings.accountTitle,
+                subtitle: strings.accountSubtitle,
                 icon: Icons.person_outline,
               ),
               const SizedBox(height: 16),
@@ -206,13 +217,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   leading: const Icon(Icons.person_outline),
                   title: Text(user.displayName ?? user.email),
                   subtitle: Text(user.email),
-                  trailing: Text(user.role.label),
+                  trailing: Text(strings.roleLabel(user.role)),
                 ),
               ),
               const SizedBox(height: 12),
-              const Text(
-                'Patient pregnancy profiles are managed on the patient profile module.',
-                style: TextStyle(color: Colors.black54),
+              Text(
+                strings.pregnancyModuleNote,
+                style: const TextStyle(color: Colors.black54),
               ),
             ],
           ),
@@ -221,7 +232,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     }
 
     return Scaffold(
-      appBar: widget.showAppBar ? AppBar(title: const Text('Edit profile')) : null,
+      appBar: widget.showAppBar ? AppBar(title: Text(strings.editProfile)) : null,
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: profileAsync.when(
@@ -230,96 +241,102 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               key: _formKey,
               child: ListView(
                 children: [
-                  const ScreenHeader(
-                    title: 'Patient profile',
-                    subtitle: 'Complete your details to personalize nutrition targets.',
+                  ScreenHeader(
+                    title: strings.patientProfileTitle,
+                    subtitle: strings.patientProfileSubtitle,
                     icon: Icons.favorite_border,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _dobCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Date of birth (YYYY-MM-DD)',
+                    decoration: InputDecoration(
+                      labelText: strings.dobLabel,
                     ),
-                    validator: (v) => v != null && v.trim().isNotEmpty ? null : 'Required',
+                    validator: (v) =>
+                        v != null && v.trim().isNotEmpty ? null : strings.requiredField,
                   ),
                   Row(
                     children: [
                       Expanded(
                         child: TextFormField(
                           controller: _heightCtrl,
-                          decoration: const InputDecoration(labelText: 'Height (cm)'),
+                          decoration: InputDecoration(labelText: strings.heightLabel),
                           keyboardType: TextInputType.number,
                           validator: (v) =>
-                              v != null && double.tryParse(v) != null ? null : 'Number',
+                              v != null && double.tryParse(v) != null
+                                  ? null
+                                  : strings.numberField,
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: TextFormField(
                           controller: _weightCtrl,
-                          decoration: const InputDecoration(labelText: 'Weight (kg)'),
+                          decoration: InputDecoration(labelText: strings.weightLabel),
                           keyboardType: TextInputType.number,
                           validator: (v) =>
-                              v != null && double.tryParse(v) != null ? null : 'Number',
+                              v != null && double.tryParse(v) != null
+                                  ? null
+                                  : strings.numberField,
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   InputDecorator(
-                    decoration: const InputDecoration(labelText: 'BMI'),
+                    decoration: InputDecoration(labelText: strings.bmiLabel),
                     child: Text(bmi == null ? '--' : bmi.toStringAsFixed(1)),
                   ),
                   TextFormField(
                     controller: _bloodTypeCtrl,
-                    decoration: const InputDecoration(labelText: 'Blood type'),
+                    decoration: InputDecoration(labelText: strings.bloodTypeLabel),
                   ),
                   const SizedBox(height: 12),
-                  Text('Medical conditions', style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    strings.medicalConditions,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Anemia'),
+                    title: Text(strings.anemiaLabel),
                     value: _hasAnemia,
                     onChanged: (v) => setState(() => _hasAnemia = v),
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Gestational diabetes'),
+                    title: Text(strings.gdmLabel),
                     value: _hasGdm,
                     onChanged: (v) => setState(() => _hasGdm = v),
                   ),
                   const SizedBox(height: 16),
-                  Text('Pregnancy', style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    strings.pregnancySectionTitle,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 8),
                   pregnancyAsync.when(
                     data: (_) => Column(
                       children: [
                         TextFormField(
                           controller: _weekCtrl,
-                          decoration:
-                              const InputDecoration(labelText: 'Gestational week'),
+                          decoration: InputDecoration(
+                            labelText: strings.gestationalWeekLabel,
+                          ),
                           keyboardType: TextInputType.number,
                           validator: _validateWeek,
+                          onChanged: (_) => setState(() {}),
                         ),
-                        DropdownButtonFormField<int>(
-                          initialValue: _trimester,
-                          items: const [
-                            DropdownMenuItem(value: 1, child: Text('Trimester 1')),
-                            DropdownMenuItem(value: 2, child: Text('Trimester 2')),
-                            DropdownMenuItem(value: 3, child: Text('Trimester 3')),
-                          ],
-                          onChanged: (value) {
-                            if (value != null) setState(() => _trimester = value);
-                          },
-                          decoration: const InputDecoration(labelText: 'Trimester'),
+                        InputDecorator(
+                          decoration:
+                              InputDecoration(labelText: strings.trimesterLabelText),
+                          child: Text(_trimesterFromWeekLabel(strings)),
                         ),
                         TextFormField(
                           controller: _eddCtrl,
                           decoration: InputDecoration(
-                            labelText: 'EDD (YYYY-MM-DD)',
+                            labelText: strings.eddLabel,
                             suffixIcon: IconButton(
-                              tooltip: 'Pick date',
+                              tooltip: strings.pickDateTooltip,
                               onPressed: () => _pickEdd(context),
                               icon: const Icon(Icons.calendar_month),
                             ),
@@ -329,7 +346,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         ),
                         TextFormField(
                           controller: _riskCtrl,
-                          decoration: const InputDecoration(labelText: 'Risk level'),
+                          decoration: InputDecoration(labelText: strings.riskLevelLabel),
                         ),
                       ],
                     ),
@@ -374,20 +391,23 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                                     riskText.isNotEmpty;
                                 if (hasPregnancyInput) {
                                   final week = int.tryParse(weekText);
-                                  final eddDate = DateTime.tryParse(eddText);
+                                  final eddDate =
+                                      eddText.isEmpty ? null : DateTime.tryParse(eddText);
                                   if (week == null) {
                                     throw const FormatException('Pregnancy week');
                                   }
-                                  if (eddDate == null) {
+                                  if (eddText.isNotEmpty && eddDate == null) {
                                     throw const FormatException('EDD');
                                   }
                                   final pregnancyId = _syncedPregnancy?.id ??
                                       DateTime.now().microsecondsSinceEpoch.toString();
+                                  final trimesterIndex =
+                                      Pregnancy.trimesterIndexFromWeek(week);
                                   final pregnancy = Pregnancy(
                                     id: pregnancyId,
                                     patientId: user.id,
                                     gestationalWeek: week,
-                                    trimester: _trimester,
+                                    trimester: trimesterIndex,
                                     edd: eddText,
                                     riskLevel: riskText,
                                     updatedAt: DateTime.now(),
@@ -397,23 +417,23 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
                                 if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Profile saved')),
+                                  SnackBar(content: Text(strings.profileSaved)),
                                 );
                               } on FormatException catch (e) {
                                 if (!context.mounted) return;
                                 final label = e.message;
                                 final message = label == 'Height/weight'
-                                    ? 'Height and weight must be numbers.'
+                                    ? strings.heightWeightNumberError
                                     : (label == 'Pregnancy week'
-                                        ? 'Gestational week must be a number.'
-                                        : 'EDD must be a valid date (YYYY-MM-DD).');
+                                        ? strings.weekNumberError
+                                        : strings.eddInvalidError);
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Save failed: $message')),
+                                  SnackBar(content: Text(strings.saveFailed(message))),
                                 );
                               } catch (e) {
                                 if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Save failed: $e')),
+                                  SnackBar(content: Text(strings.saveFailed('$e'))),
                                 );
                               } finally {
                                 if (mounted) {
@@ -427,7 +447,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                               width: 18,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('Save profile'),
+                          : Text(strings.saveProfile),
                     ),
                   ),
                 ],

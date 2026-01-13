@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../localization/app_strings.dart';
 import '../models/food_entry.dart';
 import '../models/food_item.dart';
 import '../providers/app_providers.dart';
 import '../services/service_providers.dart';
 import '../widgets/empty_state.dart';
-import '../widgets/require_sign_in.dart';
 import '../widgets/screen_header.dart';
 
 class LogScreen extends ConsumerWidget {
@@ -16,72 +16,69 @@ class LogScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final entries = ref.watch(entriesProvider);
+    final strings = AppStrings.of(context);
 
-    return RequireSignIn(
-      title: 'Meal log',
-      showAppBar: true,
-      message: 'Please sign in to log meals.',
-      child: Scaffold(
-        appBar: AppBar(title: const Text('Meal log')),
-        body: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const ScreenHeader(
-                title: 'Meal log',
-                subtitle: 'Log meals to keep your summary and recommendations accurate.',
-                icon: Icons.restaurant_menu,
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: entries.when(
-                  data: (items) => items.isEmpty
-                      ? EmptyState(
-                          icon: Icons.restaurant_menu_outlined,
-                          title: 'No meals logged yet',
-                          message: 'Add your first meal to start tracking nutrition.',
-                          action: FilledButton.icon(
-                            onPressed: () => _showAddOptions(context, ref),
-                            icon: const Icon(Icons.add),
-                            label: const Text('Log a meal'),
-                          ),
-                        )
-                      : ListView.separated(
-                          itemCount: items.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 8),
-                          itemBuilder: (context, index) {
-                            final entry = items[index];
-                            return Card(
-                              child: ListTile(
-                                title: Text(entry.meal),
-                                subtitle: Text(
-                                  '${entry.calories} kcal | P ${entry.protein}g | C ${entry.carbs}g | F ${entry.fat}g | ${_mealTypeLabel(entry.mealType ?? _mealTypeFromDate(entry.date))}',
-                                ),
-                                trailing: Text(
-                                  '${entry.date.month}/${entry.date.day}',
-                                  style: const TextStyle(color: Colors.grey),
-                                ),
-                              ),
-                            );
-                          },
+    return Scaffold(
+      appBar: AppBar(title: Text(strings.t('Meal log'))),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ScreenHeader(
+              title: strings.t('Meal log'),
+              subtitle: strings.t('Log meals to keep your summary and recommendations accurate.'),
+              icon: Icons.restaurant_menu,
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: entries.when(
+                data: (items) => items.isEmpty
+                    ? EmptyState(
+                        icon: Icons.restaurant_menu_outlined,
+                        title: strings.t('No meals logged yet'),
+                        message: strings.t('Add your first meal to start tracking nutrition.'),
+                        action: FilledButton.icon(
+                          onPressed: () => _showAddOptions(context, ref),
+                          icon: const Icon(Icons.add),
+                          label: Text(strings.t('Log a meal')),
                         ),
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => Center(child: Text('Error: $e')),
-                ),
+                      )
+                    : ListView.separated(
+                        itemCount: items.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (context, index) {
+                          final entry = items[index];
+                          return Card(
+                            child: ListTile(
+                              title: Text(entry.meal),
+                              subtitle: Text(
+                                '${entry.calories} kcal | P ${entry.protein}g | C ${entry.carbs}g | F ${entry.fat}g | ${_mealTypeLabel(entry.mealType ?? _mealTypeFromDate(entry.date), strings)}',
+                              ),
+                              trailing: Text(
+                                '${entry.date.month}/${entry.date.day}',
+                                style: const TextStyle(color: Colors.grey),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(child: Text('Error: $e')),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () => _showAddOptions(context, ref),
-          child: const Icon(Icons.add),
-        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddOptions(context, ref),
+        child: const Icon(Icons.add),
       ),
     );
   }
 
   Future<void> _showAddOptions(BuildContext context, WidgetRef ref) async {
+    final strings = AppStrings.of(context);
     final rootContext = context;
     await showModalBottomSheet(
       context: context,
@@ -90,7 +87,7 @@ class LogScreen extends ConsumerWidget {
           children: [
             ListTile(
               leading: const Icon(Icons.edit),
-              title: const Text('Manual entry'),
+              title: Text(strings.t('Manual entry')),
               onTap: () async {
                 await Navigator.of(sheetContext).maybePop();
                 if (!rootContext.mounted) return;
@@ -99,7 +96,7 @@ class LogScreen extends ConsumerWidget {
             ),
             ListTile(
               leading: const Icon(Icons.restaurant_menu),
-              title: const Text('Pick from Malaysian food DB'),
+              title: Text(strings.t('Pick from Malaysian food DB')),
               onTap: () async {
                 await Navigator.of(sheetContext).maybePop();
                 if (!rootContext.mounted) return;
@@ -108,7 +105,7 @@ class LogScreen extends ConsumerWidget {
             ),
             ListTile(
               leading: const Icon(Icons.camera_alt),
-              title: const Text('Scan with camera'),
+              title: Text(strings.t('Scan with camera')),
               onTap: () async {
                 await Navigator.of(sheetContext).maybePop();
                 if (!rootContext.mounted) return;
@@ -117,7 +114,7 @@ class LogScreen extends ConsumerWidget {
             ),
             ListTile(
               leading: const Icon(Icons.image),
-              title: const Text('Upload image'),
+              title: Text(strings.t('Upload image')),
               onTap: () async {
                 await Navigator.of(sheetContext).maybePop();
                 if (!rootContext.mounted) return;
@@ -131,6 +128,7 @@ class LogScreen extends ConsumerWidget {
   }
 
   Future<void> _showAddEntrySheet(BuildContext context, WidgetRef ref) async {
+    final strings = AppStrings.of(context);
     final user = ref.read(currentUserProvider);
     if (user == null) return;
     final dataStore = ref.read(dataStoreProvider);
@@ -164,12 +162,13 @@ class LogScreen extends ConsumerWidget {
                   children: [
                     TextFormField(
                       controller: mealCtrl,
-                      decoration: const InputDecoration(labelText: 'Meal name'),
-                      validator: (v) => v != null && v.isNotEmpty ? null : 'Required',
+                      decoration: InputDecoration(labelText: strings.t('Meal name')),
+                      validator: (v) =>
+                          v != null && v.isNotEmpty ? null : strings.t('Required'),
                     ),
                     DropdownButtonFormField<String>(
-                      value: mealType,
-                      items: _mealOptions
+                      initialValue: mealType,
+                      items: _mealOptions(strings)
                           .map(
                             (opt) => DropdownMenuItem(
                               value: opt.value,
@@ -181,34 +180,38 @@ class LogScreen extends ConsumerWidget {
                         if (value == null) return;
                         setState(() => mealType = value);
                       },
-                      decoration: const InputDecoration(labelText: 'Meal time'),
+                      decoration: InputDecoration(labelText: strings.t('Meal time')),
                     ),
                     TextFormField(
                       controller: quantityCtrl,
-                      decoration: const InputDecoration(labelText: 'Quantity'),
+                      decoration: InputDecoration(labelText: strings.t('Quantity')),
                       keyboardType: TextInputType.number,
                       validator: (v) =>
-                          v != null && double.tryParse(v) != null ? null : 'Number',
+                          v != null && double.tryParse(v) != null ? null : strings.t('Number'),
                     ),
                     Row(
                       children: [
                         Expanded(
                           child: TextFormField(
                             controller: caloriesCtrl,
-                            decoration: const InputDecoration(labelText: 'Calories'),
+                            decoration: InputDecoration(labelText: strings.t('Calories')),
                             keyboardType: TextInputType.number,
                             validator: (v) =>
-                                v != null && int.tryParse(v) != null ? null : 'Number',
+                                v != null && int.tryParse(v) != null
+                                    ? null
+                                    : strings.t('Number'),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: TextFormField(
                             controller: proteinCtrl,
-                            decoration: const InputDecoration(labelText: 'Protein (g)'),
+                            decoration: InputDecoration(labelText: strings.t('Protein (g)')),
                             keyboardType: TextInputType.number,
                             validator: (v) =>
-                                v != null && int.tryParse(v) != null ? null : 'Number',
+                                v != null && int.tryParse(v) != null
+                                    ? null
+                                    : strings.t('Number'),
                           ),
                         ),
                       ],
@@ -218,20 +221,24 @@ class LogScreen extends ConsumerWidget {
                         Expanded(
                           child: TextFormField(
                             controller: carbCtrl,
-                            decoration: const InputDecoration(labelText: 'Carbs (g)'),
+                            decoration: InputDecoration(labelText: strings.t('Carbs (g)')),
                             keyboardType: TextInputType.number,
                             validator: (v) =>
-                                v != null && int.tryParse(v) != null ? null : 'Number',
+                                v != null && int.tryParse(v) != null
+                                    ? null
+                                    : strings.t('Number'),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: TextFormField(
                             controller: fatCtrl,
-                            decoration: const InputDecoration(labelText: 'Fat (g)'),
+                            decoration: InputDecoration(labelText: strings.t('Fat (g)')),
                             keyboardType: TextInputType.number,
                             validator: (v) =>
-                                v != null && int.tryParse(v) != null ? null : 'Number',
+                                v != null && int.tryParse(v) != null
+                                    ? null
+                                    : strings.t('Number'),
                           ),
                         ),
                       ],
@@ -245,7 +252,7 @@ class LogScreen extends ConsumerWidget {
                           width: 140,
                           child: TextFormField(
                             controller: ironCtrl,
-                            decoration: const InputDecoration(labelText: 'Iron (mg)'),
+                            decoration: InputDecoration(labelText: strings.t('Iron (mg)')),
                             keyboardType: TextInputType.number,
                           ),
                         ),
@@ -253,7 +260,7 @@ class LogScreen extends ConsumerWidget {
                           width: 140,
                           child: TextFormField(
                             controller: folateCtrl,
-                            decoration: const InputDecoration(labelText: 'Folate (mcg)'),
+                            decoration: InputDecoration(labelText: strings.t('Folate (mcg)')),
                             keyboardType: TextInputType.number,
                           ),
                         ),
@@ -288,16 +295,16 @@ class LogScreen extends ConsumerWidget {
                             if (!context.mounted) return;
                             Navigator.of(context).maybePop();
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Meal saved.')),
+                              SnackBar(content: Text(strings.t('Meal saved.'))),
                             );
                           } catch (e) {
                             if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Save failed: $e')),
+                              SnackBar(content: Text(strings.saveFailed('$e'))),
                             );
                           }
                         },
-                        child: const Text('Save'),
+                        child: Text(strings.t('Save')),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -312,6 +319,7 @@ class LogScreen extends ConsumerWidget {
   }
 
   Future<void> _showFoodPicker(BuildContext context, WidgetRef ref) async {
+    final strings = AppStrings.of(context);
     final rootContext = context;
     final db = ref.read(foodDatabaseProvider);
     final user = ref.read(currentUserProvider);
@@ -331,9 +339,20 @@ class LogScreen extends ConsumerWidget {
                 children: [
                   TextField(
                     controller: searchCtrl,
-                    decoration: const InputDecoration(
-                      hintText: 'Search Malaysian foods',
-                      prefixIcon: Icon(Icons.search),
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      hintText: strings.t('Search Malaysian foods'),
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: searchCtrl.text.trim().isEmpty
+                          ? null
+                          : IconButton(
+                              tooltip: strings.t('Clear'),
+                              onPressed: () {
+                                searchCtrl.clear();
+                                setState(() {});
+                              },
+                              icon: const Icon(Icons.close),
+                            ),
                     ),
                     onChanged: (_) => setState(() {}),
                   ),
@@ -375,13 +394,13 @@ class LogScreen extends ConsumerWidget {
                                     }
                                     if (rootContext.mounted) {
                                       ScaffoldMessenger.of(rootContext).showSnackBar(
-                                        const SnackBar(content: Text('Meal saved.')),
+                                        SnackBar(content: Text(strings.t('Meal saved.'))),
                                       );
                                     }
                                   } catch (e) {
                                     if (rootContext.mounted) {
                                       ScaffoldMessenger.of(rootContext).showSnackBar(
-                                        SnackBar(content: Text('Save failed: $e')),
+                                        SnackBar(content: Text(strings.saveFailed('$e'))),
                                       );
                                     }
                                   }
@@ -407,6 +426,7 @@ class LogScreen extends ConsumerWidget {
     WidgetRef ref, {
     required ImageSource source,
   }) async {
+    final strings = AppStrings.of(context);
     final rootContext = context;
     final user = ref.read(currentUserProvider);
     if (user == null) return;
@@ -417,7 +437,7 @@ class LogScreen extends ConsumerWidget {
     } catch (e) {
       if (rootContext.mounted) {
         ScaffoldMessenger.of(rootContext).showSnackBar(
-          SnackBar(content: Text('Unable to access media: $e')),
+          SnackBar(content: Text(strings.unableToAccessMedia('$e'))),
         );
       }
       return;
@@ -427,7 +447,7 @@ class LogScreen extends ConsumerWidget {
     if (foods.isEmpty) {
       if (rootContext.mounted) {
         ScaffoldMessenger.of(rootContext).showSnackBar(
-          const SnackBar(content: Text('Food database is empty.')),
+          SnackBar(content: Text(strings.t('Food database is empty.'))),
         );
       }
       return;
@@ -445,13 +465,13 @@ class LogScreen extends ConsumerWidget {
       ref.invalidate(entriesProvider);
       if (rootContext.mounted) {
         ScaffoldMessenger.of(rootContext).showSnackBar(
-          const SnackBar(content: Text('Meal saved.')),
+          SnackBar(content: Text(strings.t('Meal saved.'))),
         );
       }
     } catch (e) {
       if (rootContext.mounted) {
         ScaffoldMessenger.of(rootContext).showSnackBar(
-          SnackBar(content: Text('Save failed: $e')),
+          SnackBar(content: Text(strings.saveFailed('$e'))),
         );
       }
     }
@@ -482,13 +502,14 @@ class LogScreen extends ConsumerWidget {
   }
 
   Future<String?> _selectMealType(BuildContext context) async {
+    final strings = AppStrings.of(context);
     final initial = _defaultMealType();
     return showModalBottomSheet<String>(
       context: context,
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: _mealOptions
+          children: _mealOptions(strings)
               .map(
                 (opt) => ListTile(
                   title: Text(opt.label),
@@ -504,11 +525,11 @@ class LogScreen extends ConsumerWidget {
     );
   }
 
-  String _mealTypeLabel(String? value) {
+  String _mealTypeLabel(String? value, AppStrings strings) {
     final normalized = value?.trim().toLowerCase();
-    final match = _mealOptions.firstWhere(
+    final match = _mealOptions(strings).firstWhere(
       (opt) => opt.value == normalized,
-      orElse: () => const _MealOption(value: 'meal', label: 'Meal'),
+      orElse: () => _MealOption(value: 'meal', label: strings.t('Meal')),
     );
     return match.label;
   }
@@ -536,9 +557,11 @@ class _MealOption {
   final String label;
 }
 
-const List<_MealOption> _mealOptions = [
-  _MealOption(value: 'breakfast', label: 'Breakfast'),
-  _MealOption(value: 'lunch', label: 'Lunch'),
-  _MealOption(value: 'dinner', label: 'Dinner'),
-  _MealOption(value: 'supper', label: 'Supper'),
-];
+List<_MealOption> _mealOptions(AppStrings strings) {
+  return [
+    _MealOption(value: 'breakfast', label: strings.t('Breakfast')),
+    _MealOption(value: 'lunch', label: strings.t('Lunch')),
+    _MealOption(value: 'dinner', label: strings.t('Dinner')),
+    _MealOption(value: 'supper', label: strings.t('Supper')),
+  ];
+}

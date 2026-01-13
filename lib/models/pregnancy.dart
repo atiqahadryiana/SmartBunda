@@ -19,7 +19,23 @@ class Pregnancy {
   final String riskLevel;
   final DateTime? updatedAt;
 
+  static int trimesterIndexFromWeek(int week) {
+    if (week <= 0) return 0;
+    if (week <= 12) return 1;
+    if (week <= 27) return 2;
+    return 3;
+  }
+
+  static Trimester? trimesterFromWeek(int week) {
+    if (week <= 0) return null;
+    if (week <= 12) return Trimester.first;
+    if (week <= 27) return Trimester.second;
+    return Trimester.third;
+  }
+
   Trimester get trimesterEnum {
+    final derived = trimesterFromWeek(gestationalWeek);
+    if (derived != null) return derived;
     switch (trimester) {
       case 1:
         return Trimester.first;

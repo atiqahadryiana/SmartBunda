@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../localization/app_strings.dart';
 import '../models/food_entry.dart';
 import '../models/firestore_doc.dart';
 import '../models/pregnancy.dart';
@@ -31,27 +32,29 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
     final profileAsync = ref.watch(profileProvider);
     final pregnancyAsync = ref.watch(pregnancyProvider);
     final recommendationsAsync = ref.watch(recommendationsProvider);
+    final strings = AppStrings.of(context);
     const maxDayOffset = 30.0;
 
     final dayLabel = DateFormat.MMMd().format(_selectedDate);
 
     return RequireSignIn(
-      title: 'Summary',
+      title: strings.t('Summary'),
       showAppBar: widget.showAppBar,
-      message: 'Please sign in to view your summary.',
+      message: strings.t('Please sign in to view your summary.'),
       child: Scaffold(
-        appBar: widget.showAppBar ? AppBar(title: const Text('Summary')) : null,
+        appBar:
+            widget.showAppBar ? AppBar(title: Text(strings.t('Summary'))) : null,
         body: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ScreenHeader(
-              title: 'Summary',
-              subtitle: 'Review nutrition progress and recommendations by day.',
+              title: strings.t('Summary'),
+              subtitle: strings.t('Review nutrition progress and recommendations by day.'),
               icon: Icons.dashboard_outlined,
               action: IconButton(
-                tooltip: 'Pick date',
+                tooltip: strings.t('Pick date'),
                 onPressed: () async {
                   final picked = await showDatePicker(
                     context: context,
@@ -75,13 +78,13 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            Text('Viewing: $dayLabel'),
+            Text(strings.viewingDay(dayLabel)),
             if (profileAsync.valueOrNull == null)
               Card(
                 color: const Color(0xFFFFF1F5),
                 child: ListTile(
                   leading: const Icon(Icons.person, color: Colors.pink),
-                  title: const Text('Complete your profile to tailor targets'),
+                  title: Text(strings.t('Complete your profile to tailor targets')),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
@@ -94,7 +97,7 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
               min: 0,
               max: maxDayOffset,
               divisions: maxDayOffset.toInt(),
-              label: '${_dayOffset.toInt()} days ago',
+              label: strings.daysAgo(_dayOffset.toInt()),
               value: _dayOffset,
               activeColor: Colors.pinkAccent,
               onChanged: (v) {
@@ -119,7 +122,7 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
                   final dbRecs = _recommendationsFromDocs(
                     recommendationsAsync.valueOrNull ?? const <FirestoreDoc>[],
                   );
-                  final computedRecs = _recommendations(profile, gaps);
+                  final computedRecs = _recommendations(profile, gaps, strings);
                   final recs = dbRecs.isNotEmpty ? dbRecs : computedRecs;
                   return SingleChildScrollView(
                     child: Column(
@@ -131,12 +134,12 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'Recommendations',
+                          strings.t('Recommendations'),
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         const SizedBox(height: 8),
                         if (recs.isEmpty)
-                          const Text('On track. Keep logging meals.')
+                          Text(strings.t('On track. Keep logging meals.'))
                         else
                           ...recs.map((r) => Padding(
                                 padding: const EdgeInsets.symmetric(vertical: 2),
@@ -150,12 +153,12 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
                               )),
                         const SizedBox(height: 16),
                         Text(
-                          'Entries ($dayLabel)',
+                          strings.entriesForDay(dayLabel),
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         const SizedBox(height: 8),
                         todays.isEmpty
-                            ? const Text('Nothing logged for this day.')
+                            ? Text(strings.t('Nothing logged for this day.'))
                             : Column(
                                 children: todays
                                     .map(
@@ -163,7 +166,7 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
                                         child: ListTile(
                                           title: Text(e.meal),
                                           subtitle: Text(
-                                            '${e.calories} kcal | P ${e.protein}g | C ${e.carbs}g | F ${e.fat}g | ${_mealTypeLabel(e.mealType ?? _mealTypeFromDate(e.date))}',
+                                            '${e.calories} kcal | P ${e.protein}g | C ${e.carbs}g | F ${e.fat}g | ${_mealTypeLabel(e.mealType ?? _mealTypeFromDate(e.date), strings)}',
                                           ),
                                           trailing: Text(DateFormat.Md().format(e.date)),
                                         ),
@@ -233,22 +236,30 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
     ];
   }
 
-  List<String> _recommendations(Profile? profile, List<_Gap> gaps) {
+  List<String> _recommendations(
+    Profile? profile,
+    List<_Gap> gaps,
+    AppStrings strings,
+  ) {
     final recs = <String>[];
     for (final gap in gaps) {
       if (gap.isLow) {
         switch (gap.label) {
           case 'Iron':
-            recs.add('Add spinach, legumes, and lean meat for iron support.');
+            recs.add(
+              strings.t('Add spinach, legumes, and lean meat for iron support.'),
+            );
             break;
           case 'Folate':
-            recs.add('Add leafy greens or beans to raise folate intake.');
+            recs.add(strings.t('Add leafy greens or beans to raise folate intake.'));
             break;
         }
       }
     }
     if (profile != null && profile.medicalConditions.contains(MedicalCondition.anemia)) {
-      recs.add('For anemia: pair iron sources with vitamin C to improve absorption.');
+      recs.add(
+        strings.t('For anemia: pair iron sources with vitamin C to improve absorption.'),
+      );
     }
     return recs;
   }
@@ -285,19 +296,19 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
     return 'supper';
   }
 
-  String _mealTypeLabel(String? value) {
+  String _mealTypeLabel(String? value, AppStrings strings) {
     final normalized = value?.trim().toLowerCase();
     switch (normalized) {
       case 'breakfast':
-        return 'Breakfast';
+        return strings.t('Breakfast');
       case 'lunch':
-        return 'Lunch';
+        return strings.t('Lunch');
       case 'dinner':
-        return 'Dinner';
+        return strings.t('Dinner');
       case 'supper':
-        return 'Supper';
+        return strings.t('Supper');
       default:
-        return 'Meal';
+        return strings.t('Meal');
     }
   }
 }
@@ -313,7 +324,8 @@ class _NutrientSplitCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final segments = _nutrientSegments(totals, targets);
+    final strings = AppStrings.of(context);
+    final segments = _nutrientSegments(totals, targets, strings);
     final total = segments.fold<double>(0, (sum, s) => sum + s.value);
     final empty = total <= 0;
     final titleStyle = Theme.of(context).textTheme.titleMedium;
@@ -325,7 +337,7 @@ class _NutrientSplitCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Nutrient progress mix', style: titleStyle),
+            Text(strings.t('Nutrient progress mix'), style: titleStyle),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -344,11 +356,11 @@ class _NutrientSplitCard extends StatelessWidget {
                     children: [
                       if (empty)
                         Text(
-                          'No nutrients logged yet.',
+                          strings.t('No nutrients logged yet.'),
                           style: TextStyle(color: muted),
                         )
                       else ...[
-                        Text('Progress by target', style: TextStyle(color: muted)),
+                        Text(strings.t('Progress by target'), style: TextStyle(color: muted)),
                         const SizedBox(height: 6),
                         ...segments.map(
                           (segment) => _MacroLegendItem(
@@ -375,10 +387,11 @@ class _NutrientSplitCard extends StatelessWidget {
   List<_MacroSegment> _nutrientSegments(
     _EntryTotals totals,
     _EntryTotals targets,
+    AppStrings strings,
   ) {
     return [
       _MacroSegment(
-        label: 'Calories',
+        label: strings.t('Calories'),
         value: 0,
         intake: totals.calories.toDouble(),
         target: targets.calories.toDouble(),
@@ -386,7 +399,7 @@ class _NutrientSplitCard extends StatelessWidget {
         color: Colors.pink.shade300,
       ),
       _MacroSegment(
-        label: 'Protein',
+        label: strings.t('Protein'),
         value: 0,
         intake: totals.protein.toDouble(),
         target: targets.protein.toDouble(),
@@ -394,7 +407,7 @@ class _NutrientSplitCard extends StatelessWidget {
         color: Colors.pinkAccent,
       ),
       _MacroSegment(
-        label: 'Carbs',
+        label: strings.t('Carbs'),
         value: 0,
         intake: totals.carbs.toDouble(),
         target: targets.carbs.toDouble(),
@@ -402,7 +415,7 @@ class _NutrientSplitCard extends StatelessWidget {
         color: Colors.pinkAccent.withValues(alpha: 160),
       ),
       _MacroSegment(
-        label: 'Fat',
+        label: strings.t('Fat'),
         value: 0,
         intake: totals.fat.toDouble(),
         target: targets.fat.toDouble(),
@@ -410,7 +423,7 @@ class _NutrientSplitCard extends StatelessWidget {
         color: Colors.purpleAccent,
       ),
       _MacroSegment(
-        label: 'Iron',
+        label: strings.t('Iron'),
         value: 0,
         intake: totals.ironMg,
         target: targets.ironMg,
@@ -418,7 +431,7 @@ class _NutrientSplitCard extends StatelessWidget {
         color: Colors.deepPurpleAccent,
       ),
       _MacroSegment(
-        label: 'Folate',
+        label: strings.t('Folate'),
         value: 0,
         intake: totals.folateMcg,
         target: targets.folateMcg,
@@ -495,6 +508,7 @@ class _MacroPieChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     final total = segments.fold<double>(0, (sum, s) => sum + s.value);
     final muted = Theme.of(context).colorScheme.onSurface.withValues(alpha: 120);
     final average = segments.isEmpty ? 0 : (total / segments.length * 100);
@@ -515,7 +529,7 @@ class _MacroPieChart extends StatelessWidget {
               empty ? '0%' : '${average.toStringAsFixed(0)}%',
               style: Theme.of(context).textTheme.titleLarge,
             ),
-            Text('avg', style: TextStyle(color: muted)),
+            Text(strings.t('avg'), style: TextStyle(color: muted)),
           ],
         ),
       ],

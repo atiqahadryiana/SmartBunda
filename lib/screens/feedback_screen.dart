@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../localization/app_strings.dart';
 import '../models/app_user.dart';
 import '../models/feedback_entry.dart';
 import '../providers/app_providers.dart';
@@ -30,6 +31,7 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
 
   Future<void> _submitFeedback(AppUser user) async {
     if (!_formKey.currentState!.validate()) return;
+    final strings = AppStrings.of(context);
     setState(() => _sending = true);
     final entry = FeedbackEntry(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
@@ -48,7 +50,7 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
     });
     FocusScope.of(context).unfocus();
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Feedback sent')),
+      SnackBar(content: Text(strings.t('Feedback sent'))),
     );
   }
 
@@ -61,18 +63,20 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
+    final strings = AppStrings.of(context);
     final child = user == null
         ? const SizedBox.shrink()
         : _feedbackView(context, user);
     return RequireSignIn(
-      title: 'Feedback',
+      title: strings.t('Feedback'),
       showAppBar: true,
-      message: 'Please sign in to send feedback.',
+      message: strings.t('Please sign in to send feedback.'),
       child: child,
     );
   }
 
   Widget _feedbackView(BuildContext context, AppUser user) {
+    final strings = AppStrings.of(context);
     final isMonitor = user.role == UserRole.admin ||
         user.role == UserRole.doctor ||
         user.role == UserRole.nurse ||
@@ -81,7 +85,7 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
         ref.watch(isMonitor ? allFeedbackProvider : feedbackProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(isMonitor ? 'Feedback monitor' : 'Feedback')),
+      appBar: AppBar(title: Text(isMonitor ? strings.t('Feedback monitor') : strings.t('Feedback'))),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: feedbackAsync.when(
@@ -91,10 +95,10 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
             return ListView(
               children: [
                 ScreenHeader(
-                  title: isMonitor ? 'Feedback monitor' : 'Feedback',
+                  title: isMonitor ? strings.t('Feedback monitor') : strings.t('Feedback'),
                   subtitle: isMonitor
-                      ? 'Review comments and ratings from users.'
-                      : 'Share how the app is working for you.',
+                      ? strings.t('Review comments and ratings from users.')
+                      : strings.t('Share how the app is working for you.'),
                   icon: Icons.feedback_outlined,
                 ),
                 const SizedBox(height: 16),
@@ -104,19 +108,19 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Share your feedback',
+                        strings.t('Share your feedback'),
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: _messageCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Message',
+                        decoration: InputDecoration(
+                          labelText: strings.t('Message'),
                           alignLabelWithHint: true,
                         ),
                         maxLines: 4,
                         validator: (v) =>
-                            v != null && v.trim().isNotEmpty ? null : 'Required',
+                            v != null && v.trim().isNotEmpty ? null : strings.t('Required'),
                       ),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<int>(
@@ -131,7 +135,7 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
                         onChanged: (value) {
                           if (value != null) setState(() => _rating = value);
                         },
-                        decoration: const InputDecoration(labelText: 'Rating'),
+                        decoration: InputDecoration(labelText: strings.t('Rating')),
                       ),
                       const SizedBox(height: 12),
                       SizedBox(
@@ -144,7 +148,7 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
                                   width: 18,
                                   child: CircularProgressIndicator(strokeWidth: 2),
                                 )
-                              : const Text('Send feedback'),
+                              : Text(strings.t('Send feedback')),
                         ),
                       ),
                     ],
@@ -152,15 +156,15 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  isMonitor ? 'All feedback' : 'Your feedback',
+                  isMonitor ? strings.t('All feedback') : strings.t('Your feedback'),
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 8),
                 if (sorted.isEmpty)
-                  const EmptyState(
+                  EmptyState(
                     icon: Icons.feedback_outlined,
-                    title: 'No feedback yet',
-                    message: 'Feedback will show up here once it is submitted.',
+                    title: strings.t('No feedback yet'),
+                    message: strings.t('Feedback will show up here once it is submitted.'),
                   )
                 else
                   ListView.separated(
@@ -177,9 +181,9 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               if (entry.rating != null)
-                                Text('Rating: ${entry.rating}/5'),
+                                Text(strings.ratingValue(entry.rating!)),
                               if (isMonitor)
-                                Text('From: ${entry.userName}'),
+                                Text(strings.fromUser(entry.userName)),
                               Text(_formatTimestamp(entry.createdAt)),
                             ],
                           ),

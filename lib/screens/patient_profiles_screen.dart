@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../localization/app_strings.dart';
 import '../models/app_user.dart';
 import '../models/food_entry.dart';
 import '../models/pregnancy.dart';
@@ -19,17 +20,20 @@ class PatientProfilesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final strings = AppStrings.of(context);
     final usersAsync = ref.watch(usersProvider);
     final profilesAsync = ref.watch(allProfilesProvider);
     final pregnanciesAsync = ref.watch(allPregnanciesProvider);
     final entriesAsync = ref.watch(allEntriesProvider);
 
     return RequireSignIn(
-      title: 'Patient profiles',
+      title: strings.t('Patient profiles'),
       showAppBar: showAppBar,
-      message: 'Please sign in to view patient profiles.',
+      message: strings.t('Please sign in to view patient profiles.'),
       child: Scaffold(
-        appBar: showAppBar ? AppBar(title: const Text('Patient profiles')) : null,
+        appBar: showAppBar
+            ? AppBar(title: Text(strings.t('Patient profiles')))
+            : null,
         body: usersAsync.when(
           data: (users) {
             final profiles = profilesAsync.valueOrNull;
@@ -40,18 +44,18 @@ class PatientProfilesScreen extends ConsumerWidget {
             }
             final patients = users.where((u) => u.role == UserRole.patient).toList();
             if (patients.isEmpty) {
-              return const EmptyState(
+              return EmptyState(
                 icon: Icons.people_outline,
-                title: 'No patients yet',
-                message: 'Patients will appear here after registration.',
+                title: strings.t('No patients yet'),
+                message: strings.t('Patients will appear here after registration.'),
               );
             }
             return ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                const ScreenHeader(
-                  title: 'Patient profiles',
-                  subtitle: 'Open a patient to review their profile and logs.',
+                ScreenHeader(
+                  title: strings.t('Patient profiles'),
+                  subtitle: strings.t('Open a patient to review their profile and logs.'),
                   icon: Icons.people_outline,
                 ),
                 const SizedBox(height: 16),
@@ -62,8 +66,8 @@ class PatientProfilesScreen extends ConsumerWidget {
                     child: ListTile(
                       leading: _avatar(profile, patient),
                       title: Text(patient.displayName ?? patient.email),
-                      subtitle: Text(_profileSummary(profile, pregnancies[patient.id])),
-                      trailing: Text('${patientEntries.length} logs'),
+                      subtitle: Text(_profileSummary(profile, pregnancies[patient.id], strings)),
+                      trailing: Text(strings.logsCount(patientEntries.length)),
                       onTap: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
@@ -89,16 +93,19 @@ class PatientProfilesScreen extends ConsumerWidget {
     );
   }
 
-  String _profileSummary(Profile? profile, Pregnancy? pregnancy) {
+  String _profileSummary(Profile? profile, Pregnancy? pregnancy, AppStrings strings) {
     final parts = <String>[];
     if (profile == null) {
-      parts.add('Profile missing');
+      parts.add(strings.t('Profile missing'));
     }
     if (pregnancy == null) {
-      parts.add('Pregnancy not set');
+      parts.add(strings.t('Pregnancy not set'));
     } else {
       parts.add(
-        '${_trimesterLabel(pregnancy.trimesterEnum)} trimester - Week ${pregnancy.gestationalWeek}',
+        strings.pregnancySummary(
+          pregnancy.trimesterEnum,
+          pregnancy.gestationalWeek,
+        ),
       );
     }
     return parts.join(' | ');
@@ -115,14 +122,4 @@ class PatientProfilesScreen extends ConsumerWidget {
     );
   }
 
-  String _trimesterLabel(Trimester trimester) {
-    switch (trimester) {
-      case Trimester.first:
-        return 'First';
-      case Trimester.second:
-        return 'Second';
-      case Trimester.third:
-        return 'Third';
-    }
-  }
 }

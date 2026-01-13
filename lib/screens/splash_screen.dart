@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../localization/app_strings.dart';
 import '../services/service_providers.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
@@ -30,6 +31,7 @@ class SplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     final scheme = Theme.of(context).colorScheme;
     final accent = scheme.primary;
     final accentAlt = scheme.secondary;
@@ -94,7 +96,7 @@ class SplashScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Pregnancy nutrition, simplified.',
+                    strings.t('Pregnancy nutrition, simplified.'),
                     style: GoogleFonts.poppins(
                       textStyle: TextStyle(
                         fontSize: 14,

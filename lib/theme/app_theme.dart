@@ -28,7 +28,7 @@ class AppTheme {
     secondary: secondaryPink,
     tertiary: tertiaryPeach,
     surface: surfaceBase,
-    surfaceVariant: const Color(0xFFFFE4EE),
+    surfaceContainerHighest: const Color(0xFFFFE4EE),
     outlineVariant: const Color(0xFFF5C5D7),
   );
 

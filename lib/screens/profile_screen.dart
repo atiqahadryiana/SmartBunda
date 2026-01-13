@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../localization/app_strings.dart';
 import '../models/app_user.dart';
 import '../models/pregnancy.dart';
 import '../models/profile.dart';
 import '../providers/app_providers.dart';
+import '../providers/locale_provider.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/require_sign_in.dart';
 import '../widgets/screen_header.dart';
@@ -18,18 +20,19 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
+    final strings = AppStrings.of(context);
     final child = user == null
         ? const SizedBox.shrink()
         : user.role != UserRole.patient
             ? Scaffold(
-                appBar: showAppBar ? AppBar(title: const Text('Account')) : null,
+                appBar: showAppBar ? AppBar(title: Text(strings.accountTitle)) : null,
                 body: Padding(
                   padding: const EdgeInsets.all(16),
                   child: ListView(
                     children: [
-                      const ScreenHeader(
-                        title: 'Account',
-                        subtitle: 'Review your account details and role.',
+                      ScreenHeader(
+                        title: strings.accountTitle,
+                        subtitle: strings.accountReviewSubtitle,
                         icon: Icons.person_outline,
                       ),
                       const SizedBox(height: 16),
@@ -38,9 +41,11 @@ class ProfileScreen extends ConsumerWidget {
                           leading: const Icon(Icons.person_outline),
                           title: Text(user.displayName ?? user.email),
                           subtitle: Text(user.email),
-                          trailing: Text(user.role.label),
+                          trailing: Text(strings.roleLabel(user.role)),
                         ),
                       ),
+                      const SizedBox(height: 12),
+                      const _LanguageCard(),
                     ],
                   ),
                 ),
@@ -48,9 +53,9 @@ class ProfileScreen extends ConsumerWidget {
             : _profileView(context, ref);
 
     return RequireSignIn(
-      title: 'Profile',
+      title: strings.profileTitle,
       showAppBar: showAppBar,
-      message: 'Please sign in to view your profile.',
+      message: strings.signInToViewProfile,
       child: child,
     );
   }
@@ -58,8 +63,9 @@ class ProfileScreen extends ConsumerWidget {
   Widget _profileView(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(profileProvider);
     final pregnancyAsync = ref.watch(pregnancyProvider);
+    final strings = AppStrings.of(context);
     return Scaffold(
-      appBar: showAppBar ? AppBar(title: const Text('Profile')) : null,
+      appBar: showAppBar ? AppBar(title: Text(strings.profileTitle)) : null,
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: profileAsync.when(
@@ -68,28 +74,30 @@ class ProfileScreen extends ConsumerWidget {
             return ListView(
               children: [
                 ScreenHeader(
-                  title: 'Profile',
-                  subtitle: 'Review your outcomes and update details when needed.',
+                  title: strings.profileTitle,
+                  subtitle: strings.profileSubtitle,
                   icon: Icons.person_outline,
                   action: FilledButton.icon(
                     onPressed: () => _openEdit(context),
                     icon: const Icon(Icons.edit_outlined),
-                    label: const Text('Edit'),
+                    label: Text(strings.edit),
                   ),
                 ),
                 const SizedBox(height: 16),
-                if (profile == null)
+                if (profile == null) ...[
                   EmptyState(
                     icon: Icons.person_outline,
-                    title: 'No profile yet',
-                    message: 'Complete your profile to unlock personalized targets.',
+                    title: strings.noProfileYet,
+                    message: strings.noProfileMessage,
                     action: FilledButton.icon(
                       onPressed: () => _openEdit(context),
                       icon: const Icon(Icons.edit_outlined),
-                      label: const Text('Edit profile'),
+                      label: Text(strings.editProfile),
                     ),
-                  )
-                else ...[
+                  ),
+                  const SizedBox(height: 12),
+                  const _LanguageCard(),
+                ] else ...[
                   _OutcomesCard(profile: profile, pregnancy: pregnancy),
                   const SizedBox(height: 12),
                   _DetailsCard(profile: profile),
@@ -100,6 +108,8 @@ class ProfileScreen extends ConsumerWidget {
                     pregnancy: pregnancy,
                     isLoading: pregnancyAsync.isLoading,
                   ),
+                  const SizedBox(height: 12),
+                  const _LanguageCard(),
                 ],
               ],
             );
@@ -128,8 +138,10 @@ class _OutcomesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     final bmi = _bmi(profile);
-    final trimester = pregnancy == null ? '--' : _trimesterLabel(pregnancy!.trimesterEnum);
+    final trimester =
+        pregnancy == null ? '--' : strings.trimesterLabel(pregnancy!.trimesterEnum);
     final week = pregnancy == null ? '--' : pregnancy!.gestationalWeek.toString();
     return Card(
       child: Padding(
@@ -137,15 +149,15 @@ class _OutcomesCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Outcomes', style: Theme.of(context).textTheme.titleMedium),
+            Text(strings.outcomes, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Row(
               children: [
-                Expanded(child: _OutcomeTile(label: 'BMI', value: bmi ?? '--')),
+                Expanded(child: _OutcomeTile(label: strings.bmiLabel, value: bmi ?? '--')),
                 const SizedBox(width: 8),
-                Expanded(child: _OutcomeTile(label: 'Trimester', value: trimester)),
+                Expanded(child: _OutcomeTile(label: strings.trimester, value: trimester)),
                 const SizedBox(width: 8),
-                Expanded(child: _OutcomeTile(label: 'Week', value: week)),
+                Expanded(child: _OutcomeTile(label: strings.week, value: week)),
               ],
             ),
           ],
@@ -188,25 +200,26 @@ class _DetailsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Details', style: Theme.of(context).textTheme.titleMedium),
+            Text(strings.details, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
-            _InfoRow(label: 'Date of birth', value: _label(profile.dob)),
+            _InfoRow(label: strings.dateOfBirth, value: _label(profile.dob)),
             _InfoRow(
-              label: 'Height',
+              label: strings.height,
               value: '${profile.heightCm.toStringAsFixed(1)} cm',
             ),
             _InfoRow(
-              label: 'Weight',
+              label: strings.weight,
               value: '${profile.currentWeightKg.toStringAsFixed(1)} kg',
             ),
             _InfoRow(
-              label: 'Blood type',
+              label: strings.bloodType,
               value: _label(profile.bloodType),
             ),
           ],
@@ -223,14 +236,15 @@ class _MedicalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final conditions = _conditions(profile);
+    final strings = AppStrings.of(context);
+    final conditions = _conditions(profile, strings);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Medical conditions', style: Theme.of(context).textTheme.titleMedium),
+            Text(strings.medicalConditions, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Text(conditions),
           ],
@@ -239,19 +253,19 @@ class _MedicalCard extends StatelessWidget {
     );
   }
 
-  String _conditions(Profile profile) {
+  String _conditions(Profile profile, AppStrings strings) {
     final labels = <String>[];
     for (final condition in profile.medicalConditions) {
       switch (condition) {
         case MedicalCondition.anemia:
-          labels.add('Anemia');
+          labels.add(strings.anemiaLabel);
           break;
         case MedicalCondition.gestationalDiabetes:
-          labels.add('Gestational diabetes');
+          labels.add(strings.gdmLabel);
           break;
       }
     }
-    return labels.isEmpty ? 'None reported' : labels.join(', ');
+    return labels.isEmpty ? strings.noneReported : labels.join(', ');
   }
 }
 
@@ -263,6 +277,7 @@ class _PregnancyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     if (isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -272,22 +287,57 @@ class _PregnancyCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Pregnancy', style: Theme.of(context).textTheme.titleMedium),
+            Text(strings.pregnancy, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             if (pregnancy == null)
-              const Text('Pregnancy details not set yet.')
+              Text(strings.pregnancyNotSet)
             else ...[
               _InfoRow(
-                label: 'Gestational week',
+                label: strings.gestationalWeek,
                 value: pregnancy!.gestationalWeek.toString(),
               ),
               _InfoRow(
-                label: 'Trimester',
-                value: _trimesterLabel(pregnancy!.trimesterEnum),
+                label: strings.trimester,
+                value: strings.trimesterLabel(pregnancy!.trimesterEnum),
               ),
-              _InfoRow(label: 'EDD', value: _label(pregnancy!.edd)),
-              _InfoRow(label: 'Risk level', value: _label(pregnancy!.riskLevel)),
+              _InfoRow(label: strings.edd, value: _label(pregnancy!.edd)),
+              _InfoRow(label: strings.riskLevel, value: _label(pregnancy!.riskLevel)),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LanguageCard extends ConsumerWidget {
+  const _LanguageCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final strings = AppStrings.of(context);
+    final locale = ref.watch(appLocaleProvider);
+    final code = locale.languageCode == 'ms' ? 'ms' : 'en';
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(strings.languageTitle, style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: code,
+              decoration: InputDecoration(labelText: strings.languageLabel),
+              items: [
+                DropdownMenuItem(value: 'en', child: Text(strings.englishLabel)),
+                DropdownMenuItem(value: 'ms', child: Text(strings.malayLabel)),
+              ],
+              onChanged: (value) {
+                if (value == null) return;
+                ref.read(appLocaleProvider.notifier).setLocale(Locale(value));
+              },
+            ),
           ],
         ),
       ),
@@ -328,15 +378,4 @@ class _InfoRow extends StatelessWidget {
 String _label(String? value) {
   final trimmed = value?.trim();
   return trimmed == null || trimmed.isEmpty ? '--' : trimmed;
-}
-
-String _trimesterLabel(Trimester trimester) {
-  switch (trimester) {
-    case Trimester.first:
-      return 'First';
-    case Trimester.second:
-      return 'Second';
-    case Trimester.third:
-      return 'Third';
-  }
 }

@@ -57,6 +57,7 @@ class FoodItem {
       json['calories_per_serving'],
       json['calories'],
       nutrients['calories'],
+      json['nutrients.calories'],
     ]);
     return FoodItem(
       id: json['id'] as String,
@@ -67,6 +68,8 @@ class FoodItem {
         _firstNonNull([
           nutrients['protein_g'],
           nutrients['protein'],
+          json['nutrients.protein_g'],
+          json['nutrients.protein'],
           json['proteinG'],
           json['protein_g'],
           json['protein'],
@@ -77,6 +80,9 @@ class FoodItem {
           nutrients['carb_g'],
           nutrients['carbs'],
           nutrients['carb'],
+          json['nutrients.carb_g'],
+          json['nutrients.carbs'],
+          json['nutrients.carb'],
           json['carbG'],
           json['carb_g'],
           json['carbs'],
@@ -87,6 +93,8 @@ class FoodItem {
         _firstNonNull([
           nutrients['fat_g'],
           nutrients['fat'],
+          json['nutrients.fat_g'],
+          json['nutrients.fat'],
           json['fatG'],
           json['fat_g'],
           json['fat'],
@@ -96,6 +104,8 @@ class FoodItem {
         _firstNonNull([
           nutrients['iron_mg'],
           nutrients['iron'],
+          json['nutrients.iron_mg'],
+          json['nutrients.iron'],
           json['ironMg'],
           json['iron_mg'],
           json['iron'],
@@ -105,6 +115,8 @@ class FoodItem {
         _firstNonNull([
           nutrients['folate_mcg'],
           nutrients['folate'],
+          json['nutrients.folate_mcg'],
+          json['nutrients.folate'],
           json['folateMcg'],
           json['folate_mcg'],
           json['folate'],

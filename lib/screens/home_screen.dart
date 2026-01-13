@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../localization/app_strings.dart';
 import '../models/app_user.dart';
 import '../providers/app_providers.dart';
 import '../services/service_providers.dart';
@@ -38,8 +39,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (resolvedUser == null) {
       return const LoginScreen();
     }
+    final strings = AppStrings.of(context);
     final role = resolvedUser.role;
-    final navItems = _navItemsForUser(resolvedUser);
+    final navItems = _navItemsForUser(resolvedUser, strings);
     final pages = navItems.map((item) => item.page).toList();
     final tabs = navItems.map((item) => item.destination).toList();
     final safeIndex = _index.clamp(0, pages.length - 1);
@@ -47,8 +49,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_titleForRole(role, name)),
-        actions: _actionsForRole(context, role),
+        title: Text(_titleForRole(role, name, strings)),
+        actions: _actionsForRole(context, role, strings),
       ),
       body: LazyIndexedStack(index: safeIndex, children: pages),
       bottomNavigationBar: NavigationBar(
@@ -61,16 +63,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  String _titleForRole(UserRole role, String name) {
-    if (role == UserRole.patient) return 'Hi, $name';
-    return '${role.label}: $name';
+  String _titleForRole(UserRole role, String name, AppStrings strings) {
+    if (role == UserRole.patient) return strings.hi(name);
+    return '${strings.roleLabel(role)}: $name';
   }
 
-  List<Widget> _actionsForRole(BuildContext context, UserRole role) {
+  List<Widget> _actionsForRole(
+    BuildContext context,
+    UserRole role,
+    AppStrings strings,
+  ) {
     final actions = <Widget>[
       IconButton(
-        tooltip: 'Logout',
-        onPressed: () => _confirmLogout(context),
+        tooltip: strings.logoutTooltip,
+        onPressed: () => _confirmLogout(context, strings),
         icon: const Icon(Icons.logout),
       ),
     ];
@@ -78,7 +84,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       actions.insert(
         0,
         IconButton(
-          tooltip: 'Education',
+          tooltip: strings.educationTooltip,
           onPressed: () => Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const EducationScreen()),
           ),
@@ -89,20 +95,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return actions;
   }
 
-  Future<void> _confirmLogout(BuildContext context) async {
+  Future<void> _confirmLogout(BuildContext context, AppStrings strings) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Log out?'),
-        content: const Text('Are you sure you want to log out?'),
+        title: Text(strings.logoutTitle),
+        content: Text(strings.logoutMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).maybePop(false),
-            child: const Text('No'),
+            child: Text(strings.no),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).maybePop(true),
-            child: const Text('Yes, log out'),
+            child: Text(strings.yesLogOut),
           ),
         ],
       ),
@@ -114,49 +120,49 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         .pushNamedAndRemoveUntil(LoginScreen.routeName, (route) => false);
   }
 
-  List<_NavItem> _navItemsForUser(AppUser user) {
+  List<_NavItem> _navItemsForUser(AppUser user, AppStrings strings) {
     final permissions = user.effectivePermissions;
     final items = <_NavItem>[];
     switch (user.role) {
       case UserRole.patient:
         items.addAll([
-          const _NavItem(
-            page: SummaryScreen(),
+          _NavItem(
+            page: const SummaryScreen(),
             destination: NavigationDestination(
-              icon: Icon(Icons.dashboard_outlined),
-              label: 'Overview',
+              icon: const Icon(Icons.dashboard_outlined),
+              label: strings.navOverview,
             ),
             permission: AccessPermission.reporting,
           ),
-          const _NavItem(
-            page: FoodLoggingHubScreen(),
+          _NavItem(
+            page: const FoodLoggingHubScreen(),
             destination: NavigationDestination(
-              icon: Icon(Icons.restaurant_menu),
-              label: 'Log',
+              icon: const Icon(Icons.restaurant_menu),
+              label: strings.navLog,
             ),
             permission: AccessPermission.foodLogging,
           ),
           _NavItem(
             page: AppointmentsScreen(role: UserRole.patient),
             destination: NavigationDestination(
-              icon: Icon(Icons.event_available),
-              label: 'Appointments',
+              icon: const Icon(Icons.event_available),
+              label: strings.navAppointments,
             ),
             permission: AccessPermission.appointments,
           ),
-          const _NavItem(
-            page: ReportsScreen(role: UserRole.patient),
+          _NavItem(
+            page: const ReportsScreen(role: UserRole.patient),
             destination: NavigationDestination(
-              icon: Icon(Icons.assessment_outlined),
-              label: 'Reports',
+              icon: const Icon(Icons.assessment_outlined),
+              label: strings.navReports,
             ),
             permission: AccessPermission.reporting,
           ),
-          const _NavItem(
-            page: ProfileScreen(),
+          _NavItem(
+            page: const ProfileScreen(),
             destination: NavigationDestination(
-              icon: Icon(Icons.person),
-              label: 'Profile',
+              icon: const Icon(Icons.person),
+              label: strings.navProfile,
             ),
             permission: AccessPermission.patientProfiles,
           ),
@@ -164,19 +170,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         break;
       case UserRole.doctor:
         items.addAll([
-          const _NavItem(
-            page: PatientProfilesScreen(showAppBar: false),
+          _NavItem(
+            page: const PatientProfilesScreen(showAppBar: false),
             destination: NavigationDestination(
-              icon: Icon(Icons.people_outline),
-              label: 'Patients',
+              icon: const Icon(Icons.people_outline),
+              label: strings.navPatients,
             ),
             permission: AccessPermission.patientProfiles,
           ),
-          const _NavItem(
-            page: NutritionistScreen(role: UserRole.doctor),
+          _NavItem(
+            page: const NutritionistScreen(role: UserRole.doctor),
             destination: NavigationDestination(
-              icon: Icon(Icons.analytics_outlined),
-              label: 'Analysis',
+              icon: const Icon(Icons.analytics_outlined),
+              label: strings.navAnalysis,
             ),
             permission: AccessPermission.nutritionAnalysis,
           ),
@@ -185,25 +191,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               role: UserRole.doctor,
               showAppBar: false,
             ),
-            destination: const NavigationDestination(
-              icon: Icon(Icons.playlist_add_check),
-              label: 'Plans',
+            destination: NavigationDestination(
+              icon: const Icon(Icons.playlist_add_check),
+              label: strings.navPlans,
             ),
             permission: AccessPermission.nutritionPlans,
           ),
           _NavItem(
             page: AppointmentsScreen(role: UserRole.doctor),
-            destination: const NavigationDestination(
-              icon: Icon(Icons.event_available),
-              label: 'Appointments',
+            destination: NavigationDestination(
+              icon: const Icon(Icons.event_available),
+              label: strings.navAppointments,
             ),
             permission: AccessPermission.appointments,
           ),
-          const _NavItem(
-            page: ReportsScreen(role: UserRole.doctor),
+          _NavItem(
+            page: const ReportsScreen(role: UserRole.doctor),
             destination: NavigationDestination(
-              icon: Icon(Icons.assessment_outlined),
-              label: 'Reports',
+              icon: const Icon(Icons.assessment_outlined),
+              label: strings.navReports,
             ),
             permission: AccessPermission.reporting,
           ),
@@ -211,19 +217,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         break;
       case UserRole.dietitian:
         items.addAll([
-          const _NavItem(
-            page: PatientProfilesScreen(showAppBar: false),
+          _NavItem(
+            page: const PatientProfilesScreen(showAppBar: false),
             destination: NavigationDestination(
-              icon: Icon(Icons.people_outline),
-              label: 'Patients',
+              icon: const Icon(Icons.people_outline),
+              label: strings.navPatients,
             ),
             permission: AccessPermission.patientProfiles,
           ),
-          const _NavItem(
-            page: NutritionistScreen(role: UserRole.dietitian),
+          _NavItem(
+            page: const NutritionistScreen(role: UserRole.dietitian),
             destination: NavigationDestination(
-              icon: Icon(Icons.analytics_outlined),
-              label: 'Analysis',
+              icon: const Icon(Icons.analytics_outlined),
+              label: strings.navAnalysis,
             ),
             permission: AccessPermission.nutritionAnalysis,
           ),
@@ -232,25 +238,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               role: UserRole.dietitian,
               showAppBar: false,
             ),
-            destination: const NavigationDestination(
-              icon: Icon(Icons.playlist_add_check),
-              label: 'Plans',
+            destination: NavigationDestination(
+              icon: const Icon(Icons.playlist_add_check),
+              label: strings.navPlans,
             ),
             permission: AccessPermission.nutritionPlans,
           ),
           _NavItem(
             page: AppointmentsScreen(role: UserRole.dietitian),
-            destination: const NavigationDestination(
-              icon: Icon(Icons.event_available),
-              label: 'Appointments',
+            destination: NavigationDestination(
+              icon: const Icon(Icons.event_available),
+              label: strings.navAppointments,
             ),
             permission: AccessPermission.appointments,
           ),
-          const _NavItem(
-            page: ReportsScreen(role: UserRole.dietitian),
+          _NavItem(
+            page: const ReportsScreen(role: UserRole.dietitian),
             destination: NavigationDestination(
-              icon: Icon(Icons.assessment_outlined),
-              label: 'Reports',
+              icon: const Icon(Icons.assessment_outlined),
+              label: strings.navReports,
             ),
             permission: AccessPermission.reporting,
           ),
@@ -258,42 +264,42 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         break;
       case UserRole.nurse:
         items.addAll([
-          const _NavItem(
-            page: NurseOverviewScreen(),
+          _NavItem(
+            page: const NurseOverviewScreen(),
             destination: NavigationDestination(
-              icon: Icon(Icons.dashboard_outlined),
-              label: 'Overview',
+              icon: const Icon(Icons.dashboard_outlined),
+              label: strings.navOverview,
             ),
           ),
-          const _NavItem(
-            page: PatientProfilesScreen(showAppBar: false),
+          _NavItem(
+            page: const PatientProfilesScreen(showAppBar: false),
             destination: NavigationDestination(
-              icon: Icon(Icons.people_outline),
-              label: 'Patients',
+              icon: const Icon(Icons.people_outline),
+              label: strings.navPatients,
             ),
             permission: AccessPermission.patientProfiles,
           ),
           _NavItem(
             page: AppointmentsScreen(role: UserRole.nurse),
             destination: NavigationDestination(
-              icon: Icon(Icons.event_available),
-              label: 'Appointments',
+              icon: const Icon(Icons.event_available),
+              label: strings.navAppointments,
             ),
             permission: AccessPermission.appointments,
           ),
-          const _NavItem(
-            page: NurseMonitoringScreen(),
+          _NavItem(
+            page: const NurseMonitoringScreen(),
             destination: NavigationDestination(
-              icon: Icon(Icons.monitor_heart_outlined),
-              label: 'Monitoring',
+              icon: const Icon(Icons.monitor_heart_outlined),
+              label: strings.navMonitoring,
             ),
             permission: AccessPermission.monitoringAlerts,
           ),
-          const _NavItem(
-            page: ReportsScreen(role: UserRole.nurse),
+          _NavItem(
+            page: const ReportsScreen(role: UserRole.nurse),
             destination: NavigationDestination(
-              icon: Icon(Icons.analytics_outlined),
-              label: 'Reports',
+              icon: const Icon(Icons.analytics_outlined),
+              label: strings.navReports,
             ),
             permission: AccessPermission.reporting,
           ),
@@ -301,23 +307,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         break;
       case UserRole.admin:
         items.addAll([
-          const _NavItem(
-            page: AdminOverviewScreen(),
+          _NavItem(
+            page: const AdminOverviewScreen(),
             destination: NavigationDestination(
-              icon: Icon(Icons.dashboard_outlined),
-              label: 'Overview',
+              icon: const Icon(Icons.dashboard_outlined),
+              label: strings.navOverview,
             ),
           ),
-          const _NavItem(
-            page: AdminScreen(),
+          _NavItem(
+            page: const AdminScreen(),
             destination: NavigationDestination(
-              icon: Icon(Icons.admin_panel_settings),
-              label: 'Admin',
+              icon: const Icon(Icons.admin_panel_settings),
+              label: strings.navAdmin,
             ),
             permission: AccessPermission.userManagement,
           ),
-          const _NavItem(
-            page: SystemAdminScreen(
+          _NavItem(
+            page: const SystemAdminScreen(
               showSettings: false,
               showData: true,
               showHealth: true,
@@ -325,16 +331,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               subtitle: 'Backups, content, and system health.',
             ),
             destination: NavigationDestination(
-              icon: Icon(Icons.storage_outlined),
-              label: 'Data',
+              icon: const Icon(Icons.storage_outlined),
+              label: strings.navData,
             ),
             permission: AccessPermission.systemAdministration,
           ),
-          const _NavItem(
-            page: ReportsScreen(role: UserRole.admin),
+          _NavItem(
+            page: const ReportsScreen(role: UserRole.admin),
             destination: NavigationDestination(
-              icon: Icon(Icons.assessment_outlined),
-              label: 'Report',
+              icon: const Icon(Icons.assessment_outlined),
+              label: strings.navReport,
             ),
             permission: AccessPermission.reporting,
           ),
@@ -350,9 +356,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       return [
         _NavItem(
           page: RoleModulesScreen(role: user.role),
-          destination: const NavigationDestination(
-            icon: Icon(Icons.grid_view_outlined),
-            label: 'Modules',
+          destination: NavigationDestination(
+            icon: const Icon(Icons.grid_view_outlined),
+            label: strings.navModules,
           ),
         ),
       ];

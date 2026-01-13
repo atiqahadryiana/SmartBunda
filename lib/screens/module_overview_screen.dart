@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../localization/app_strings.dart';
 import '../widgets/screen_header.dart';
 
 class ModuleOverviewScreen extends StatelessWidget {
@@ -20,6 +21,7 @@ class ModuleOverviewScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(title)),
       body: ListView(
@@ -31,7 +33,7 @@ class ModuleOverviewScreen extends StatelessWidget {
             icon: icon ?? Icons.info_outline,
           ),
           const SizedBox(height: 16),
-          Text('What you can do', style: Theme.of(context).textTheme.titleMedium),
+          Text(strings.t('What you can do'), style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           ...features.map(
             (feature) => ListTile(

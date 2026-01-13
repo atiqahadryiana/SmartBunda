@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../localization/app_strings.dart';
 import '../models/alert_item.dart';
 import '../models/app_user.dart';
 import '../models/appointment.dart';
@@ -32,13 +33,14 @@ class _MonitoringScreenState extends ConsumerState<MonitoringScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     final user = ref.watch(currentUserProvider);
     final effectiveRole = user?.role ?? widget.role;
     final settingsAsync = ref.watch(systemSettingsProvider);
     return RequireSignIn(
-      title: 'Monitoring & alerts',
+      title: strings.t('Monitoring & alerts'),
       showAppBar: widget.showAppBar,
-      message: 'Please sign in to view monitoring alerts.',
+      message: strings.t('Please sign in to view monitoring alerts.'),
       child: Builder(
         builder: (context) {
           if (user == null) {
@@ -51,7 +53,9 @@ class _MonitoringScreenState extends ConsumerState<MonitoringScreen> {
             final notificationsAsync = ref.watch(notificationsProvider);
 
             return Scaffold(
-              appBar: widget.showAppBar ? AppBar(title: const Text('Monitoring & alerts')) : null,
+              appBar: widget.showAppBar
+                  ? AppBar(title: Text(strings.t('Monitoring & alerts')))
+                  : null,
               body: Padding(
                 padding: const EdgeInsets.all(16),
                 child: settingsAsync.when(
@@ -61,16 +65,18 @@ class _MonitoringScreenState extends ConsumerState<MonitoringScreen> {
                     if (!_didAutoRefresh && entriesAsync.hasValue) {
                       _didAutoRefresh = true;
                       WidgetsBinding.instance.addPostFrameCallback((_) {
-                        _refreshPatientAlerts(user, entries, appointments, settings);
+                        _refreshPatientAlerts(user, entries, appointments, settings, strings);
                       });
                     }
 
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const ScreenHeader(
-                          title: 'Monitoring',
-                          subtitle: 'Review alerts and reminders based on your recent logs.',
+                        ScreenHeader(
+                          title: strings.t('Monitoring'),
+                          subtitle: strings.t(
+                            'Review alerts and reminders based on your recent logs.',
+                          ),
                           icon: Icons.monitor_heart_outlined,
                         ),
                         const SizedBox(height: 12),
@@ -78,12 +84,12 @@ class _MonitoringScreenState extends ConsumerState<MonitoringScreen> {
                           children: [
                             FilledButton.icon(
                               onPressed: () =>
-                                  _refreshPatientAlerts(user, entries, appointments, settings),
+                                  _refreshPatientAlerts(user, entries, appointments, settings, strings),
                               icon: const Icon(Icons.refresh),
-                              label: const Text('Refresh'),
+                              label: Text(strings.t('Refresh')),
                             ),
                             const SizedBox(width: 12),
-                            Text('Today ${_todayLabel()}'),
+                            Text(strings.todayWithDate(_todayLabel())),
                           ],
                         ),
                         const SizedBox(height: 12),
@@ -99,15 +105,15 @@ class _MonitoringScreenState extends ConsumerState<MonitoringScreen> {
                                   return ListView(
                                     children: [
                                       Text(
-                                        'Alerts',
+                                        strings.t('Alerts'),
                                         style: Theme.of(context).textTheme.titleMedium,
                                       ),
                                       const SizedBox(height: 8),
                                       if (sortedAlerts.isEmpty)
-                                        const EmptyState(
+                                        EmptyState(
                                           icon: Icons.notifications_none_outlined,
-                                          title: 'No alerts',
-                                          message: 'You are all caught up for now.',
+                                          title: strings.t('No alerts'),
+                                          message: strings.t('You are all caught up for now.'),
                                         )
                                       else
                                         ...sortedAlerts.map((alert) {
@@ -122,19 +128,19 @@ class _MonitoringScreenState extends ConsumerState<MonitoringScreen> {
                                                       onPressed: () => ref
                                                           .read(alertRepositoryProvider)
                                                           .acknowledge(alert.id),
-                                                      child: const Text('Mark read'),
+                                                      child: Text(strings.t('Mark read')),
                                                     ),
                                             ),
                                           );
                                         }),
                                       const SizedBox(height: 16),
                                       Text(
-                                        'Notifications',
+                                        strings.t('Notifications'),
                                         style: Theme.of(context).textTheme.titleMedium,
                                       ),
                                       const SizedBox(height: 8),
                                       if (sortedNotifications.isEmpty)
-                                        const Text('No notifications yet.')
+                                        Text(strings.t('No notifications yet.'))
                                       else
                                         ...sortedNotifications.map(
                                           (doc) => Card(
@@ -175,7 +181,9 @@ class _MonitoringScreenState extends ConsumerState<MonitoringScreen> {
           final usersAsync = ref.watch(usersProvider);
 
           return Scaffold(
-            appBar: widget.showAppBar ? AppBar(title: const Text('Monitoring & alerts')) : null,
+            appBar: widget.showAppBar
+                ? AppBar(title: Text(strings.t('Monitoring & alerts')))
+                : null,
             body: Padding(
               padding: const EdgeInsets.all(16),
               child: settingsAsync.when(
@@ -192,6 +200,7 @@ class _MonitoringScreenState extends ConsumerState<MonitoringScreen> {
                       entriesByUser[patient.id] ?? const <FoodEntry>[],
                       appointments,
                       settings,
+                      strings,
                     );
                     if (alerts.isNotEmpty) {
                       alertsByPatient[patient.id] = alerts;
@@ -199,18 +208,18 @@ class _MonitoringScreenState extends ConsumerState<MonitoringScreen> {
                   }
 
                   if (alertsByPatient.isEmpty) {
-                    return const EmptyState(
+                    return EmptyState(
                       icon: Icons.notifications_none_outlined,
-                      title: 'No critical alerts',
-                      message: 'All patients look stable right now.',
+                      title: strings.t('No critical alerts'),
+                      message: strings.t('All patients look stable right now.'),
                     );
                   }
 
                   return ListView(
                     children: [
-                      const ScreenHeader(
-                        title: 'Monitoring',
-                        subtitle: 'Review alerts for patients who need attention.',
+                      ScreenHeader(
+                        title: strings.t('Monitoring'),
+                        subtitle: strings.t('Review alerts for patients who need attention.'),
                         icon: Icons.monitor_heart_outlined,
                       ),
                       const SizedBox(height: 16),
@@ -220,7 +229,7 @@ class _MonitoringScreenState extends ConsumerState<MonitoringScreen> {
                           child: ExpansionTile(
                             leading: const Icon(Icons.monitor_heart_outlined),
                             title: Text(patient.displayName ?? patient.email),
-                            subtitle: Text('${entry.value.length} notifications'),
+                            subtitle: Text(strings.notificationsCount(entry.value.length)),
                             children: entry.value
                                 .map(
                                   (alert) => ListTile(
@@ -250,8 +259,9 @@ class _MonitoringScreenState extends ConsumerState<MonitoringScreen> {
     List<FoodEntry> entries,
     List<Appointment> appointments,
     SystemSettings settings,
+    AppStrings strings,
   ) {
-    final alerts = _buildAlertsForUser(user, entries, appointments, settings);
+    final alerts = _buildAlertsForUser(user, entries, appointments, settings, strings);
     ref.read(alertRepositoryProvider).replaceAlerts(user.id, alerts);
   }
 
@@ -260,6 +270,7 @@ class _MonitoringScreenState extends ConsumerState<MonitoringScreen> {
     List<FoodEntry> entries,
     List<Appointment> appointments,
     SystemSettings settings,
+    AppStrings strings,
   ) {
     final todayEntries = entries.where(_isToday).toList();
     final totals = _totals(todayEntries);
@@ -273,7 +284,7 @@ class _MonitoringScreenState extends ConsumerState<MonitoringScreen> {
         AlertItem(
           id: _alertId(user.id, AlertType.reminder, 'meal-${now.day}'),
           userId: user.id,
-          message: 'No meals logged today. Add your intake for accurate tracking.',
+          message: strings.noMealsLoggedToday,
           severity: AlertSeverity.low,
           type: AlertType.reminder,
           createdAt: now,
@@ -287,8 +298,7 @@ class _MonitoringScreenState extends ConsumerState<MonitoringScreen> {
         AlertItem(
           id: _alertId(user.id, AlertType.deficiencyAlert, 'low-calorie-${now.day}'),
           userId: user.id,
-          message:
-              'Today\'s calories are below the minimum target (${settings.caloriesMin} kcal).',
+          message: strings.caloriesBelowMinimum(settings.caloriesMin),
           severity: AlertSeverity.medium,
           type: AlertType.deficiencyAlert,
           createdAt: now,
@@ -302,8 +312,7 @@ class _MonitoringScreenState extends ConsumerState<MonitoringScreen> {
         AlertItem(
           id: _alertId(user.id, AlertType.deficiencyAlert, 'high-calorie-${now.day}'),
           userId: user.id,
-          message:
-              'Today\'s calories exceed the max target (${settings.caloriesMax} kcal).',
+          message: strings.caloriesAboveMaximum(settings.caloriesMax),
           severity: AlertSeverity.medium,
           type: AlertType.deficiencyAlert,
           createdAt: now,
@@ -317,8 +326,7 @@ class _MonitoringScreenState extends ConsumerState<MonitoringScreen> {
         AlertItem(
           id: _alertId(user.id, AlertType.deficiencyAlert, 'low-protein-${now.day}'),
           userId: user.id,
-          message:
-              'Protein is below the target (${settings.proteinGMin} g).',
+          message: strings.proteinBelowTarget(settings.proteinGMin),
           severity: AlertSeverity.medium,
           type: AlertType.deficiencyAlert,
           createdAt: now,
@@ -332,7 +340,7 @@ class _MonitoringScreenState extends ConsumerState<MonitoringScreen> {
         AlertItem(
           id: _alertId(user.id, AlertType.deficiencyAlert, 'low-iron-${now.day}'),
           userId: user.id,
-          message: 'Iron intake is below ${settings.ironMgMin} mg.',
+          message: strings.ironBelowTarget(settings.ironMgMin),
           severity: AlertSeverity.medium,
           type: AlertType.deficiencyAlert,
           createdAt: now,
@@ -346,7 +354,7 @@ class _MonitoringScreenState extends ConsumerState<MonitoringScreen> {
         AlertItem(
           id: _alertId(user.id, AlertType.deficiencyAlert, 'low-folate-${now.day}'),
           userId: user.id,
-          message: 'Folate intake is below ${settings.folateMcgMin} mcg.',
+          message: strings.folateBelowTarget(settings.folateMcgMin),
           severity: AlertSeverity.medium,
           type: AlertType.deficiencyAlert,
           createdAt: now,
@@ -367,8 +375,10 @@ class _MonitoringScreenState extends ConsumerState<MonitoringScreen> {
         AlertItem(
           id: _alertId(user.id, AlertType.appointment, appt.id),
           userId: user.id,
-          message:
-              'Upcoming appointment on ${appt.dateTime.month}/${appt.dateTime.day} at ${_timeLabel(appt.dateTime)}.',
+          message: strings.upcomingAppointment(
+            '${appt.dateTime.month}/${appt.dateTime.day}',
+            _timeLabel(appt.dateTime),
+          ),
           severity: AlertSeverity.low,
           type: AlertType.appointment,
           createdAt: now,

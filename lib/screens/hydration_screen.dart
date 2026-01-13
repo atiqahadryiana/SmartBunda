@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../localization/app_strings.dart';
 import '../models/hydration_entry.dart';
 import '../models/pregnancy.dart';
 import '../providers/app_providers.dart';
@@ -67,6 +68,7 @@ class _HydrationScreenState extends ConsumerState<HydrationScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
+    final strings = AppStrings.of(context);
 
     final pregnancyAsync = ref.watch(pregnancyProvider);
     final hydrationAsync = ref.watch(hydrationEntriesProvider);
@@ -74,7 +76,7 @@ class _HydrationScreenState extends ConsumerState<HydrationScreen> {
     final child = user == null
         ? const SizedBox.shrink()
         : Scaffold(
-            appBar: AppBar(title: const Text('Hydration')),
+            appBar: AppBar(title: Text(strings.t('Hydration'))),
             body: Padding(
               padding: const EdgeInsets.all(16),
               child: hydrationAsync.when(
@@ -92,9 +94,11 @@ class _HydrationScreenState extends ConsumerState<HydrationScreen> {
 
                   return ListView(
                     children: [
-                      const ScreenHeader(
-                        title: 'Hydration',
-                        subtitle: 'Log water throughout the day to hit your daily target.',
+                      ScreenHeader(
+                        title: strings.t('Hydration'),
+                        subtitle: strings.t(
+                          'Log water throughout the day to hit your daily target.',
+                        ),
                         icon: Icons.water_drop_outlined,
                       ),
                       const SizedBox(height: 16),
@@ -104,7 +108,8 @@ class _HydrationScreenState extends ConsumerState<HydrationScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Today', style: Theme.of(context).textTheme.titleMedium),
+                              Text(strings.t('Today'),
+                                  style: Theme.of(context).textTheme.titleMedium),
                               const SizedBox(height: 6),
                               Text('$total / $target ml'),
                               const SizedBox(height: 8),
@@ -114,7 +119,8 @@ class _HydrationScreenState extends ConsumerState<HydrationScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      Text('Quick add', style: Theme.of(context).textTheme.titleMedium),
+                      Text(strings.t('Quick add'),
+                          style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 8,
@@ -141,9 +147,8 @@ class _HydrationScreenState extends ConsumerState<HydrationScreen> {
                             child: TextField(
                               controller: _customCtrl,
                               keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                labelText: 'Custom amount (ml)',
-                              ),
+                              decoration:
+                                  InputDecoration(labelText: strings.t('Custom amount (ml)')),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -152,7 +157,9 @@ class _HydrationScreenState extends ConsumerState<HydrationScreen> {
                               final value = int.tryParse(_customCtrl.text);
                               if (value == null || value <= 0) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Enter a valid amount in ml')),
+                                  SnackBar(
+                                    content: Text(strings.t('Enter a valid amount in ml')),
+                                  ),
                                 );
                                 return;
                               }
@@ -160,18 +167,20 @@ class _HydrationScreenState extends ConsumerState<HydrationScreen> {
                               FocusScope.of(context).unfocus();
                               _addWater(value);
                             },
-                            child: const Text('Add'),
+                            child: Text(strings.t('Add')),
                           ),
                         ],
                       ),
                       const SizedBox(height: 16),
-                      Text('Today log', style: Theme.of(context).textTheme.titleMedium),
+                      Text(strings.t('Today log'),
+                          style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 8),
                       if (todayEntries.isEmpty)
-                        const EmptyState(
+                        EmptyState(
                           icon: Icons.water_drop_outlined,
-                          title: 'No water logged yet',
-                          message: 'Use the quick add buttons to log your first drink.',
+                          title: strings.t('No water logged yet'),
+                          message:
+                              strings.t('Use the quick add buttons to log your first drink.'),
                         )
                       else
                         ListView.separated(
@@ -191,7 +200,8 @@ class _HydrationScreenState extends ConsumerState<HydrationScreen> {
                           },
                         ),
                       const SizedBox(height: 16),
-                      Text('Last 7 days', style: Theme.of(context).textTheme.titleMedium),
+                      Text(strings.t('Last 7 days'),
+                          style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 8),
                       Card(
                         child: Column(
@@ -216,9 +226,9 @@ class _HydrationScreenState extends ConsumerState<HydrationScreen> {
           );
 
     return RequireSignIn(
-      title: 'Hydration',
+      title: strings.t('Hydration'),
       showAppBar: true,
-      message: 'Please sign in to track hydration.',
+      message: strings.t('Please sign in to track hydration.'),
       child: child,
     );
   }

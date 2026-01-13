@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../localization/app_strings.dart';
 import '../widgets/screen_header.dart';
 import 'hydration_screen.dart';
 import 'log_screen.dart';
@@ -10,28 +11,30 @@ class FoodLoggingHubScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     return Scaffold(
-      appBar:
-          showAppBar ? AppBar(title: const Text('Food logging & nutrition')) : null,
+      appBar: showAppBar
+          ? AppBar(title: Text(strings.t('Food logging & nutrition')))
+          : null,
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const ScreenHeader(
-            title: 'Food logging',
-            subtitle: 'Log meals and hydration to keep recommendations accurate.',
+          ScreenHeader(
+            title: strings.t('Food logging'),
+            subtitle: strings.t('Log meals and hydration to keep recommendations accurate.'),
             icon: Icons.restaurant_menu,
           ),
           const SizedBox(height: 16),
           _ModuleCard(
             icon: Icons.restaurant_menu,
-            title: 'Meal log',
-            subtitle: 'Log daily food and beverage intake.',
+            title: strings.t('Meal log'),
+            subtitle: strings.t('Log daily food and beverage intake.'),
             onTap: () => _open(context, const LogScreen()),
           ),
           _ModuleCard(
             icon: Icons.water_drop_outlined,
-            title: 'Hydration log',
-            subtitle: 'Track water intake and reminders.',
+            title: strings.t('Hydration log'),
+            subtitle: strings.t('Track water intake and reminders.'),
             onTap: () => _open(context, const HydrationScreen()),
           ),
         ],

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../localization/app_strings.dart';
 import '../models/app_user.dart';
 import '../services/service_providers.dart';
 import '../widgets/auth_shell.dart';
@@ -70,6 +71,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _showResetDialog() async {
+    final strings = AppStrings.of(context);
     final emailCtrl = TextEditingController(text: _emailController.text.trim());
     String? info;
     String? error;
@@ -80,7 +82,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
           return AlertDialog(
-            title: const Text('Reset password'),
+            title: Text(strings.t('Reset password')),
             content: SizedBox(
               width: 360,
               child: Column(
@@ -88,7 +90,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 children: [
                   TextField(
                     controller: emailCtrl,
-                    decoration: const InputDecoration(labelText: 'Email'),
+                    decoration: InputDecoration(labelText: strings.t('Email')),
                   ),
                   if (info != null) ...[
                     const SizedBox(height: 8),
@@ -108,7 +110,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).maybePop(),
-                child: const Text('Close'),
+                child: Text(strings.t('Close')),
               ),
               TextButton(
                 onPressed: loading
@@ -125,7 +127,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               .requestPasswordReset(emailCtrl.text.trim());
                           setState(() {
                             info = response.isEmpty
-                                ? 'The reset link has been sent to your email.'
+                                ? strings.t('The reset link has been sent to your email.')
                                 : response;
                           });
                         } catch (e) {
@@ -134,7 +136,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           setState(() => loading = false);
                         }
                       },
-                child: const Text('Send reset link'),
+                child: Text(strings.t('Send reset link')),
               ),
             ],
           );
@@ -194,23 +196,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<String?> _promptForEmail() async {
+    final strings = AppStrings.of(context);
     final controller = TextEditingController(text: _emailController.text.trim());
     final result = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirm your email'),
+        title: Text(strings.t('Confirm your email')),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(labelText: 'Email'),
+          decoration: InputDecoration(labelText: strings.t('Email')),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).maybePop(),
-            child: const Text('Cancel'),
+            child: Text(strings.t('Cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).maybePop(controller.text.trim()),
-            child: const Text('Continue'),
+            child: Text(strings.t('Continue')),
           ),
         ],
       ),
@@ -219,9 +222,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _sendEmailLink() async {
+    final strings = AppStrings.of(context);
     final email = _emailController.text.trim();
     if (email.isEmpty || !email.contains('@')) {
-      setState(() => _error = 'Enter a valid email for email link sign-in.');
+      setState(() => _error = strings.t('Enter a valid email for email link sign-in.'));
       return;
     }
     setState(() {
@@ -246,7 +250,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       await prefs.setString(_emailLinkKey, email);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Email link sent. Check your inbox.')),
+          SnackBar(content: Text(strings.t('Email link sent. Check your inbox.'))),
         );
       }
     } catch (e) {
@@ -262,6 +266,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     ref.listen(authStateProvider, (previous, next) {
       next.whenData((user) {
         if (user != null && !_didRedirect && mounted) {
@@ -273,7 +278,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     return AuthShell(
       title: 'Smartbunda',
-      subtitle: 'A calm way to track pregnancy nutrition and stay in sync with care.',
+      subtitle: strings.t('A calm way to track pregnancy nutrition and stay in sync with care.'),
       footer: Builder(
         builder: (context) {
           final muted = Theme.of(context).colorScheme.onSurface.withValues(alpha: 140);
@@ -285,10 +290,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 spacing: 6,
                 children: [
-                  Text('New here?', style: TextStyle(color: muted)),
+                  Text(strings.t('New here?'), style: TextStyle(color: muted)),
                   TextButton(
                     onPressed: () => Navigator.of(context).pushNamed(RegisterScreen.routeName),
-                    child: const Text('Create account'),
+                    child: Text(strings.t('Create account')),
                   ),
                 ],
              // ),
@@ -308,38 +313,38 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('Welcome back', style: Theme.of(context).textTheme.titleMedium),
+                Text(strings.t('Welcome back'), style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 4),
                 Text(
-                  'Sign in to review your plan, logs, and recommendations.',
+                  strings.t('Sign in to review your plan, logs, and recommendations.'),
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: muted),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: Icon(Icons.email_outlined),
+                  decoration: InputDecoration(
+                    labelText: strings.t('Email'),
+                    prefixIcon: const Icon(Icons.email_outlined),
                   ),
                   validator: (v) =>
-                      v != null && v.contains('@') ? null : 'Enter a valid email',
+                      v != null && v.contains('@') ? null : strings.t('Enter a valid email'),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _passwordController,
-                  decoration: const InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: Icon(Icons.lock_outline),
+                  decoration: InputDecoration(
+                    labelText: strings.t('Password'),
+                    prefixIcon: const Icon(Icons.lock_outline),
                   ),
                   obscureText: true,
                   validator: (v) =>
-                      v != null && v.length >= 6 ? null : 'Min 6 characters',
+                      v != null && v.length >= 6 ? null : strings.t('Min 6 characters'),
                 ),
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: _showResetDialog,
-                    child: const Text('Forgot password?'),
+                    child: Text(strings.t('Forgot password?')),
                   ),
                 ),
                 if (_error != null) ...[
@@ -365,9 +370,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ? const SizedBox(
                             height: 18,
                             width: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Login'),
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                        : Text(strings.t('Login')),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -375,16 +380,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   children: [
                     Expanded(child: Divider(color: muted.withValues(alpha: 90))),
                     const SizedBox(width: 12),
-                    Text('or', style: Theme.of(context).textTheme.bodySmall),
+                    Text(strings.t('or'), style: Theme.of(context).textTheme.bodySmall),
                     const SizedBox(width: 12),
                     Expanded(child: Divider(color: muted.withValues(alpha: 90))),
                   ],
                 ),
                 const SizedBox(height: 16),
-                Text('Passwordless sign-in', style: Theme.of(context).textTheme.titleSmall),
+                Text(
+                  strings.t('Passwordless sign-in'),
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
                 const SizedBox(height: 4),
                 Text(
-                  'We will email a secure link. Use it on this device to finish signing in.',
+                  strings.t(
+                    'We will email a secure link. Use it on this device to finish signing in.',
+                  ),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(color: muted),
                 ),
                 const SizedBox(height: 10),
@@ -399,7 +409,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.email_outlined),
-                    label: const Text('Send sign-in link'),
+                    label: Text(strings.t('Send sign-in link')),
                   ),
                 ),
               ],

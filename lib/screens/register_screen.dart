@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../localization/app_strings.dart';
 import '../models/app_user.dart';
 import '../services/service_providers.dart';
 import '../widgets/auth_shell.dart';
@@ -72,18 +73,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     final requiresMmc = _requiresMmc(_role);
     final requiresJlm = _requiresJlm(_role);
     final requiresLicense = requiresMmc || requiresJlm;
     return AuthShell(
-      title: 'Create account',
-      subtitle: 'Join Smartbunda to personalize nutrition tracking and care.',
+      title: strings.t('Create account'),
+      subtitle: strings.t('Join Smartbunda to personalize nutrition tracking and care.'),
       topAction: Align(
         alignment: Alignment.centerLeft,
         child: TextButton.icon(
           onPressed: () => Navigator.of(context).maybePop(),
           icon: const Icon(Icons.arrow_back),
-          label: const Text('Back to login'),
+          label: Text(strings.t('Back to login')),
         ),
       ),
       footer: Wrap(
@@ -91,10 +93,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         crossAxisAlignment: WrapCrossAlignment.center,
         spacing: 6,
         children: [
-          const Text('Already have an account?'),
+          Text(strings.t('Already have an account?')),
           TextButton(
             onPressed: () => Navigator.of(context).maybePop(),
-            child: const Text('Sign in'),
+            child: Text(strings.t('Sign in')),
           ),
         ],
       ),
@@ -106,81 +108,91 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('Set up your profile', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  strings.t('Set up your profile'),
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 const SizedBox(height: 4),
                 Text(
-                  'Choose your role so we can match the right tools and permissions.',
+                  strings.t('Choose your role so we can match the right tools and permissions.'),
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: muted),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Name',
-                    prefixIcon: Icon(Icons.person_outline),
+                  decoration: InputDecoration(
+                    labelText: strings.t('Name'),
+                    prefixIcon: const Icon(Icons.person_outline),
                   ),
-                  validator: (v) => v != null && v.isNotEmpty ? null : 'Required',
+                  validator: (v) =>
+                      v != null && v.isNotEmpty ? null : strings.t('Required'),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: Icon(Icons.email_outlined),
+                  decoration: InputDecoration(
+                    labelText: strings.t('Email'),
+                    prefixIcon: const Icon(Icons.email_outlined),
                   ),
                   validator: (v) =>
-                      v != null && v.contains('@') ? null : 'Enter a valid email',
+                      v != null && v.contains('@') ? null : strings.t('Enter a valid email'),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _passwordController,
-                  decoration: const InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: Icon(Icons.lock_outline),
+                  decoration: InputDecoration(
+                    labelText: strings.t('Password'),
+                    prefixIcon: const Icon(Icons.lock_outline),
                   ),
                   obscureText: true,
                   validator: (v) =>
-                      v != null && v.length >= 6 ? null : 'Min 6 characters',
+                      v != null && v.length >= 6 ? null : strings.t('Min 6 characters'),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<UserRole>(
                   initialValue: _role,
                   isExpanded: true,
-                  items: const [
+                  items: [
                     DropdownMenuItem(
                       value: UserRole.patient,
-                      child: Text('Patient', overflow: TextOverflow.ellipsis),
+                      child: Text(
+                        strings.roleLabel(UserRole.patient),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     DropdownMenuItem(
                       value: UserRole.doctor,
                       child: Text(
-                        'Doctor',
+                        strings.roleLabel(UserRole.doctor),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     DropdownMenuItem(
                       value: UserRole.nurse,
                       child: Text(
-                        'Nurse',
+                        strings.roleLabel(UserRole.nurse),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     DropdownMenuItem(
                       value: UserRole.dietitian,
                       child: Text(
-                        'Dietitian / Nutritionist',
+                        strings.t('Dietitian / Nutritionist'),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     DropdownMenuItem(
                       value: UserRole.admin,
-                      child: Text('Admin', overflow: TextOverflow.ellipsis),
+                      child: Text(
+                        strings.roleLabel(UserRole.admin),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                   onChanged: (value) {
                     if (value != null) setState(() => _role = value);
                   },
-                  decoration: const InputDecoration(labelText: 'Role'),
+                  decoration: InputDecoration(labelText: strings.t('Role')),
                 ),
                 if (requiresLicense) ...[
                   const SizedBox(height: 12),
@@ -199,7 +211,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             Icon(Icons.verified_outlined, color: Colors.orange.shade700),
                             const SizedBox(width: 8),
                             Text(
-                              'License details',
+                              strings.t('License details'),
                               style: Theme.of(context).textTheme.titleSmall,
                             ),
                           ],
@@ -208,29 +220,31 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         if (requiresMmc)
                           TextFormField(
                             controller: _mmcController,
-                            decoration: const InputDecoration(
-                              labelText: 'MMC number',
-                              prefixIcon: Icon(Icons.badge_outlined),
+                            decoration: InputDecoration(
+                              labelText: strings.t('MMC number'),
+                              prefixIcon: const Icon(Icons.badge_outlined),
                             ),
                             validator: (v) => v != null && v.trim().isNotEmpty
                                 ? null
-                                : 'Required for this role',
+                                : strings.t('Required for this role'),
                           ),
                         if (requiresMmc && requiresJlm) const SizedBox(height: 8),
                         if (requiresJlm)
                           TextFormField(
                             controller: _jlmController,
-                            decoration: const InputDecoration(
-                              labelText: 'JLM number',
-                              prefixIcon: Icon(Icons.confirmation_number_outlined),
+                            decoration: InputDecoration(
+                              labelText: strings.t('JLM number'),
+                              prefixIcon: const Icon(Icons.confirmation_number_outlined),
                             ),
                             validator: (v) => v != null && v.trim().isNotEmpty
                                 ? null
-                                : 'Required for this role',
+                                : strings.t('Required for this role'),
                           ),
                         const SizedBox(height: 6),
                         Text(
-                          'Admin approval is required before staff accounts can sign in.',
+                          strings.t(
+                            'Admin approval is required before staff accounts can sign in.',
+                          ),
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(color: muted),
                         ),
                       ],
@@ -264,7 +278,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             width: 18,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Create account'),
+                        : Text(strings.t('Create account')),
                   ),
                 ),
               ],

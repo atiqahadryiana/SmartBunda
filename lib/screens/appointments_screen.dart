@@ -1,13 +1,13 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../localization/app_strings.dart';
 import '../models/alert_item.dart';
 import '../models/appointment.dart';
 import '../models/app_user.dart';
 import '../providers/app_providers.dart';
 import '../services/service_providers.dart';
 import '../widgets/empty_state.dart';
-import '../widgets/require_sign_in.dart';
 import '../widgets/screen_header.dart';
 
 class AppointmentsScreen extends ConsumerWidget {
@@ -15,17 +15,23 @@ class AppointmentsScreen extends ConsumerWidget {
     super.key,
     required this.role,
     this.showAppBar = false,
-    this.fallbackUser,
   });
 
   final UserRole role;
   final bool showAppBar;
-  final AppUser? fallbackUser;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(currentUserProvider) ?? fallbackUser;
-    final effectiveRole = user?.role ?? role;
+    final strings = AppStrings.of(context);
+    final user = ref.watch(currentUserProvider);
+    if (user == null) {
+      return Scaffold(
+        appBar: showAppBar ? AppBar(title: Text(strings.t('Appointments'))) : null,
+        body: Center(child: Text(strings.t('Please sign in.'))),
+      );
+    }
+
+    final effectiveRole = role;
     final canSchedule = effectiveRole == UserRole.doctor ||
         effectiveRole == UserRole.dietitian ||
         effectiveRole == UserRole.nurse;
@@ -34,87 +40,78 @@ class AppointmentsScreen extends ConsumerWidget {
         : ref.watch(allAppointmentsProvider);
     final usersAsync = ref.watch(usersProvider);
 
-    final child = user == null
-        ? const SizedBox.shrink()
-        : Scaffold(
-            appBar: showAppBar ? AppBar(title: const Text('Appointments')) : null,
-            body: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ScreenHeader(
-                    title: 'Appointments',
-                    subtitle: 'Schedule and track upcoming clinic visits.',
-                    icon: Icons.event_available,
-                    action: canSchedule
-                        ? FilledButton.icon(
-                            onPressed: () => _showCreateDialog(context, ref, user),
-                            icon: const Icon(Icons.add),
-                            label: const Text('New'),
-                          )
-                        : null,
-                  ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: appointmentsAsync.when(
-                      data: (appointments) {
-                        final allUsers = usersAsync.valueOrNull ?? const <AppUser>[];
-                        final relevant = _filterAppointments(user, appointments);
-                        if (relevant.isEmpty) {
-                          return EmptyState(
-                            icon: Icons.event_available,
-                            title: 'No appointments scheduled',
-                            message: canSchedule
-                                ? 'Create a new appointment to reserve a time slot.'
-                                : 'Your upcoming appointments will appear here.',
-                            action: canSchedule
-                                ? FilledButton.icon(
-                                    onPressed: () => _showCreateDialog(context, ref, user),
-                                    icon: const Icon(Icons.add),
-                                    label: const Text('Schedule appointment'),
-                                  )
-                                : null,
-                          );
-                        }
-                        relevant.sort((a, b) => a.dateTime.compareTo(b.dateTime));
-                        return ListView.separated(
-                          itemCount: relevant.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 8),
-                          itemBuilder: (context, index) {
-                            final appt = relevant[index];
-                            final patient =
-                                allUsers.firstWhere((u) => u.id == appt.patientId, orElse: () => user);
-                            final provider = allUsers.firstWhere(
-                              (u) => u.id == appt.providerId,
-                              orElse: () => user,
-                            );
-                            return Card(
-                              child: ListTile(
-                                title: Text(_title(appt, patient, provider, user)),
-                                subtitle: Text(
-                                  '${appt.type} | ${_dateLabel(appt.dateTime)} | ${appt.status}',
-                                ),
-                                trailing: _actions(context, ref, user, appt),
-                              ),
-                            );
-                          },
-                        );
-                      },
-                      loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (e, _) => Center(child: Text('Error: $e')),
-                    ),
-                  ),
-                ],
+    return Scaffold(
+      appBar: showAppBar ? AppBar(title: Text(strings.t('Appointments'))) : null,
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ScreenHeader(
+              title: strings.t('Appointments'),
+              subtitle: strings.t('Schedule and track upcoming clinic visits.'),
+              icon: Icons.event_available,
+              action: canSchedule
+                  ? FilledButton.icon(
+                      onPressed: () => _showCreateDialog(context, ref, user),
+                      icon: const Icon(Icons.add),
+                      label: Text(strings.t('New')),
+                    )
+                  : null,
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: appointmentsAsync.when(
+                data: (appointments) {
+                  final allUsers = usersAsync.valueOrNull ?? const <AppUser>[];
+                  final relevant = _filterAppointments(user, appointments);
+                  if (relevant.isEmpty) {
+                    return EmptyState(
+                      icon: Icons.event_available,
+                      title: strings.t('No appointments scheduled'),
+                      message: canSchedule
+                          ? strings.t('Create a new appointment to reserve a time slot.')
+                          : strings.t('Your upcoming appointments will appear here.'),
+                      action: canSchedule
+                          ? FilledButton.icon(
+                              onPressed: () => _showCreateDialog(context, ref, user),
+                              icon: const Icon(Icons.add),
+                              label: Text(strings.t('Schedule appointment')),
+                            )
+                          : null,
+                    );
+                  }
+                  relevant.sort((a, b) => a.dateTime.compareTo(b.dateTime));
+                  return ListView.separated(
+                    itemCount: relevant.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final appt = relevant[index];
+                      final patient =
+                          allUsers.firstWhere((u) => u.id == appt.patientId, orElse: () => user);
+                      final provider = allUsers.firstWhere(
+                        (u) => u.id == appt.providerId,
+                        orElse: () => user,
+                      );
+                      return Card(
+                        child: ListTile(
+                          title: Text(_title(appt, patient, provider, user, strings)),
+                          subtitle: Text(
+                            '${appt.type} | ${_dateLabel(appt.dateTime)} | ${appt.status}',
+                          ),
+                          trailing: _actions(context, ref, user, appt),
+                        ),
+                      );
+                    },
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(child: Text('Error: $e')),
               ),
             ),
-          );
-
-    return RequireSignIn(
-      title: 'Appointments',
-      showAppBar: showAppBar,
-      message: 'Please sign in to view appointments.',
-      child: child,
+          ],
+        ),
+      ),
     );
   }
 
@@ -126,6 +123,7 @@ class AppointmentsScreen extends ConsumerWidget {
   }
 
   Widget _actions(BuildContext context, WidgetRef ref, AppUser user, Appointment appt) {
+    final strings = AppStrings.of(context);
     final canManage = user.role == UserRole.doctor || user.role == UserRole.dietitian;
     if (!canManage) return const SizedBox.shrink();
     return PopupMenuButton<String>(
@@ -136,18 +134,27 @@ class AppointmentsScreen extends ConsumerWidget {
           await ref.read(appointmentRepositoryProvider).cancelAppointment(appt.id);
         }
       },
-      itemBuilder: (context) => const [
-        PopupMenuItem(value: 'complete', child: Text('Mark complete')),
-        PopupMenuItem(value: 'cancel', child: Text('Cancel')),
+      itemBuilder: (context) => [
+        PopupMenuItem(value: 'complete', child: Text(strings.t('Mark complete'))),
+        PopupMenuItem(value: 'cancel', child: Text(strings.t('Cancel'))),
       ],
     );
   }
 
-  String _title(Appointment appt, AppUser patient, AppUser provider, AppUser user) {
+  String _title(
+    Appointment appt,
+    AppUser patient,
+    AppUser provider,
+    AppUser user,
+    AppStrings strings,
+  ) {
     if (user.role == UserRole.patient) {
-      return '${provider.role.label} with ${provider.displayName ?? provider.email}';
+      return strings.withProvider(
+        strings.roleLabel(provider.role),
+        provider.displayName ?? provider.email,
+      );
     }
-    return 'Patient: ${patient.displayName ?? patient.email}';
+    return strings.patientLabel(patient.displayName ?? patient.email);
   }
 
   String _dateLabel(DateTime date) {
@@ -223,12 +230,13 @@ class AppointmentsScreen extends ConsumerWidget {
     WidgetRef ref,
     AppUser user,
   ) async {
+    final strings = AppStrings.of(context);
     if (user.role != UserRole.doctor &&
         user.role != UserRole.dietitian &&
         user.role != UserRole.nurse) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Only doctors, dietitians, and nurses can schedule.'),
+        SnackBar(
+          content: Text(strings.t('Only doctors, dietitians, and nurses can schedule.')),
         ),
       );
       return;
@@ -242,13 +250,13 @@ class AppointmentsScreen extends ConsumerWidget {
         ref.read(allAppointmentsProvider).valueOrNull ?? const <Appointment>[];
     if (user.role != UserRole.patient && patients.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No patients available yet.')),
+        SnackBar(content: Text(strings.t('No patients available yet.'))),
       );
       return;
     }
     if (user.role == UserRole.nurse && providers.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No doctors or dietitians available yet.')),
+        SnackBar(content: Text(strings.t('No doctors or dietitians available yet.'))),
       );
       return;
     }
@@ -256,21 +264,21 @@ class AppointmentsScreen extends ConsumerWidget {
     AppUser? selectedPatient = user.role == UserRole.patient ? user : patients.first;
     AppUser? selectedProvider =
         user.role == UserRole.nurse ? providers.first : user;
-    final typeCtrl = TextEditingController(text: 'Nutrition Consultation');
+    final typeCtrl = TextEditingController(text: strings.t('Nutrition Consultation'));
     DateTime selectedDate = DateTime.now().add(const Duration(days: 1));
     final reminderCtrl = TextEditingController();
     var sendReminder = user.role == UserRole.nurse;
     DateTime? selectedSlot = _firstAvailableSlot(
       selectedDate,
       allAppointments,
-      (user.role == UserRole.nurse ? selectedProvider : user)!,
+      (user.role == UserRole.nurse ? selectedProvider : user),
     );
     final formKey = GlobalKey<FormState>();
 
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Schedule appointment'),
+        title: Text(strings.t('Schedule appointment')),
         content: StatefulBuilder(
           builder: (context, setState) {
             return SizedBox(
@@ -292,8 +300,9 @@ class AppointmentsScreen extends ConsumerWidget {
                               )
                               .toList(),
                           onChanged: (value) => setState(() => selectedPatient = value),
-                          decoration: const InputDecoration(labelText: 'Patient'),
-                          validator: (value) => value == null ? 'Select a patient' : null,
+                          decoration: InputDecoration(labelText: strings.t('Patient')),
+                          validator: (value) =>
+                              value == null ? strings.t('Select a patient') : null,
                         ),
                       if (user.role == UserRole.nurse)
                         DropdownButtonFormField<AppUser>(
@@ -302,7 +311,9 @@ class AppointmentsScreen extends ConsumerWidget {
                               .map(
                                 (p) => DropdownMenuItem(
                                   value: p,
-                                  child: Text('${p.role.label} - ${p.displayName ?? p.email}'),
+                                  child: Text(
+                                    '${strings.roleLabel(p.role)} - ${p.displayName ?? p.email}',
+                                  ),
                                 ),
                               )
                               .toList(),
@@ -317,8 +328,9 @@ class AppointmentsScreen extends ConsumerWidget {
                               }
                             });
                           },
-                          decoration: const InputDecoration(labelText: 'Provider'),
-                          validator: (value) => value == null ? 'Select a provider' : null,
+                          decoration: InputDecoration(labelText: strings.t('Provider')),
+                          validator: (value) =>
+                              value == null ? strings.t('Select a provider') : null,
                         ),
                       if (user.role == UserRole.patient)
                         DropdownButtonFormField<AppUser>(
@@ -327,24 +339,29 @@ class AppointmentsScreen extends ConsumerWidget {
                               .map(
                                 (p) => DropdownMenuItem(
                                   value: p,
-                                  child: Text('${p.role.label} - ${p.displayName ?? p.email}'),
+                                  child: Text(
+                                    '${strings.roleLabel(p.role)} - ${p.displayName ?? p.email}',
+                                  ),
                                 ),
                               )
                               .toList(),
                           onChanged: (value) => setState(() => selectedProvider = value),
-                          decoration: const InputDecoration(labelText: 'Provider'),
-                          validator: (value) => value == null ? 'Select a provider' : null,
+                          decoration: InputDecoration(labelText: strings.t('Provider')),
+                          validator: (value) =>
+                              value == null ? strings.t('Select a provider') : null,
                         ),
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: typeCtrl,
-                        decoration: const InputDecoration(labelText: 'Type'),
+                        decoration: InputDecoration(labelText: strings.t('Type')),
                       ),
                       const SizedBox(height: 12),
                       Row(
                         children: [
                           Expanded(
-                            child: Text('Date: ${_dateOnlyLabel(selectedDate)}'),
+                            child: Text(
+                              strings.dateLabel(_dateOnlyLabel(selectedDate)),
+                            ),
                           ),
                           TextButton(
                             onPressed: () async {
@@ -375,7 +392,7 @@ class AppointmentsScreen extends ConsumerWidget {
                                 }
                               });
                             },
-                            child: const Text('Pick'),
+                            child: Text(strings.t('Pick')),
                           ),
                         ],
                       ),
@@ -392,10 +409,10 @@ class AppointmentsScreen extends ConsumerWidget {
                             selectedSlot = slots.isNotEmpty ? slots.first : null;
                           }
                           if (slots.isEmpty) {
-                            return const Text('No available slots for this date.');
+                            return Text(strings.t('No available slots for this date.'));
                           }
                           return DropdownButtonFormField<DateTime>(
-                            value: selectedSlot,
+                            initialValue: selectedSlot,
                             items: slots
                                 .map(
                                   (slot) => DropdownMenuItem(
@@ -405,8 +422,9 @@ class AppointmentsScreen extends ConsumerWidget {
                                 )
                                 .toList(),
                             onChanged: (value) => setState(() => selectedSlot = value),
-                            decoration: const InputDecoration(labelText: 'Time slot'),
-                            validator: (value) => value == null ? 'Select a time slot' : null,
+                            decoration: InputDecoration(labelText: strings.t('Time slot')),
+                            validator: (value) =>
+                                value == null ? strings.t('Select a time slot') : null,
                           );
                         },
                       ),
@@ -416,13 +434,13 @@ class AppointmentsScreen extends ConsumerWidget {
                           value: sendReminder,
                           onChanged: (value) =>
                               setState(() => sendReminder = value ?? false),
-                          title: const Text('Send reminder to patient'),
+                          title: Text(strings.t('Send reminder to patient')),
                         ),
                       if (user.role == UserRole.nurse && sendReminder)
                         TextFormField(
                           controller: reminderCtrl,
-                          decoration: const InputDecoration(
-                            labelText: 'Reminder message (optional)',
+                          decoration: InputDecoration(
+                            labelText: strings.t('Reminder message (optional)'),
                           ),
                           maxLines: 2,
                         ),
@@ -436,14 +454,14 @@ class AppointmentsScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).maybePop(),
-            child: const Text('Cancel'),
+            child: Text(strings.t('Cancel')),
           ),
           FilledButton(
             onPressed: () async {
               if (!formKey.currentState!.validate()) return;
               if (selectedSlot == null) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('No available slots for this date.')),
+                  SnackBar(content: Text(strings.t('No available slots for this date.'))),
                 );
                 return;
               }
@@ -459,16 +477,19 @@ class AppointmentsScreen extends ConsumerWidget {
                 providerId: provider.id,
                 dateTime: selectedSlot!,
                 type: typeCtrl.text.trim().isEmpty
-                    ? 'Nutrition Consultation'
+                    ? strings.t('Nutrition Consultation')
                     : typeCtrl.text.trim(),
                 status: 'SCHEDULED',
               );
               await ref.read(appointmentRepositoryProvider).scheduleAppointment(appointment);
               if (user.role == UserRole.nurse && sendReminder) {
                 final providerLabel =
-                    '${provider.role.label} ${provider.displayName ?? provider.email}';
+                    '${strings.roleLabel(provider.role)} ${provider.displayName ?? provider.email}';
                 final message = reminderCtrl.text.trim().isEmpty
-                    ? 'Appointment scheduled on ${_dateLabel(selectedDate)} with $providerLabel.'
+                    ? strings.appointmentScheduled(
+                        _dateLabel(selectedDate),
+                        providerLabel,
+                      )
                     : reminderCtrl.text.trim();
                 final alert = AlertItem(
                   id: DateTime.now().microsecondsSinceEpoch.toString(),
@@ -485,12 +506,10 @@ class AppointmentsScreen extends ConsumerWidget {
                 Navigator.of(context).maybePop();
               }
             },
-            child: const Text('Save'),
+            child: Text(strings.t('Save')),
           ),
         ],
       ),
     );
   }
 }
-
-
