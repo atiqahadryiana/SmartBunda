@@ -7,6 +7,8 @@ class Profile {
     required this.heightCm,
     required this.currentWeightKg,
     required this.bloodType,
+    this.hemoglobinGdl,
+    this.abdominalCircumferenceCm,
     this.medicalConditions = const <MedicalCondition>{},
     this.conditionNotes,
   });
@@ -16,6 +18,8 @@ class Profile {
   final double heightCm;
   final double currentWeightKg;
   final String bloodType;
+  final double? hemoglobinGdl;
+  final double? abdominalCircumferenceCm;
   final Set<MedicalCondition> medicalConditions;
   final String? conditionNotes;
 
@@ -30,7 +34,8 @@ class Profile {
     if (date == null) return null;
     final now = DateTime.now();
     var years = now.year - date.year;
-    if (now.month < date.month || (now.month == date.month && now.day < date.day)) {
+    if (now.month < date.month ||
+        (now.month == date.month && now.day < date.day)) {
       years -= 1;
     }
     return years;
@@ -42,6 +47,8 @@ class Profile {
     double? heightCm,
     double? currentWeightKg,
     String? bloodType,
+    double? hemoglobinGdl,
+    double? abdominalCircumferenceCm,
     Set<MedicalCondition>? medicalConditions,
     String? conditionNotes,
   }) {
@@ -51,6 +58,9 @@ class Profile {
       heightCm: heightCm ?? this.heightCm,
       currentWeightKg: currentWeightKg ?? this.currentWeightKg,
       bloodType: bloodType ?? this.bloodType,
+      hemoglobinGdl: hemoglobinGdl ?? this.hemoglobinGdl,
+      abdominalCircumferenceCm:
+          abdominalCircumferenceCm ?? this.abdominalCircumferenceCm,
       medicalConditions: medicalConditions ?? this.medicalConditions,
       conditionNotes: conditionNotes ?? this.conditionNotes,
     );

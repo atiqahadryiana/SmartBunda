@@ -46,7 +46,9 @@ class NutritionistScreen extends ConsumerWidget {
               final allEntries = allEntriesAsync.valueOrNull;
               final allProfiles = allProfilesAsync.valueOrNull;
               final allPregnancies = allPregnanciesAsync.valueOrNull;
-              if (allEntries == null || allProfiles == null || allPregnancies == null) {
+              if (allEntries == null ||
+                  allProfiles == null ||
+                  allPregnancies == null) {
                 return const Center(child: CircularProgressIndicator());
               }
 
@@ -83,12 +85,12 @@ class NutritionistScreen extends ConsumerWidget {
               final active = summaries.where((s) => s.mealsToday > 0).toList();
               final avgCalories = active.isEmpty
                   ? 0
-                  : (active.fold<int>(
-                          0, (sum, s) => sum + s.caloriesToday) /
-                      active.length)
+                  : (active.fold<int>(0, (sum, s) => sum + s.caloriesToday) /
+                          active.length)
                       .round();
-              final needsAttention =
-                  summaries.where((s) => s.mealsToday == 0 || s.profile == null).toList();
+              final needsAttention = summaries
+                  .where((s) => s.mealsToday == 0 || s.profile == null)
+                  .toList();
 
               final recentLogs = <_LogItem>[];
               for (final summary in summaries) {
@@ -142,9 +144,11 @@ class NutritionistScreen extends ConsumerWidget {
                             .take(5)
                             .map(
                               (summary) => ListTile(
-                                leading: const Icon(Icons.warning_amber_outlined),
+                                leading:
+                                    const Icon(Icons.warning_amber_outlined),
                                 title: Text(
-                                  summary.user.displayName ?? summary.user.email,
+                                  summary.user.displayName ??
+                                      summary.user.email,
                                 ),
                                 subtitle: Text(
                                   summary.profile == null
@@ -174,13 +178,13 @@ class NutritionistScreen extends ConsumerWidget {
                         final item = recentLogs[index];
                         return Card(
                           child: ListTile(
-                            leading:
-                                const Icon(Icons.restaurant_menu_outlined),
+                            leading: const Icon(Icons.restaurant_menu_outlined),
                             title: Text(item.entry.meal),
                             subtitle: Text(
                               '${item.user.displayName ?? item.user.email}  -  ${item.entry.calories} kcal',
                             ),
-                            trailing: Text('${item.entry.date.month}/${item.entry.date.day}'),
+                            trailing: Text(
+                                '${item.entry.date.month}/${item.entry.date.day}'),
                           ),
                         );
                       },
@@ -195,7 +199,8 @@ class NutritionistScreen extends ConsumerWidget {
                     const EmptyState(
                       icon: Icons.people_outline,
                       title: 'No clients registered yet',
-                      message: 'Clients will appear here after they create accounts.',
+                      message:
+                          'Clients will appear here after they create accounts.',
                     )
                   else
                     ListView.separated(
@@ -266,7 +271,7 @@ class _StatCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, color: Colors.pinkAccent),
+              Icon(icon, color: Theme.of(context).colorScheme.primary),
               const SizedBox(height: 6),
               Text(label, style: const TextStyle(color: Colors.black54)),
               const SizedBox(height: 4),

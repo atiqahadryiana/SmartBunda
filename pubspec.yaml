@@ -22,6 +22,8 @@ dependencies:
   firebase_storage: ^13.0.5
   google_fonts: ^6.2.1
   image_picker: ^1.1.2
+  image: ^4.3.0
+  tflite_flutter: ^0.12.1
   file_picker: ^8.0.0
   excel: ^4.0.2
 
@@ -34,3 +36,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/foods_my.json
+    - assets/ml/

@@ -27,11 +27,16 @@ migrate_working_dir/
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
+.firebase/
+.vscode/
+.venv-ml/
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
 /build/
 /coverage/
+android/build/
+y/
 
 # Symbolication related
 app.*.symbols
@@ -43,3 +48,19 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local ML outputs
+malaysian-food-dataset/artifacts/
+malaysian-food-dataset/.tmp/
+malaysian-food-dataset/.venv/
+malaysian-food-dataset/dataset/
+lib/screens/oracleJdk-26/
+*.keras
+*.tflite
+node_modules
+node_modules
+node_modules
+node_modules
+node_modules
+node_modules
+node_modules

@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../localization/app_strings.dart';
 import '../models/app_user.dart';
 import '../services/service_providers.dart';
+import '../utils/auth_error_messages.dart';
+import '../utils/password_policy.dart';
 import '../widgets/auth_shell.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -44,6 +46,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_role == UserRole.admin) {
+      setState(() =>
+          _error = 'Admin accounts must be created by a system administrator.');
+      return;
+    }
     final requiresMmc = _requiresMmc(_role);
     final requiresJlm = _requiresJlm(_role);
     setState(() {
@@ -52,18 +59,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     });
     try {
       await ref.read(authRepositoryProvider).register(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-        role: _role,
-        displayName: _nameController.text.trim(),
-        mmcNumber: requiresMmc ? _mmcController.text.trim() : null,
-        jlmNumber: requiresJlm ? _jlmController.text.trim() : null,
-      );
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+            role: _role,
+            displayName: _nameController.text.trim(),
+            mmcNumber: requiresMmc ? _mmcController.text.trim() : null,
+            jlmNumber: requiresJlm ? _jlmController.text.trim() : null,
+          );
       if (mounted) {
         await Navigator.of(context).maybePop();
       }
     } catch (e) {
-      setState(() => _error = e.toString());
+      setState(() => _error = friendlyAuthError(e));
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -79,15 +86,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final requiresLicense = requiresMmc || requiresJlm;
     return AuthShell(
       title: strings.t('Create account'),
-      subtitle: strings.t('Join Smartbunda to personalize nutrition tracking and care.'),
-      topAction: Align(
-        alignment: Alignment.centerLeft,
-        child: TextButton.icon(
-          onPressed: () => Navigator.of(context).maybePop(),
-          icon: const Icon(Icons.arrow_back),
-          label: Text(strings.t('Back to login')),
-        ),
-      ),
+      subtitle: strings
+          .t('Join Smartbunda to personalize nutrition tracking and care.'),
       footer: Wrap(
         alignment: WrapAlignment.center,
         crossAxisAlignment: WrapCrossAlignment.center,
@@ -95,14 +95,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         children: [
           Text(strings.t('Already have an account?')),
           TextButton(
-            onPressed: () => Navigator.of(context).maybePop(),
+            onPressed: () => Navigator.of(context)
+                .pushNamedAndRemoveUntil('/login', (route) => false),
             child: Text(strings.t('Sign in')),
           ),
         ],
       ),
       child: Builder(
         builder: (context) {
-          final muted = Theme.of(context).colorScheme.onSurface.withValues(alpha: 150);
+          final muted =
+              Theme.of(context).colorScheme.onSurface.withValues(alpha: 150);
           return Form(
             key: _formKey,
             child: Column(
@@ -114,8 +116,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  strings.t('Choose your role so we can match the right tools and permissions.'),
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: muted),
+                  strings.t(
+                      'Choose your role so we can match the right tools and permissions.'),
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(color: muted),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -134,8 +140,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     labelText: strings.t('Email'),
                     prefixIcon: const Icon(Icons.email_outlined),
                   ),
-                  validator: (v) =>
-                      v != null && v.contains('@') ? null : strings.t('Enter a valid email'),
+                  validator: (v) => v != null && v.contains('@')
+                      ? null
+                      : strings.t('Enter a valid email'),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
@@ -145,8 +152,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     prefixIcon: const Icon(Icons.lock_outline),
                   ),
                   obscureText: true,
-                  validator: (v) =>
-                      v != null && v.length >= 6 ? null : strings.t('Min 6 characters'),
+                  validator: (v) => PasswordPolicy.isValid(v ?? '')
+                      ? null
+                      : strings.t(PasswordPolicy.errorMessage),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<UserRole>(
@@ -181,13 +189,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    DropdownMenuItem(
-                      value: UserRole.admin,
-                      child: Text(
-                        strings.roleLabel(UserRole.admin),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
                   ],
                   onChanged: (value) {
                     if (value != null) setState(() => _role = value);
@@ -200,15 +201,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 200),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.black.withValues(alpha: 30)),
+                      borderRadius: BorderRadius.circular(8),
+                      border:
+                          Border.all(color: Colors.black.withValues(alpha: 30)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.verified_outlined, color: Colors.orange.shade700),
+                            Icon(Icons.verified_outlined,
+                                color: Colors.orange.shade700),
                             const SizedBox(width: 8),
                             Text(
                               strings.t('License details'),
@@ -228,13 +231,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 ? null
                                 : strings.t('Required for this role'),
                           ),
-                        if (requiresMmc && requiresJlm) const SizedBox(height: 8),
+                        if (requiresMmc && requiresJlm)
+                          const SizedBox(height: 8),
                         if (requiresJlm)
                           TextFormField(
                             controller: _jlmController,
                             decoration: InputDecoration(
                               labelText: strings.t('JLM number'),
-                              prefixIcon: const Icon(Icons.confirmation_number_outlined),
+                              prefixIcon: const Icon(
+                                  Icons.confirmation_number_outlined),
                             ),
                             validator: (v) => v != null && v.trim().isNotEmpty
                                 ? null
@@ -245,7 +250,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           strings.t(
                             'Admin approval is required before staff accounts can sign in.',
                           ),
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: muted),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: muted),
                         ),
                       ],
                     ),
@@ -258,8 +266,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: Colors.red.withValues(alpha: 25),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.red.withValues(alpha: 120)),
+                      borderRadius: BorderRadius.circular(8),
+                      border:
+                          Border.all(color: Colors.red.withValues(alpha: 120)),
                     ),
                     child: Text(
                       _error!,

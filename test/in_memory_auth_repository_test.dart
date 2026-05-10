@@ -8,7 +8,7 @@ void main() {
 
     final created = await auth.register(
       email: 'patient@example.com',
-      password: 'password',
+      password: 'Password1!',
       role: UserRole.patient,
       displayName: 'Patient',
     );
@@ -21,7 +21,7 @@ void main() {
     expect(auth.currentUser, isNull);
 
     final loggedIn =
-        await auth.signIn(email: 'patient@example.com', password: 'password');
+        await auth.signIn(email: 'patient@example.com', password: 'Password1!');
     expect(loggedIn.id, created.id);
     expect(auth.currentUser, isNotNull);
   });
@@ -32,7 +32,7 @@ void main() {
     expect(
       () => auth.register(
         email: 'dietitian_new@example.com',
-        password: 'their-secret',
+        password: 'TheirSecret1!',
         role: UserRole.dietitian,
         displayName: 'Dietitian',
       ),
@@ -50,7 +50,7 @@ void main() {
     await auth.approveUser(email: 'dietitian_new@example.com');
     // They can now sign in with their own password.
     final user =
-        await auth.signIn(email: 'dietitian_new@example.com', password: 'their-secret');
+        await auth.signIn(email: 'dietitian_new@example.com', password: 'TheirSecret1!');
     expect(user.role, UserRole.dietitian);
   });
 }

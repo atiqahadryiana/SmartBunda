@@ -25,7 +25,9 @@ class ProfileScreen extends ConsumerWidget {
         ? const SizedBox.shrink()
         : user.role != UserRole.patient
             ? Scaffold(
-                appBar: showAppBar ? AppBar(title: Text(strings.accountTitle)) : null,
+                appBar: showAppBar
+                    ? AppBar(title: Text(strings.accountTitle))
+                    : null,
                 body: Padding(
                   padding: const EdgeInsets.all(16),
                   child: ListView(
@@ -141,21 +143,27 @@ class _OutcomesCard extends StatelessWidget {
     final strings = AppStrings.of(context);
     final bmi = _bmi(profile);
     final trimester =
-        pregnancy == null ? '--' : strings.trimesterLabel(pregnancy!.trimesterEnum);
-    final week = pregnancy == null ? '--' : pregnancy!.gestationalWeek.toString();
+        pregnancy == null ? '--' : _trimesterLabel(strings, pregnancy!);
+    final week =
+        pregnancy == null ? '--' : pregnancy!.gestationalWeek.toString();
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(strings.outcomes, style: Theme.of(context).textTheme.titleMedium),
+            Text(strings.outcomes,
+                style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Row(
               children: [
-                Expanded(child: _OutcomeTile(label: strings.bmiLabel, value: bmi ?? '--')),
+                Expanded(
+                    child: _OutcomeTile(
+                        label: strings.bmiLabel, value: bmi ?? '--')),
                 const SizedBox(width: 8),
-                Expanded(child: _OutcomeTile(label: strings.trimester, value: trimester)),
+                Expanded(
+                    child: _OutcomeTile(
+                        label: strings.trimester, value: trimester)),
                 const SizedBox(width: 8),
                 Expanded(child: _OutcomeTile(label: strings.week, value: week)),
               ],
@@ -207,7 +215,8 @@ class _DetailsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(strings.details, style: Theme.of(context).textTheme.titleMedium),
+            Text(strings.details,
+                style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             _InfoRow(label: strings.dateOfBirth, value: _label(profile.dob)),
             _InfoRow(
@@ -217,6 +226,14 @@ class _DetailsCard extends StatelessWidget {
             _InfoRow(
               label: strings.weight,
               value: '${profile.currentWeightKg.toStringAsFixed(1)} kg',
+            ),
+            _InfoRow(
+              label: strings.hemoglobin,
+              value: _measurement(profile.hemoglobinGdl, 'g/dL'),
+            ),
+            _InfoRow(
+              label: strings.abdominalCircumference,
+              value: _measurement(profile.abdominalCircumferenceCm, 'cm'),
             ),
             _InfoRow(
               label: strings.bloodType,
@@ -244,7 +261,8 @@ class _MedicalCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(strings.medicalConditions, style: Theme.of(context).textTheme.titleMedium),
+            Text(strings.medicalConditions,
+                style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Text(conditions),
           ],
@@ -287,7 +305,8 @@ class _PregnancyCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(strings.pregnancy, style: Theme.of(context).textTheme.titleMedium),
+            Text(strings.pregnancy,
+                style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             if (pregnancy == null)
               Text(strings.pregnancyNotSet)
@@ -298,16 +317,23 @@ class _PregnancyCard extends StatelessWidget {
               ),
               _InfoRow(
                 label: strings.trimester,
-                value: strings.trimesterLabel(pregnancy!.trimesterEnum),
+                value: _trimesterLabel(strings, pregnancy!),
               ),
               _InfoRow(label: strings.edd, value: _label(pregnancy!.edd)),
-              _InfoRow(label: strings.riskLevel, value: _label(pregnancy!.riskLevel)),
+              _InfoRow(
+                  label: strings.riskLevel,
+                  value: _label(pregnancy!.riskLevel)),
             ],
           ],
         ),
       ),
     );
   }
+}
+
+String _trimesterLabel(AppStrings strings, Pregnancy pregnancy) {
+  final label = strings.trimesterLabel(pregnancy.trimesterEnum);
+  return strings.isMalay ? 'Trimester $label' : '$label trimester';
 }
 
 class _LanguageCard extends ConsumerWidget {
@@ -324,13 +350,15 @@ class _LanguageCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(strings.languageTitle, style: Theme.of(context).textTheme.titleMedium),
+            Text(strings.languageTitle,
+                style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              value: code,
+              initialValue: code,
               decoration: InputDecoration(labelText: strings.languageLabel),
               items: [
-                DropdownMenuItem(value: 'en', child: Text(strings.englishLabel)),
+                DropdownMenuItem(
+                    value: 'en', child: Text(strings.englishLabel)),
                 DropdownMenuItem(value: 'ms', child: Text(strings.malayLabel)),
               ],
               onChanged: (value) {
@@ -378,4 +406,9 @@ class _InfoRow extends StatelessWidget {
 String _label(String? value) {
   final trimmed = value?.trim();
   return trimmed == null || trimmed.isEmpty ? '--' : trimmed;
+}
+
+String _measurement(double? value, String unit) {
+  if (value == null || value <= 0) return '--';
+  return '${value.toStringAsFixed(1)} $unit';
 }

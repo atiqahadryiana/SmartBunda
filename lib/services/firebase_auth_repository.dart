@@ -7,6 +7,7 @@ import '../models/activity_log.dart';
 import '../models/app_user.dart';
 import '../models/system_settings.dart';
 import 'auth_repository.dart';
+import '../utils/password_policy.dart';
 
 class FirebaseAuthRepository implements AuthRepository {
   FirebaseAuthRepository({
@@ -129,6 +130,11 @@ class FirebaseAuthRepository implements AuthRepository {
     String? mmcNumber,
     String? jlmNumber,
   }) async {
+    _validatePassword(password);
+    if (role == UserRole.admin) {
+      throw Exception(
+          'Admin accounts must be created by a system administrator.');
+    }
     await _loadSettings();
     final cred = await _auth.createUserWithEmailAndPassword(
       email: email,
@@ -194,6 +200,7 @@ class FirebaseAuthRepository implements AuthRepository {
     bool isActive = true,
     Set<AccessPermission>? permissions,
   }) async {
+    _validatePassword(password);
     final secondary = await _secondaryAuth();
     final cred = await secondary.createUserWithEmailAndPassword(
       email: email,
@@ -249,7 +256,9 @@ class FirebaseAuthRepository implements AuthRepository {
       await _userDoc(userId).set(updates, SetOptions(merge: true));
     }
     await _log(
-      isActive == false ? ActivityType.userDeactivated : ActivityType.userUpdated,
+      isActive == false
+          ? ActivityType.userDeactivated
+          : ActivityType.userUpdated,
       'User account updated',
       actorId: _currentUser?.id,
       subjectId: userId,
@@ -305,6 +314,7 @@ class FirebaseAuthRepository implements AuthRepository {
     required String code,
     required String newPassword,
   }) async {
+    _validatePassword(newPassword);
     await _auth.confirmPasswordReset(code: code, newPassword: newPassword);
     await _log(
       ActivityType.passwordResetCompleted,
@@ -355,7 +365,8 @@ class FirebaseAuthRepository implements AuthRepository {
     await doc.reference.set(
       {
         'status': 'ACTIVE',
-        if (displayName != null && displayName.isNotEmpty) 'fullName': displayName,
+        if (displayName != null && displayName.isNotEmpty)
+          'fullName': displayName,
       },
       SetOptions(merge: true),
     );
@@ -472,7 +483,8 @@ class FirebaseAuthRepository implements AuthRepository {
   }
 
   void _guardAccess(AppUser user, Map<String, dynamic>? data) {
-    final status = _statusFromRaw(data?['status'], data?['isActive'], user.isActive);
+    final status =
+        _statusFromRaw(data?['status'], data?['isActive'], user.isActive);
     if (status == _UserStatus.pending) {
       throw Exception('Account not approved yet.');
     }
@@ -484,7 +496,8 @@ class FirebaseAuthRepository implements AuthRepository {
     }
   }
 
-  _UserStatus _statusFromRaw(dynamic status, dynamic isActiveValue, bool fallbackActive) {
+  _UserStatus _statusFromRaw(
+      dynamic status, dynamic isActiveValue, bool fallbackActive) {
     if (status is String) {
       final normalized = status.toLowerCase();
       if (normalized == 'pending') return _UserStatus.pending;
@@ -520,7 +533,9 @@ class FirebaseAuthRepository implements AuthRepository {
   bool _isActive(dynamic status, dynamic isActiveValue) {
     if (status is String) {
       final normalized = status.toLowerCase();
-      if (normalized == 'pending' || normalized == 'rejected' || normalized == 'inactive') {
+      if (normalized == 'pending' ||
+          normalized == 'rejected' ||
+          normalized == 'inactive') {
         return false;
       }
       return normalized == 'active';
@@ -541,6 +556,8 @@ class FirebaseAuthRepository implements AuthRepository {
       case 'nurse':
         return UserRole.nurse;
       case 'dietitian':
+      case 'nutrition':
+      case 'nutritionist':
         return UserRole.dietitian;
       case 'patient':
       default:
@@ -617,6 +634,12 @@ class FirebaseAuthRepository implements AuthRepository {
       });
     } catch (_) {
       // Ignore logging failures to avoid blocking auth flows.
+    }
+  }
+
+  void _validatePassword(String password) {
+    if (!PasswordPolicy.isValid(password)) {
+      throw Exception(PasswordPolicy.errorMessage);
     }
   }
 

@@ -79,7 +79,8 @@ class NutritionistClientScreen extends ConsumerWidget {
     final sorted = List<FoodEntry>.from(entries)
       ..sort((a, b) => b.date.compareTo(a.date));
     final today = DateTime.now();
-    final todayTotals = _totals(sorted.where((e) => _isSameDay(e.date, today)).toList());
+    final todayTotals =
+        _totals(sorted.where((e) => _isSameDay(e.date, today)).toList());
     final targets = _targets(pregnancy);
     final week = _lastDays(sorted, 7);
     final last3 = week.take(3).toList();
@@ -90,10 +91,13 @@ class NutritionistClientScreen extends ConsumerWidget {
     final noLogDays = last3.where((d) => d.totals.calories == 0).length;
     final insights = <String>[
       if (profile == null) 'Profile missing: targets use trimester defaults.',
-      if (pregnancy == null) 'Pregnancy not set: targets use trimester defaults.',
+      if (pregnancy == null)
+        'Pregnancy not set: targets use trimester defaults.',
       if (noLogDays >= 2) 'Missed logging on $noLogDays of the last 3 days.',
-      if (lowCaloriesDays >= 2) 'Calories below target on $lowCaloriesDays of last 3 days.',
-      if (lowProteinDays >= 2) 'Protein below target on $lowProteinDays of last 3 days.',
+      if (lowCaloriesDays >= 2)
+        'Calories below target on $lowCaloriesDays of last 3 days.',
+      if (lowProteinDays >= 2)
+        'Protein below target on $lowProteinDays of last 3 days.',
     ];
 
     return RequireSignIn(
@@ -137,8 +141,10 @@ class NutritionistClientScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('${targets.calories} kcal, ${targets.protein} g protein'),
-                    Text('Iron ${targets.ironMg.toInt()} mg, Folate ${targets.folateMcg.toInt()} mcg'),
+                    Text(
+                        '${targets.calories} kcal, ${targets.protein} g protein'),
+                    Text(
+                        'Iron ${targets.ironMg.toInt()} mg, Folate ${targets.folateMcg.toInt()} mcg'),
                   ],
                 ),
               ),
@@ -153,7 +159,8 @@ class NutritionistClientScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('${todayTotals.calories} / ${targets.calories} kcal'),
-                    Text('${todayTotals.protein} / ${targets.protein} g protein'),
+                    Text(
+                        '${todayTotals.protein} / ${targets.protein} g protein'),
                     const SizedBox(height: 8),
                     _GapRow(
                       label: 'Iron',
@@ -196,8 +203,9 @@ class NutritionistClientScreen extends ConsumerWidget {
                   final status = day.totals.calories >= targets.calories * 0.8
                       ? 'On track'
                       : 'Low';
-                  final color =
-                      status == 'On track' ? Colors.green.shade600 : Colors.orange;
+                  final color = status == 'On track'
+                      ? Colors.green.shade600
+                      : Colors.orange;
                   return ListTile(
                     dense: true,
                     title: Text('${day.day.month}/${day.day.day}'),
@@ -210,7 +218,8 @@ class NutritionistClientScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 16),
-            Text('Recent meals', style: Theme.of(context).textTheme.titleMedium),
+            Text('Recent meals',
+                style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             if (sorted.isEmpty)
               const Text('No meals logged yet.')
@@ -251,7 +260,8 @@ class NutritionistClientScreen extends ConsumerWidget {
       );
       return;
     }
-    final controller = TextEditingController(text: profile?.conditionNotes ?? '');
+    final controller =
+        TextEditingController(text: profile?.conditionNotes ?? '');
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -308,8 +318,11 @@ class _ProfileCard extends StatelessWidget {
 
     final bmi = profile!.bmi;
     final conditions = <String>[
-      if (profile!.medicalConditions.contains(MedicalCondition.gestationalDiabetes)) 'GDM',
-      if (profile!.medicalConditions.contains(MedicalCondition.anemia)) 'Anemia',
+      if (profile!.medicalConditions
+          .contains(MedicalCondition.gestationalDiabetes))
+        'GDM',
+      if (profile!.medicalConditions.contains(MedicalCondition.anemia))
+        'Anemia',
     ];
     final conditionText = conditions.isEmpty ? 'None' : conditions.join(', ');
     final pregnancyLine = pregnancy == null
@@ -322,8 +335,15 @@ class _ProfileCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('DOB: ${profile!.dob}', style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text('DOB: ${profile!.dob}',
+                style: const TextStyle(fontWeight: FontWeight.w600)),
             Text('Blood type: ${profile!.bloodType}'),
+            Text('Weight: ${profile!.currentWeightKg.toStringAsFixed(1)} kg'),
+            Text('Hemoglobin: ${_measurement(profile!.hemoglobinGdl, 'g/dL')}'),
+            Text(
+              'Abdominal circumference: '
+              '${_measurement(profile!.abdominalCircumferenceCm, 'cm')}',
+            ),
             Text('BMI ${bmi.toStringAsFixed(1)}'),
             Text(pregnancyLine),
             Text('Conditions: $conditionText'),
@@ -343,6 +363,11 @@ class _ProfileCard extends StatelessWidget {
         return 'Third';
     }
   }
+}
+
+String _measurement(double? value, String unit) {
+  if (value == null || value <= 0) return '--';
+  return '${value.toStringAsFixed(1)} $unit';
 }
 
 class _GapRow extends StatelessWidget {
@@ -367,8 +392,10 @@ class _GapRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         children: [
-          Expanded(child: Text('$label: ${intake.toStringAsFixed(1)}$targetText')),
-          Text(status, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+          Expanded(
+              child: Text('$label: ${intake.toStringAsFixed(1)}$targetText')),
+          Text(status,
+              style: TextStyle(color: color, fontWeight: FontWeight.w600)),
         ],
       ),
     );
@@ -398,7 +425,8 @@ class _ConditionFeedbackCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Condition feedback', style: Theme.of(context).textTheme.titleSmall),
+                Text('Condition feedback',
+                    style: Theme.of(context).textTheme.titleSmall),
                 if (canEdit)
                   TextButton(
                     onPressed: onEdit,

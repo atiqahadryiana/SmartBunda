@@ -14,6 +14,7 @@ import '../models/nutrition_plan.dart';
 import '../models/pregnancy.dart';
 import '../models/profile.dart';
 import '../models/system_settings.dart';
+import '../services/auth_repository.dart';
 import '../services/service_providers.dart';
 
 final currentUserProvider = Provider<AppUser?>((ref) {
@@ -75,10 +76,16 @@ final activityLogsProvider = StreamProvider<List<ActivityLogEntry>>((ref) {
   return ref.watch(authRepositoryProvider).watchActivityLogs();
 });
 
+final pendingApprovalsProvider = FutureProvider<List<PendingApproval>>((ref) {
+  return ref.watch(authRepositoryProvider).pendingApprovals();
+});
+
 final appointmentsProvider = StreamProvider<List<Appointment>>((ref) {
   final user = ref.watch(currentUserProvider);
   if (user == null) return const Stream.empty();
-  return ref.watch(appointmentRepositoryProvider).watchAppointmentsForUser(user.id);
+  return ref
+      .watch(appointmentRepositoryProvider)
+      .watchAppointmentsForUser(user.id);
 });
 
 final allAppointmentsProvider = StreamProvider<List<Appointment>>((ref) {
@@ -122,27 +129,37 @@ final educationContentProvider = StreamProvider<List<FirestoreDoc>>((ref) {
 });
 
 final allEducationContentProvider = StreamProvider<List<FirestoreDoc>>((ref) {
-  return ref.watch(contentRepositoryProvider).watchEducationContent(activeOnly: false);
+  return ref
+      .watch(contentRepositoryProvider)
+      .watchEducationContent(activeOnly: false);
 });
 
 final recommendationsProvider = StreamProvider<List<FirestoreDoc>>((ref) {
   final user = ref.watch(currentUserProvider);
   if (user == null) return const Stream.empty();
-  return ref.watch(contentRepositoryProvider).watchRecommendations(userId: user.id);
+  return ref
+      .watch(contentRepositoryProvider)
+      .watchRecommendations(userId: user.id);
 });
 
 final allRecommendationsProvider = StreamProvider<List<FirestoreDoc>>((ref) {
-  return ref.watch(contentRepositoryProvider).watchRecommendations(activeOnly: false);
+  return ref
+      .watch(contentRepositoryProvider)
+      .watchRecommendations(activeOnly: false);
 });
 
 final notificationsProvider = StreamProvider<List<FirestoreDoc>>((ref) {
   final user = ref.watch(currentUserProvider);
   if (user == null) return const Stream.empty();
-  return ref.watch(contentRepositoryProvider).watchNotifications(userId: user.id);
+  return ref
+      .watch(contentRepositoryProvider)
+      .watchNotifications(userId: user.id);
 });
 
 final allNotificationsProvider = StreamProvider<List<FirestoreDoc>>((ref) {
-  return ref.watch(contentRepositoryProvider).watchNotifications(activeOnly: false);
+  return ref
+      .watch(contentRepositoryProvider)
+      .watchNotifications(activeOnly: false);
 });
 
 final reportsProvider = StreamProvider<List<FirestoreDoc>>((ref) {

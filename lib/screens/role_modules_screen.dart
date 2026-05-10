@@ -6,7 +6,9 @@ import '../providers/app_providers.dart';
 import 'admin_screen.dart';
 import 'appointments_screen.dart';
 import 'education_screen.dart';
-import 'food_logging_hub_screen.dart';
+import 'food_catalog_screen.dart';
+import 'hydration_screen.dart';
+import 'log_screen.dart';
 import 'module_overview_screen.dart';
 import 'monitoring_screen.dart';
 import 'nutrition_plan_management_screen.dart';
@@ -14,6 +16,7 @@ import 'nutritionist_screen.dart';
 import 'patient_profiles_screen.dart';
 import 'profile_screen.dart';
 import 'reports_screen.dart';
+import 'summary_screen.dart';
 import 'system_admin_screen.dart';
 
 class RoleModulesScreen extends ConsumerWidget {
@@ -36,12 +39,16 @@ class RoleModulesScreen extends ConsumerWidget {
         : modules
             .where(
               (module) =>
-                  module.permission == null || currentUser.hasPermission(module.permission!),
+                  module.permission == null ||
+                  currentUser.hasPermission(module.permission!),
             )
             .toList();
-    final coreModules = visible.where((module) => module.sprintIndex != null).toList()
+    final coreModules = visible
+        .where((module) => module.sprintIndex != null)
+        .toList()
       ..sort((a, b) => a.sprintIndex!.compareTo(b.sprintIndex!));
-    final supportModules = visible.where((module) => module.sprintIndex == null).toList();
+    final supportModules =
+        visible.where((module) => module.sprintIndex == null).toList();
     final recommended = coreModules.isNotEmpty
         ? coreModules.firstWhere(
             (module) => module.sprintIndex != 0,
@@ -49,45 +56,37 @@ class RoleModulesScreen extends ConsumerWidget {
           )
         : (supportModules.isNotEmpty ? supportModules.first : null);
     return Scaffold(
-      appBar: showAppBar ? AppBar(title: Text('${resolvedRole.label} modules')) : null,
+      appBar: showAppBar
+          ? AppBar(title: Text('${resolvedRole.label} modules'))
+          : null,
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('Getting started', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 4),
-          Text(
-            _roleGuidance(resolvedRole),
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-          ),
+          _ModulesHeader(role: resolvedRole),
           if (recommended != null) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             _StartHereCard(
               module: recommended,
               onTap: () => _openModule(context, recommended),
             ),
           ],
           if (coreModules.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Text('Core sprints', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 18),
+            Text('Core sprints',
+                style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
-            ...coreModules.map(
-              (module) => _ModuleCard(
-                module: module,
-                onTap: () => _openModule(context, module),
-              ),
+            _ModuleGrid(
+              modules: coreModules,
+              onOpen: (module) => _openModule(context, module),
             ),
           ],
           if (supportModules.isNotEmpty) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
             Text('More tools', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
-            ...supportModules.map(
-              (module) => _ModuleCard(
-                module: module,
-                onTap: () => _openModule(context, module),
-              ),
+            _ModuleGrid(
+              modules: supportModules,
+              onOpen: (module) => _openModule(context, module),
             ),
           ],
         ],
@@ -114,6 +113,13 @@ class RoleModulesScreen extends ConsumerWidget {
             builder: (_) => const AdminScreen(showAppBar: true),
             sprintIndex: 1,
             permission: AccessPermission.userManagement,
+          ),
+          _module(
+            title: 'Food database',
+            description: 'Maintain food items and nutrition values.',
+            icon: Icons.restaurant_menu_outlined,
+            builder: (_) => const FoodCatalogScreen(showAppBar: true),
+            permission: AccessPermission.foodDatabase,
           ),
           _module(
             title: 'Appointments',
@@ -148,6 +154,14 @@ class RoleModulesScreen extends ConsumerWidget {
             permission: AccessPermission.authentication,
           ),
           _module(
+            title: 'Daily summary',
+            description: 'Review daily nutrition progress and recommendations.',
+            icon: Icons.dashboard_outlined,
+            builder: (_) => const SummaryScreen(showAppBar: true),
+            sprintIndex: 1,
+            permission: AccessPermission.reporting,
+          ),
+          _module(
             title: 'Patient profile & pregnancy',
             description: 'Personal details, pregnancy progress.',
             icon: Icons.person_outline,
@@ -156,10 +170,18 @@ class RoleModulesScreen extends ConsumerWidget {
             permission: AccessPermission.patientProfiles,
           ),
           _module(
-            title: 'Food logging & nutrition',
-            description: 'Meals, hydration, and nutrition summaries.',
+            title: 'Meal log',
+            description: 'Record meals and nutrition intake.',
             icon: Icons.restaurant_menu,
-            builder: (_) => const FoodLoggingHubScreen(showAppBar: true),
+            builder: (_) => const LogScreen(),
+            sprintIndex: 3,
+            permission: AccessPermission.foodLogging,
+          ),
+          _module(
+            title: 'Hydration log',
+            description: 'Track water intake and daily hydration progress.',
+            icon: Icons.water_drop_outlined,
+            builder: (_) => const HydrationScreen(),
             sprintIndex: 3,
             permission: AccessPermission.foodLogging,
           ),
@@ -167,8 +189,7 @@ class RoleModulesScreen extends ConsumerWidget {
             title: 'Monitoring & alert',
             description: 'Track trends and receive reminders.',
             icon: Icons.monitor_heart_outlined,
-            builder: (_) =>
-                MonitoringScreen(role: role, showAppBar: true),
+            builder: (_) => MonitoringScreen(role: role, showAppBar: true),
             permission: AccessPermission.monitoringAlerts,
           ),
           _module(
@@ -223,15 +244,15 @@ class RoleModulesScreen extends ConsumerWidget {
             title: 'Nutrition plan management',
             description: 'Build and approve nutrition plans.',
             icon: Icons.playlist_add_check,
-            builder: (_) => NutritionPlanManagementScreen(role: role, showAppBar: true),
+            builder: (_) =>
+                NutritionPlanManagementScreen(role: role, showAppBar: true),
             permission: AccessPermission.nutritionPlans,
           ),
           _module(
             title: 'Monitoring & alert',
             description: 'Track trends and critical risks.',
             icon: Icons.monitor_heart_outlined,
-            builder: (_) =>
-                MonitoringScreen(role: role, showAppBar: true),
+            builder: (_) => MonitoringScreen(role: role, showAppBar: true),
             permission: AccessPermission.monitoringAlerts,
           ),
           _module(
@@ -271,8 +292,7 @@ class RoleModulesScreen extends ConsumerWidget {
             title: 'Monitoring & alert',
             description: 'Track trends and critical risks.',
             icon: Icons.monitor_heart_outlined,
-            builder: (_) =>
-                MonitoringScreen(role: role, showAppBar: true),
+            builder: (_) => MonitoringScreen(role: role, showAppBar: true),
             permission: AccessPermission.monitoringAlerts,
           ),
           _module(
@@ -320,15 +340,15 @@ class RoleModulesScreen extends ConsumerWidget {
             title: 'Nutrition plan management',
             description: 'Build and approve nutrition plans.',
             icon: Icons.playlist_add_check,
-            builder: (_) => NutritionPlanManagementScreen(role: role, showAppBar: true),
+            builder: (_) =>
+                NutritionPlanManagementScreen(role: role, showAppBar: true),
             permission: AccessPermission.nutritionPlans,
           ),
           _module(
             title: 'Monitoring & alert',
             description: 'Track trends and critical risks.',
             icon: Icons.monitor_heart_outlined,
-            builder: (_) =>
-                MonitoringScreen(role: role, showAppBar: true),
+            builder: (_) => MonitoringScreen(role: role, showAppBar: true),
             permission: AccessPermission.monitoringAlerts,
           ),
           _module(
@@ -365,6 +385,107 @@ String _roleGuidance(UserRole role) {
   }
 }
 
+class _ModulesHeader extends StatelessWidget {
+  const _ModulesHeader({required this.role});
+
+  final UserRole role;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(
+          scheme.primary.withValues(alpha: 14),
+          scheme.surface,
+        ),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: scheme.primary,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.grid_view_outlined, color: Colors.white),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${role.label} modules',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    _roleGuidance(role),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                          height: 1.45,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ModuleGrid extends StatelessWidget {
+  const _ModuleGrid({
+    required this.modules,
+    required this.onOpen,
+  });
+
+  final List<_ModuleItem> modules;
+  final ValueChanged<_ModuleItem> onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 960
+            ? 3
+            : constraints.maxWidth >= 620
+                ? 2
+                : 1;
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: modules.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: columns == 1 ? 3.1 : 1.55,
+          ),
+          itemBuilder: (context, index) {
+            final module = modules[index];
+            return _ModuleCard(
+              module: module,
+              onTap: () => onOpen(module),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
 void _openModule(BuildContext context, _ModuleItem module) {
   Navigator.of(context).push(
     MaterialPageRoute(builder: module.builder),
@@ -386,7 +507,7 @@ class _StartHereCard extends StatelessWidget {
         scheme.surface,
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(8),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(14),
@@ -399,7 +520,8 @@ class _StartHereCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Start here', style: Theme.of(context).textTheme.titleSmall),
+                    Text('Start here',
+                        style: Theme.of(context).textTheme.titleSmall),
                     const SizedBox(height: 4),
                     Text(
                       module.title,
@@ -435,7 +557,7 @@ class _ModuleCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Card(
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(8),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(12),

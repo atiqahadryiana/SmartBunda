@@ -151,7 +151,14 @@ class FoodCatalogRepository {
     _loaded = true;
   }
 
-  void _emitCatalog() async {
+  Future<void> refresh() async {
+    _loaded = false;
+    _systemEntries = null;
+    _customEntries.clear();
+    await _emitCatalog();
+  }
+
+  Future<void> _emitCatalog() async {
     await _ensureBase();
     final items = <FoodCatalogEntry>[
       ...?_systemEntries,

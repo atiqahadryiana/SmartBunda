@@ -1,11 +1,11 @@
 {
-    "name": "smartbunda",
-    "short_name": "smartbunda",
+    "name": "Smartbunda",
+    "short_name": "Smartbunda",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F7FAF8",
+    "theme_color": "#0F766E",
+    "description": "Pregnancy nutrition tracking, care plans, reports, and appointments for mothers and care teams.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

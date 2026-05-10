@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../localization/app_strings.dart';
 import '../models/app_user.dart';
 import '../services/service_providers.dart';
+import '../utils/auth_error_messages.dart';
 import '../widgets/auth_shell.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
@@ -22,7 +23,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   static const _emailLinkKey = 'emailLinkSignInEmail';
   static const _emailLinkContinueUrl =
-      'https://smartbunda-d7761.firebaseapp.com/emailSignIn';
+      'https://smartbunda-atiqahadryianaa.web.app/emailSignIn';
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -62,7 +63,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _didRedirect = true;
       _goHome(user);
     } catch (e) {
-      setState(() => _error = e.toString());
+      setState(() => _error = friendlyAuthError(e));
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -127,11 +128,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               .requestPasswordReset(emailCtrl.text.trim());
                           setState(() {
                             info = response.isEmpty
-                                ? strings.t('The reset link has been sent to your email.')
+                                ? strings.t(
+                                    'The reset link has been sent to your email.')
                                 : response;
                           });
                         } catch (e) {
-                          setState(() => error = e.toString());
+                          setState(() => error = friendlyAuthError(e));
                         } finally {
                           setState(() => loading = false);
                         }
@@ -147,7 +149,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   void _goHome(AppUser user) {
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const HomeScreen()),
+      MaterialPageRoute(builder: (_) => HomeScreen(initialUser: user)),
       (route) => false,
     );
   }
@@ -186,7 +188,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _goHome(user);
     } catch (e) {
       if (mounted) {
-        setState(() => _error = e.toString());
+        setState(() => _error = friendlyAuthError(e));
       }
     } finally {
       if (mounted) {
@@ -197,7 +199,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<String?> _promptForEmail() async {
     final strings = AppStrings.of(context);
-    final controller = TextEditingController(text: _emailController.text.trim());
+    final controller =
+        TextEditingController(text: _emailController.text.trim());
     final result = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
@@ -212,7 +215,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: Text(strings.t('Cancel')),
           ),
           FilledButton(
-            onPressed: () => Navigator.of(context).maybePop(controller.text.trim()),
+            onPressed: () =>
+                Navigator.of(context).maybePop(controller.text.trim()),
             child: Text(strings.t('Continue')),
           ),
         ],
@@ -225,7 +229,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final strings = AppStrings.of(context);
     final email = _emailController.text.trim();
     if (email.isEmpty || !email.contains('@')) {
-      setState(() => _error = strings.t('Enter a valid email for email link sign-in.'));
+      setState(() =>
+          _error = strings.t('Enter a valid email for email link sign-in.'));
       return;
     }
     setState(() {
@@ -250,12 +255,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       await prefs.setString(_emailLinkKey, email);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(strings.t('Email link sent. Check your inbox.'))),
+          SnackBar(
+              content: Text(strings.t('Email link sent. Check your inbox.'))),
         );
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _error = e.toString());
+        setState(() => _error = friendlyAuthError(e));
       }
     } finally {
       if (mounted) {
@@ -278,10 +284,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     return AuthShell(
       title: 'Smartbunda',
-      subtitle: strings.t('A calm way to track pregnancy nutrition and stay in sync with care.'),
+      subtitle: strings.t(
+          'A calm way to track pregnancy nutrition and stay in sync with care.'),
       footer: Builder(
         builder: (context) {
-          final muted = Theme.of(context).colorScheme.onSurface.withValues(alpha: 140);
+          final muted =
+              Theme.of(context).colorScheme.onSurface.withValues(alpha: 140);
           return Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -292,32 +300,39 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 children: [
                   Text(strings.t('New here?'), style: TextStyle(color: muted)),
                   TextButton(
-                    onPressed: () => Navigator.of(context).pushNamed(RegisterScreen.routeName),
+                    onPressed: () => Navigator.of(context)
+                        .pushNamed(RegisterScreen.routeName),
                     child: Text(strings.t('Create account')),
                   ),
                 ],
-             // ),
-             // TextButton(
-             //   onPressed: () => Navigator.of(context).pushNamed('/onboarding'),
-             //   child: const Text('View app tour'),
-             ),
+                // ),
+                // TextButton(
+                //   onPressed: () => Navigator.of(context).pushNamed('/onboarding'),
+                //   child: const Text('View app tour'),
+              ),
             ],
           );
         },
       ),
       child: Builder(
         builder: (context) {
-          final muted = Theme.of(context).colorScheme.onSurface.withValues(alpha: 150);
+          final muted =
+              Theme.of(context).colorScheme.onSurface.withValues(alpha: 150);
           return Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(strings.t('Welcome back'), style: Theme.of(context).textTheme.titleMedium),
+                Text(strings.t('Welcome back'),
+                    style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 4),
                 Text(
-                  strings.t('Sign in to review your plan, logs, and recommendations.'),
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: muted),
+                  strings.t(
+                      'Sign in to review your plan, logs, and recommendations.'),
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(color: muted),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -326,8 +341,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     labelText: strings.t('Email'),
                     prefixIcon: const Icon(Icons.email_outlined),
                   ),
-                  validator: (v) =>
-                      v != null && v.contains('@') ? null : strings.t('Enter a valid email'),
+                  validator: (v) => v != null && v.contains('@')
+                      ? null
+                      : strings.t('Enter a valid email'),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
@@ -337,8 +353,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     prefixIcon: const Icon(Icons.lock_outline),
                   ),
                   obscureText: true,
-                  validator: (v) =>
-                      v != null && v.length >= 6 ? null : strings.t('Min 6 characters'),
+                  validator: (v) => v != null && v.length >= 6
+                      ? null
+                      : strings.t('Min 6 characters'),
                 ),
                 Align(
                   alignment: Alignment.centerRight,
@@ -352,8 +369,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: Colors.red.withValues(alpha: 25),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.red.withValues(alpha: 120)),
+                      borderRadius: BorderRadius.circular(8),
+                      border:
+                          Border.all(color: Colors.red.withValues(alpha: 120)),
                     ),
                     child: Text(
                       _error!,
@@ -370,19 +388,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ? const SizedBox(
                             height: 18,
                             width: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
                         : Text(strings.t('Login')),
                   ),
                 ),
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    Expanded(child: Divider(color: muted.withValues(alpha: 90))),
+                    Expanded(
+                        child: Divider(color: muted.withValues(alpha: 90))),
                     const SizedBox(width: 12),
-                    Text(strings.t('or'), style: Theme.of(context).textTheme.bodySmall),
+                    Text(strings.t('or'),
+                        style: Theme.of(context).textTheme.bodySmall),
                     const SizedBox(width: 12),
-                    Expanded(child: Divider(color: muted.withValues(alpha: 90))),
+                    Expanded(
+                        child: Divider(color: muted.withValues(alpha: 90))),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -395,7 +416,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   strings.t(
                     'We will email a secure link. Use it on this device to finish signing in.',
                   ),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: muted),
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: muted),
                 ),
                 const SizedBox(height: 10),
                 SizedBox(

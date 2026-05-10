@@ -60,8 +60,9 @@ class AppStrings {
 
   String get logoutTooltip => isMalay ? 'Log keluar' : 'Logout';
   String get logoutTitle => isMalay ? 'Log keluar?' : 'Log out?';
-  String get logoutMessage =>
-      isMalay ? 'Adakah anda pasti mahu log keluar?' : 'Are you sure you want to log out?';
+  String get logoutMessage => isMalay
+      ? 'Adakah anda pasti mahu log keluar?'
+      : 'Are you sure you want to log out?';
   String get no => isMalay ? 'Tidak' : 'No';
   String get yesLogOut => isMalay ? 'Ya, log keluar' : 'Yes, log out';
   String get educationTooltip => isMalay ? 'Pendidikan' : 'Education';
@@ -86,17 +87,21 @@ class AppStrings {
       : 'Review your outcomes and update details when needed.';
   String get edit => isMalay ? 'Kemas kini' : 'Edit';
   String get editProfile => isMalay ? 'Kemas kini profil' : 'Edit profile';
-  String get noProfileYet => isMalay ? 'Profil belum tersedia' : 'No profile yet';
+  String get noProfileYet =>
+      isMalay ? 'Profil belum tersedia' : 'No profile yet';
   String get noProfileMessage => isMalay
       ? 'Lengkapkan profil anda untuk dapatkan sasaran diperibadikan.'
       : 'Complete your profile to unlock personalized targets.';
   String get outcomes => isMalay ? 'Status' : 'Outcomes';
   String get details => isMalay ? 'Butiran' : 'Details';
-  String get medicalConditions => isMalay ? 'Keadaan perubatan' : 'Medical conditions';
+  String get medicalConditions =>
+      isMalay ? 'Keadaan perubatan' : 'Medical conditions';
   String get pregnancy => isMalay ? 'Kehamilan' : 'Pregnancy';
-  String get pregnancyNotSet =>
-      isMalay ? 'Maklumat kehamilan belum ditetapkan.' : 'Pregnancy details not set yet.';
-  String get gestationalWeek => isMalay ? 'Minggu kehamilan' : 'Gestational week';
+  String get pregnancyNotSet => isMalay
+      ? 'Maklumat kehamilan belum ditetapkan.'
+      : 'Pregnancy details not set yet.';
+  String get gestationalWeek =>
+      isMalay ? 'Minggu kehamilan' : 'Gestational week';
   String get trimester => isMalay ? 'Trimester' : 'Trimester';
   String get week => isMalay ? 'Minggu' : 'Week';
   String get edd => isMalay ? 'Tarikh jangka lahir' : 'EDD';
@@ -104,20 +109,27 @@ class AppStrings {
   String get dateOfBirth => isMalay ? 'Tarikh lahir' : 'Date of birth';
   String get height => isMalay ? 'Tinggi' : 'Height';
   String get weight => isMalay ? 'Berat' : 'Weight';
+  String get hemoglobin => isMalay ? 'Hemoglobin' : 'Hemoglobin';
+  String get abdominalCircumference =>
+      isMalay ? 'Lilitan abdomen' : 'Abdominal circumference';
   String get bloodType => isMalay ? 'Jenis darah' : 'Blood type';
   String get noneReported => isMalay ? 'Tiada dilaporkan' : 'None reported';
 
   String get accountTitle => isMalay ? 'Akaun' : 'Account';
-  String get accountSubtitle =>
-      isMalay ? 'Urus butiran profil dan tetapan peranan anda.' : 'Manage your profile details and role settings.';
+  String get accountSubtitle => isMalay
+      ? 'Urus butiran profil dan tetapan peranan anda.'
+      : 'Manage your profile details and role settings.';
   String get accountReviewSubtitle => isMalay
       ? 'Semak butiran akaun dan peranan anda.'
       : 'Review your account details and role.';
-  String get signInToViewProfile =>
-      isMalay ? 'Sila log masuk untuk melihat profil anda.' : 'Please sign in to view your profile.';
-  String get signInToEditProfile =>
-      isMalay ? 'Sila log masuk untuk kemas kini profil anda.' : 'Please sign in to edit your profile.';
-  String get patientProfileTitle => isMalay ? 'Profil pesakit' : 'Patient profile';
+  String get signInToViewProfile => isMalay
+      ? 'Sila log masuk untuk melihat profil anda.'
+      : 'Please sign in to view your profile.';
+  String get signInToEditProfile => isMalay
+      ? 'Sila log masuk untuk kemas kini profil anda.'
+      : 'Please sign in to edit your profile.';
+  String get patientProfileTitle =>
+      isMalay ? 'Profil pesakit' : 'Patient profile';
   String get patientProfileSubtitle => isMalay
       ? 'Lengkapkan butiran anda untuk peribadikan sasaran pemakanan.'
       : 'Complete your details to personalize nutrition targets.';
@@ -125,6 +137,10 @@ class AppStrings {
       isMalay ? 'Tarikh lahir (YYYY-MM-DD)' : 'Date of birth (YYYY-MM-DD)';
   String get heightLabel => isMalay ? 'Tinggi (cm)' : 'Height (cm)';
   String get weightLabel => isMalay ? 'Berat (kg)' : 'Weight (kg)';
+  String get hemoglobinLabel =>
+      isMalay ? 'Hemoglobin (g/dL)' : 'Hemoglobin (g/dL)';
+  String get abdominalCircumferenceLabel =>
+      isMalay ? 'Lilitan abdomen (cm)' : 'Abdominal circumference (cm)';
   String get bmiLabel => 'BMI';
   String get bloodTypeLabel => isMalay ? 'Jenis darah' : 'Blood type';
   String get anemiaLabel => 'Anemia';
@@ -133,7 +149,8 @@ class AppStrings {
       ? 'Profil kehamilan pesakit diurus melalui modul profil pesakit.'
       : 'Patient pregnancy profiles are managed on the patient profile module.';
   String get pregnancySectionTitle => isMalay ? 'Kehamilan' : 'Pregnancy';
-  String get gestationalWeekLabel => isMalay ? 'Minggu kehamilan' : 'Gestational week';
+  String get gestationalWeekLabel =>
+      isMalay ? 'Minggu kehamilan' : 'Gestational week';
   String get trimesterLabelText => isMalay ? 'Trimester' : 'Trimester';
   String get trimester1 => 'Trimester 1';
   String get trimester2 => 'Trimester 2';
@@ -146,8 +163,9 @@ class AppStrings {
   String get profileSaved => isMalay ? 'Profil disimpan' : 'Profile saved';
   String saveFailed(String message) =>
       isMalay ? 'Simpan gagal: $message' : 'Save failed: $message';
-  String unableToAccessMedia(String message) =>
-      isMalay ? 'Tidak dapat akses media: $message' : 'Unable to access media: $message';
+  String unableToAccessMedia(String message) => isMalay
+      ? 'Tidak dapat akses media: $message'
+      : 'Unable to access media: $message';
   String errorLoadingContent(String message) => isMalay
       ? 'Ralat memuat kandungan: $message'
       : 'Error loading content: $message';
@@ -159,8 +177,9 @@ class AppStrings {
   String reportFor(String name) => isMalay ? 'Laporan: $name' : 'Report: $name';
   String entriesLogged(int count) =>
       isMalay ? 'Log direkod: $count' : 'Entries logged: $count';
-  String totalCaloriesLogged(int total) =>
-      isMalay ? 'Jumlah kalori direkod: $total' : 'Total calories logged: $total';
+  String totalCaloriesLogged(int total) => isMalay
+      ? 'Jumlah kalori direkod: $total'
+      : 'Total calories logged: $total';
   String targetsSummary(int calories, int protein) => isMalay
       ? 'Sasaran: $calories kcal, $protein g'
       : 'Targets: $calories kcal, $protein g';
@@ -202,12 +221,13 @@ class AppStrings {
       isMalay ? '$count notifikasi' : '$count notifications';
   String ratingValue(int rating) =>
       isMalay ? 'Penilaian: $rating/5' : 'Rating: $rating/5';
-  String fromUser(String name) =>
-      isMalay ? 'Daripada: $name' : 'From: $name';
-  String get heightWeightNumberError =>
-      isMalay ? 'Tinggi dan berat mestilah nombor.' : 'Height and weight must be numbers.';
-  String get weekNumberError =>
-      isMalay ? 'Minggu kehamilan mestilah nombor.' : 'Gestational week must be a number.';
+  String fromUser(String name) => isMalay ? 'Daripada: $name' : 'From: $name';
+  String get heightWeightNumberError => isMalay
+      ? 'Tinggi dan berat mestilah nombor.'
+      : 'Height and weight must be numbers.';
+  String get weekNumberError => isMalay
+      ? 'Minggu kehamilan mestilah nombor.'
+      : 'Gestational week must be a number.';
   String get eddInvalidError => isMalay
       ? 'Tarikh jangka lahir mesti tarikh sah (YYYY-MM-DD).'
       : 'EDD must be a valid date (YYYY-MM-DD).';
@@ -233,8 +253,7 @@ class AppStrings {
       : 'Based on your trimester$conditionNote.';
   String conditionsLabel(String labels) =>
       isMalay ? ' (keadaan: $labels)' : ' (conditions: $labels)';
-  String logsCount(int count) =>
-      isMalay ? '$count log' : '$count logs';
+  String logsCount(int count) => isMalay ? '$count log' : '$count logs';
   String pregnancySummary(Trimester trimester, int week) {
     final trimesterLabel = this.trimesterLabel(trimester);
     return isMalay
@@ -247,7 +266,8 @@ class AppStrings {
     'Log': 'Log',
     'Appointments': 'Temu janji',
     'Feedback': 'Maklum balas',
-    'Please sign in to send feedback.': 'Sila log masuk untuk menghantar maklum balas.',
+    'Please sign in to send feedback.':
+        'Sila log masuk untuk menghantar maklum balas.',
     'Feedback sent': 'Maklum balas dihantar',
     'Feedback monitor': 'Pemantau maklum balas',
     'Review comments and ratings from users.':
@@ -280,7 +300,8 @@ class AppStrings {
     'Select a provider': 'Pilih penyedia',
     'Type': 'Jenis',
     'Pick': 'Pilih',
-    'No available slots for this date.': 'Tiada slot tersedia untuk tarikh ini.',
+    'No available slots for this date.':
+        'Tiada slot tersedia untuk tarikh ini.',
     'Time slot': 'Slot masa',
     'Select a time slot': 'Pilih slot masa',
     'Send reminder to patient': 'Hantar peringatan kepada pesakit',
@@ -303,6 +324,8 @@ class AppStrings {
     'No saved reports yet.': 'Belum ada laporan disimpan.',
     'Report copied to clipboard': 'Laporan disalin ke papan klip',
     'Saved report': 'Laporan disimpan',
+    'Medical report': 'Laporan perubatan',
+    'Nutrition report': 'Laporan pemakanan',
     'Reports overview': 'Ringkasan laporan',
     'Tap a patient to review their last 7 days of intake.':
         'Ketik pesakit untuk semak pengambilan 7 hari terakhir.',
@@ -311,7 +334,8 @@ class AppStrings {
         'Laporan akan muncul selepas pesakit mula log makanan.',
     'Analytics': 'Analitik',
     'System usage': 'Penggunaan sistem',
-    'High-level metrics across all users.': 'Metrik ringkas untuk semua pengguna.',
+    'High-level metrics across all users.':
+        'Metrik ringkas untuk semua pengguna.',
     'Total users': 'Jumlah pengguna',
     'Active accounts': 'Akaun aktif',
     'Inactive accounts': 'Akaun tidak aktif',
@@ -353,8 +377,17 @@ class AppStrings {
     'Trimester nutrition guide': 'Panduan pemakanan trimester',
     'Recommended targets based on gestation stage.':
         'Sasaran yang disyorkan berdasarkan tahap kehamilan.',
+    'Perinatal care manual': 'Manual penjagaan perinatal',
+    'Pre-pregnancy risk checks, care workflow, counselling, and antenatal visits.':
+        'Semakan risiko pra-kehamilan, aliran penjagaan, kaunseling, dan lawatan antenatal.',
+    'Structured guidance from pages 29-79 for pre-pregnancy and early antenatal care.':
+        'Panduan berstruktur daripada halaman 29-79 untuk penjagaan pra-kehamilan dan antenatal awal.',
+    'Antenatal visit schedule': 'Jadual lawatan antenatal',
+    'Use this as care-team reference material, not as a replacement for clinician judgement.':
+        'Gunakan ini sebagai rujukan pasukan penjagaan, bukan pengganti pertimbangan klinisian.',
     'Healthy meal suggestions': 'Cadangan hidangan sihat',
-    'Balanced meal ideas and snack tips.': 'Idea hidangan seimbang dan tip snek.',
+    'Balanced meal ideas and snack tips.':
+        'Idea hidangan seimbang dan tip snek.',
     'Curated meal ideas for each trimester.':
         'Idea hidangan pilihan untuk setiap trimester.',
     'Iron-rich meals with leafy greens and lean proteins':
@@ -367,7 +400,8 @@ class AppStrings {
         'Peribadikan cadangan bersama pasukan penjagaan anda.',
     'Pregnancy nutrition FAQs': 'Soalan Lazim pemakanan kehamilan',
     'Quick guidance and common questions.': 'Panduan ringkas dan soalan biasa.',
-    'Common questions answered in one place.': 'Soalan biasa dijawab di satu tempat.',
+    'Common questions answered in one place.':
+        'Soalan biasa dijawab di satu tempat.',
     'How much water should I drink daily?':
         'Berapa banyak air perlu saya minum setiap hari?',
     'What foods support healthy iron levels?':
@@ -376,6 +410,19 @@ class AppStrings {
         'Had kafein yang selamat semasa kehamilan',
     'Always consult your clinician for medical advice.':
         'Sentiasa rujuk klinisian anda untuk nasihat perubatan.',
+    'AI nutrition assistant': 'Pembantu pemakanan AI',
+    'Ask about pregnancy nutrition and the content above.':
+        'Tanya tentang pemakanan kehamilan dan kandungan di atas.',
+    'Ask a nutrition question': 'Tanya soalan pemakanan',
+    'Send': 'Hantar',
+    'Thanks for the question. This is a demo chat box. Connect an AI service to provide tailored answers.':
+        'Terima kasih atas soalan. Ini kotak sembang demo. Sambungkan servis AI untuk jawapan yang disesuaikan.',
+    'Try to spread water intake across the day, aim for steady sips, and follow any target from your care team.':
+        'Cuba agihkan pengambilan air sepanjang hari, minum sedikit tetapi kerap, dan ikut sasaran daripada pasukan penjagaan.',
+    'Pair iron sources with vitamin C and include leafy greens, beans, or lean meats.':
+        'Gandingkan sumber zat besi dengan vitamin C dan ambil sayur berdaun, kekacang, atau daging tanpa lemak.',
+    'During pregnancy, keep caffeine moderate and check with your clinician if unsure.':
+        'Semasa kehamilan, hadkan kafein dan semak dengan klinisian jika tidak pasti.',
     'What you can do': 'Apa yang boleh anda lakukan',
     'Account': 'Akaun',
     'Edit': 'Kemas kini',
@@ -393,6 +440,102 @@ class AppStrings {
     'Clear': 'Kosongkan',
     'Login': 'Log masuk',
     'Create account': 'Cipta akaun',
+    'Back to website': 'Kembali ke laman web',
+    'Pregnancy nutrition platform': 'Platform pemakanan kehamilan',
+    'Admin dashboard + mobile app': 'Papan pemuka admin + aplikasi mudah alih',
+    'Pregnancy nutrition care, coordinated.':
+        'Penjagaan pemakanan kehamilan yang terselaras.',
+    'One nutrition platform for the clinic and the mother.':
+        'Satu platform pemakanan untuk klinik dan ibu.',
+    'Smartbunda connects admin operations, care-team visibility, and daily mobile tracking in one coordinated workflow.':
+        'Smartbunda menghubungkan operasi admin, keterlihatan pasukan penjagaan, dan penjejakan mudah alih harian dalam satu aliran kerja terselaras.',
+    'Open platform': 'Buka platform',
+    'Admin approvals and reporting': 'Kelulusan admin dan pelaporan',
+    'Mobile food and hydration logs': 'Log makanan dan hidrasi mudah alih',
+    'Shared patient care context': 'Konteks penjagaan pesakit yang dikongsi',
+    'Two connected surfaces': 'Dua permukaan yang saling terhubung',
+    'Admin control for the clinic. Simple tracking for the patient.':
+        'Kawalan admin untuk klinik. Penjejakan ringkas untuk pesakit.',
+    'Smartbunda gives administrators a professional control layer while keeping the mobile experience focused on daily habits and care follow-up.':
+        'Smartbunda memberi pentadbir lapisan kawalan profesional sambil mengekalkan pengalaman mudah alih yang fokus pada tabiat harian dan susulan penjagaan.',
+    'Designed for staff approvals, access control, reporting, and system oversight.':
+        'Direka untuk kelulusan staf, kawalan akses, pelaporan, dan pemantauan sistem.',
+    'Built for mothers to log meals, hydration, appointments, and nutrition progress quickly.':
+        'Dibina untuk ibu merekod makanan, hidrasi, temu janji, dan kemajuan pemakanan dengan cepat.',
+    'User approvals and role management':
+        'Kelulusan pengguna dan pengurusan peranan',
+    'Operational filters, sorting, and review queues':
+        'Penapis operasi, pengisihan, dan barisan semakan',
+    'Reporting, analytics, and system health':
+        'Pelaporan, analitik, dan kesihatan sistem',
+    'Meal logging and image-based food scan':
+        'Log makanan dan imbasan makanan berasaskan imej',
+    'Hydration and appointment tracking': 'Penjejakan hidrasi dan temu janji',
+    'Simple summaries and care-team visibility':
+        'Ringkasan mudah dan keterlihatan pasukan penjagaan',
+    'Shared workflow': 'Aliran kerja dikongsi',
+    'From patient action to admin visibility in one loop.':
+        'Daripada tindakan pesakit kepada keterlihatan admin dalam satu aliran.',
+    'Daily intake and patient activity stay visible to the clinic, while admin teams keep access, approvals, and reporting organized.':
+        'Pengambilan harian dan aktiviti pesakit kekal kelihatan kepada klinik, manakala pasukan admin mengekalkan akses, kelulusan, dan pelaporan secara teratur.',
+    'Patient logs meals': 'Pesakit merekod makanan',
+    'The mobile app captures food, hydration, and appointment activity.':
+        'Aplikasi mudah alih menangkap aktiviti makanan, hidrasi, dan temu janji.',
+    'Care data becomes visible': 'Data penjagaan menjadi kelihatan',
+    'Nutrition and monitoring workflows share a consistent patient record.':
+        'Aliran kerja pemakanan dan pemantauan berkongsi rekod pesakit yang konsisten.',
+    'Admin teams stay in control': 'Pasukan admin kekal mengawal',
+    'Approvals, user policies, and reports remain manageable from the dashboard.':
+        'Kelulusan, polisi pengguna, dan laporan kekal mudah diurus dari papan pemuka.',
+    'Platform coverage': 'Liputan platform',
+    'Built for real clinic operations and daily mobile use.':
+        'Dibina untuk operasi klinik sebenar dan penggunaan mudah alih harian.',
+    'The web-style admin experience gives staff a broader operational view, while the mobile flow stays quick enough for repeat daily logging.':
+        'Pengalaman admin gaya web memberi staf pandangan operasi yang lebih luas, manakala aliran mudah alih kekal cukup pantas untuk log harian berulang.',
+    'Admin operations': 'Operasi admin',
+    'Approvals, account control, patient directory review, and reporting.':
+        'Kelulusan, kawalan akaun, semakan direktori pesakit, dan pelaporan.',
+    'Mobile tracking': 'Penjejakan mudah alih',
+    'Meal scan, hydration logging, appointments, and daily summaries.':
+        'Imbasan makanan, log hidrasi, temu janji, dan ringkasan harian.',
+    'Launch the dashboard. Keep the mobile experience close.':
+        'Lancarkan papan pemuka. Kekalkan pengalaman mudah alih dekat.',
+    'Use one Smartbunda workspace to coordinate admin teams, care teams, and patient habits.':
+        'Gunakan satu ruang kerja Smartbunda untuk menyelaras pasukan admin, pasukan penjagaan, dan tabiat pesakit.',
+    'Track meals, hydration, appointments, and care team recommendations in one secure workspace.':
+        'Jejak makanan, hidrasi, temu janji, dan cadangan pasukan penjagaan dalam satu ruang kerja selamat.',
+    'Start tracking': 'Mula menjejak',
+    'Role-based access': 'Akses mengikut peranan',
+    'Patient progress reports': 'Laporan kemajuan pesakit',
+    'Clinic follow-up tools': 'Alat susulan klinik',
+    'One platform': 'Satu platform',
+    'Clear workspaces for every user.':
+        'Ruang kerja jelas untuk setiap pengguna.',
+    'Mothers, nurses, doctors, dietitians, and administrators each get the tools that match their responsibility.':
+        'Ibu, jururawat, doktor, pakar diet, dan pentadbir menerima alat yang sepadan dengan tanggungjawab masing-masing.',
+    'Mothers': 'Ibu',
+    'Daily meals, hydration, appointments, and progress.':
+        'Makanan harian, hidrasi, temu janji, dan kemajuan.',
+    'Care teams': 'Pasukan penjagaan',
+    'Patient profiles, nutrition analysis, and care plans.':
+        'Profil pesakit, analisis pemakanan, dan pelan penjagaan.',
+    'Administrators': 'Pentadbir',
+    'User approvals, system health, content, and reporting.':
+        'Kelulusan pengguna, kesihatan sistem, kandungan, dan pelaporan.',
+    'Clinical follow-up': 'Susulan klinikal',
+    'Keep nutrition decisions connected to real logs.':
+        'Hubungkan keputusan pemakanan dengan log sebenar.',
+    'Smartbunda turns daily intake into practical context for appointments, recommendations, and reports.':
+        'Smartbunda menukar pengambilan harian kepada konteks praktikal untuk temu janji, cadangan, dan laporan.',
+    'Nutrition targets by pregnancy stage':
+        'Sasaran pemakanan mengikut tahap kehamilan',
+    'Alerts for gaps in iron, folate, and protein':
+        'Amaran untuk jurang zat besi, folat, dan protein',
+    'Reports ready for care conversations':
+        'Laporan tersedia untuk perbincangan penjagaan',
+    'Start with your next meal.': 'Mulakan dengan hidangan seterusnya.',
+    'Build a clearer nutrition record for every visit.':
+        'Bina rekod pemakanan yang lebih jelas untuk setiap lawatan.',
     'Join Smartbunda to personalize nutrition tracking and care.':
         'Sertai Smartbunda untuk memperibadikan penjejakan pemakanan dan penjagaan.',
     'Back to login': 'Kembali ke log masuk',
@@ -404,13 +547,17 @@ class AppStrings {
     'Forgot password?': 'Lupa kata laluan?',
     'Reset password': 'Tetapkan semula kata laluan',
     'Send reset link': 'Hantar pautan set semula',
-    'The reset link has been sent to your email.': 'Pautan set semula telah dihantar ke emel anda.',
+    'The reset link has been sent to your email.':
+        'Pautan set semula telah dihantar ke emel anda.',
     'Confirm your email': 'Sahkan emel anda',
     'Enter a valid email': 'Masukkan emel yang sah',
     'Min 6 characters': 'Minimum 6 aksara',
+    'Password must include uppercase, lowercase, number, and symbol (min 6 characters).':
+        'Kata laluan mesti mengandungi huruf besar, huruf kecil, nombor, dan simbol (minimum 6 aksara).',
     'Passwordless sign-in': 'Log masuk tanpa kata laluan',
     'Send sign-in link': 'Hantar pautan log masuk',
-    'Email link sent. Check your inbox.': 'Pautan emel dihantar. Sila semak peti masuk.',
+    'Email link sent. Check your inbox.':
+        'Pautan emel dihantar. Sila semak peti masuk.',
     'Enter a valid email for email link sign-in.':
         'Masukkan emel yang sah untuk log masuk melalui pautan emel.',
     'A calm way to track pregnancy nutrition and stay in sync with care.':
@@ -465,6 +612,7 @@ class AppStrings {
     'Food logging & nutrition': 'Log makanan & pemakanan',
     'Log meals and hydration to keep recommendations accurate.':
         'Log makanan dan hidrasi untuk pastikan cadangan tepat.',
+    'Choose how you want to log': 'Pilih cara untuk log',
     'Meal log': 'Log makanan',
     'Log meals to keep your summary and recommendations accurate.':
         'Log makanan untuk memastikan ringkasan dan cadangan tepat.',
@@ -474,8 +622,54 @@ class AppStrings {
     'Log a meal': 'Log makanan',
     'Manual entry': 'Input manual',
     'Pick from Malaysian food DB': 'Pilih dari DB makanan Malaysia',
+    'Food DB': 'DB makanan',
+    'Add meals manually or from the food database.':
+        'Tambah makanan secara manual atau daripada pangkalan data makanan.',
+    'Tip: scan when you have a clear food photo, or use manual entry when the dish is mixed.':
+        'Tip: imbas apabila foto makanan jelas, atau gunakan input manual apabila hidangan bercampur.',
+    'Type the meal and nutrients yourself.':
+        'Taip makanan dan nutrien sendiri.',
+    'Search saved foods and portions.':
+        'Cari makanan dan saiz hidangan yang disimpan.',
+    'Take a fresh photo for TensorFlow Lite detection.':
+        'Ambil foto baharu untuk pengesanan TensorFlow Lite.',
+    'Choose an existing photo from your gallery.':
+        'Pilih foto sedia ada daripada galeri anda.',
     'Scan with camera': 'Imbas dengan kamera',
     'Upload image': 'Muat naik imej',
+    'Meal scanner': 'Pengimbas makanan',
+    'Scan meal': 'Imbas makanan',
+    'Use your camera or gallery to detect a meal and save it faster.':
+        'Gunakan kamera atau galeri anda untuk mengesan makanan dan simpan dengan lebih pantas.',
+    'Use your camera or gallery to detect a Malaysian dish and add it to your meal log.':
+        'Gunakan kamera atau galeri anda untuk mengesan hidangan Malaysia dan menambahkannya ke log makanan anda.',
+    'Scan and save meals faster':
+        'Imbas dan simpan makanan dengan lebih pantas',
+    'Smartbunda analyzes the image with TensorFlow Lite, matches the result to your food database, then lets you confirm the detected meal before saving.':
+        'Smartbunda menganalisis imej dengan TensorFlow Lite, memadankan hasilnya dengan pangkalan data makanan anda, kemudian membolehkan anda mengesahkan makanan yang dikesan sebelum disimpan.',
+    'How it works': 'Cara ia berfungsi',
+    'Take a photo or choose one from your gallery.':
+        'Ambil foto atau pilih satu daripada galeri anda.',
+    'Review the detected food suggestions and pick the best match.':
+        'Semak cadangan makanan yang dikesan dan pilih padanan terbaik.',
+    'Confirm meal time and quantity, then save the log entry.':
+        'Sahkan waktu makan dan kuantiti, kemudian simpan entri log.',
+    'Scanner requirements': 'Keperluan pengimbas',
+    'TensorFlow Lite scanner': 'Pengimbas TensorFlow Lite',
+    'The TensorFlow Lite model and labels must be present in assets/ml before image scanning can run.':
+        'Model TensorFlow Lite dan label mesti ada dalam assets/ml sebelum imbasan imej boleh dijalankan.',
+    'Use a bright, clear image with one main dish for better suggestions.':
+        'Gunakan imej terang dan jelas dengan satu hidangan utama untuk cadangan yang lebih baik.',
+    'Analyzing image...': 'Menganalisis imej...',
+    'Choose detected food': 'Pilih makanan yang dikesan',
+    'Pick the closest match before saving to your meal log.':
+        'Pilih padanan paling hampir sebelum simpan ke log makanan anda.',
+    'Nutrition details needed': 'Butiran nutrisi diperlukan',
+    'Confidence': 'Keyakinan',
+    'Could not read selected image.': 'Tidak dapat membaca imej yang dipilih.',
+    'No matching food found in the food database for this image.':
+        'Tiada makanan sepadan ditemui dalam pangkalan data untuk imej ini.',
+    'Meal saved from image scan.': 'Makanan disimpan daripada imbasan imej.',
     'Meal name': 'Nama hidangan',
     'Meal time': 'Waktu makan',
     'Quantity': 'Kuantiti',
@@ -487,9 +681,11 @@ class AppStrings {
     'Meal saved.': 'Makanan disimpan.',
     'Search Malaysian foods': 'Cari makanan Malaysia',
     'Food database is empty.': 'Pangkalan data makanan kosong.',
-    'Log daily food and beverage intake.': 'Log pengambilan makanan dan minuman harian.',
+    'Log daily food and beverage intake.':
+        'Log pengambilan makanan dan minuman harian.',
     'Hydration log': 'Log hidrasi',
-    'Track water intake and reminders.': 'Jejak pengambilan air dan peringatan.',
+    'Track water intake and reminders.':
+        'Jejak pengambilan air dan peringatan.',
     'Hydration': 'Hidrasi',
     'Log water throughout the day to hit your daily target.':
         'Log air sepanjang hari untuk capai sasaran harian.',
@@ -510,7 +706,8 @@ class AppStrings {
     'Language': 'Bahasa',
     'App language': 'Bahasa aplikasi',
     'Summary': 'Ringkasan',
-    'Please sign in to view your summary.': 'Sila log masuk untuk melihat ringkasan anda.',
+    'Please sign in to view your summary.':
+        'Sila log masuk untuk melihat ringkasan anda.',
     'Review nutrition progress and recommendations by day.':
         'Semak kemajuan pemakanan dan cadangan mengikut hari.',
     'Pick date': 'Pilih tarikh',

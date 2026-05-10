@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:excel/excel.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -68,6 +70,7 @@ class FoodCatalogScreen extends ConsumerWidget {
                       itemBuilder: (context, index) {
                         final entry = items[index];
                         return Card(
+                          key: ValueKey(entry.item.id),
                           child: ListTile(
                             title: Text(entry.item.name),
                             subtitle: Text(
@@ -83,19 +86,27 @@ class FoodCatalogScreen extends ConsumerWidget {
                               children: [
                                 Switch(
                                   value: entry.isActive,
-                                  onChanged: (value) => ref
-                                      .read(foodDatabaseProvider)
-                                      .setItemActive(entry.item.id, value),
+                                  onChanged: (value) async {
+                                    await _runCatalogAction(context, () async {
+                                      await ref
+                                          .read(foodDatabaseProvider)
+                                          .setItemActive(entry.item.id, value);
+                                      await ref.read(foodDatabaseProvider).refresh();
+                                    });
+                                  },
                                 ),
                                 if (entry.source == FoodCatalogSource.custom)
                                   PopupMenuButton<String>(
-                                    onSelected: (value) {
+                                    onSelected: (value) async {
                                       if (value == 'edit') {
                                         _showForm(context, ref, entry: entry);
                                       } else if (value == 'delete') {
-                                        ref
-                                            .read(foodDatabaseProvider)
-                                            .removeCustomItem(entry.item.id);
+                                        await _runCatalogAction(context, () async {
+                                          await ref
+                                              .read(foodDatabaseProvider)
+                                              .removeCustomItem(entry.item.id);
+                                          await ref.read(foodDatabaseProvider).refresh();
+                                        });
                                       }
                                     },
                                     itemBuilder: (context) => const [
@@ -169,14 +180,18 @@ class FoodCatalogScreen extends ConsumerWidget {
       type: FileType.custom,
       allowedExtensions: const ['xlsx', 'xls'],
       withData: true,
+      withReadStream: true,
     );
     if (result == null || result.files.isEmpty) return;
-    final bytes = result.files.single.bytes;
+    final bytes = await _readFileBytes(result.files.single);
     if (bytes == null) {
-      _showSnack(context, 'Unable to read the selected file.');
+      if (context.mounted) {
+        _showSnack(context, 'Unable to read the selected file.');
+      }
       return;
     }
 
+    if (!context.mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
@@ -240,18 +255,19 @@ class FoodCatalogScreen extends ConsumerWidget {
       }
 
       await ref.read(foodDatabaseProvider).addCustomItems(items);
+      await ref.read(foodDatabaseProvider).refresh();
 
       if (!context.mounted) return;
       messenger.hideCurrentSnackBar();
-      final note = skipped > 0 ? ' Skipped  rows.' : '';
+      final note = skipped > 0 ? ' Skipped $skipped rows.' : '';
       messenger.showSnackBar(
-        SnackBar(content: Text('Imported  foods.$note')),
+        SnackBar(content: Text('Imported ${items.length} foods.$note')),
       );
     } catch (e) {
       if (!context.mounted) return;
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
-        const SnackBar(content: Text('Import failed: ')),
+        SnackBar(content: Text('Import failed: $e')),
       );
     }
   }
@@ -259,6 +275,17 @@ class FoodCatalogScreen extends ConsumerWidget {
   int? _columnIndex(String key, bool useHeader, Map<String, int> headerMap) {
     if (useHeader) return headerMap[key];
     return _fallbackColumnIndex[key];
+  }
+
+  Future<Uint8List?> _readFileBytes(PlatformFile file) async {
+    if (file.bytes != null) return file.bytes;
+    final stream = file.readStream;
+    if (stream == null) return null;
+    final builder = BytesBuilder();
+    await for (final chunk in stream) {
+      builder.add(chunk);
+    }
+    return builder.takeBytes();
   }
 
   Map<String, int> _buildHeaderMap(List<Data?> row) {
@@ -290,6 +317,14 @@ class FoodCatalogScreen extends ConsumerWidget {
   String _cellString(Data? cell) {
     final value = cell?.value;
     if (value == null) return '';
+    if (value is TextCellValue) {
+      return value.value.toString().trim();
+    }
+    if (value is IntCellValue) return value.value.toString();
+    if (value is DoubleCellValue) return value.value.toString();
+    if (value is BoolCellValue) return value.value.toString();
+    if (value is DateCellValue) return value.asDateTimeUtc().toIso8601String();
+    if (value is DateTimeCellValue) return value.asDateTimeUtc().toIso8601String();
     return value.toString().trim();
   }
 
@@ -298,15 +333,52 @@ class FoodCatalogScreen extends ConsumerWidget {
   }
 
   num _numFromCell(Data? cell) {
-    final value = cell?.value;
-    if (value is num) return value as num;
-    final text = value?.toString().replaceAll(',', '').trim() ?? '';
-    return num.tryParse(text) ?? 0;
+    if (cell == null) return 0;
+    final value = cell.value;
+    if (value == null) return 0;
+    if (value is IntCellValue) return value.value;
+    if (value is DoubleCellValue) return value.value;
+    if (value is BoolCellValue) return value.value ? 1 : 0;
+    final text = _cellString(cell);
+    return _parseNumberText(text) ?? 0;
   }
 
   int _intFromCell(Data? cell) => _numFromCell(cell).round();
 
   double _doubleFromCell(Data? cell) => _numFromCell(cell).toDouble();
+
+  num? _parseNumberText(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return null;
+    var normalized = trimmed.replaceAll(' ', '');
+    if (normalized.contains('.') && normalized.contains(',')) {
+      if (normalized.lastIndexOf(',') > normalized.lastIndexOf('.')) {
+        normalized = normalized.replaceAll('.', '').replaceAll(',', '.');
+      } else {
+        normalized = normalized.replaceAll(',', '');
+      }
+    } else if (normalized.contains(',')) {
+      final thousandPattern = RegExp(r'^[-+]?(\d{1,3})(,\d{3})+(\.\d+)?$');
+      if (thousandPattern.hasMatch(normalized)) {
+        normalized = normalized.replaceAll(',', '');
+      } else {
+        normalized = normalized.replaceAll(',', '.');
+      }
+    }
+    final match = RegExp(r'[-+]?\d*\.?\d+').firstMatch(normalized);
+    if (match == null) return null;
+    return num.tryParse(match.group(0)!);
+  }
+
+  int _parseIntField(String value) {
+    final parsed = _parseNumberText(value);
+    return parsed?.toInt() ?? 0;
+  }
+
+  double _parseDoubleField(String value) {
+    final parsed = _parseNumberText(value);
+    return parsed?.toDouble() ?? 0;
+  }
 
   void _showSnack(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -334,71 +406,87 @@ class FoodCatalogScreen extends ConsumerWidget {
         TextEditingController(text: entry?.item.folateMcg.toString() ?? '');
     final formKey = GlobalKey<FormState>();
 
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(entry == null ? 'Add custom food' : 'Edit custom food'),
-        content: SizedBox(
-          width: 400,
-          child: Form(
-            key: formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  TextFormField(
-                    controller: nameCtrl,
-                    decoration: const InputDecoration(labelText: 'Name'),
-                    validator: (v) => v != null && v.trim().isNotEmpty ? null : 'Required',
-                  ),
-                  TextFormField(
-                    controller: servingCtrl,
-                    decoration: const InputDecoration(labelText: 'Serving'),
-                    validator: (v) => v != null && v.trim().isNotEmpty ? null : 'Required',
-                  ),
-                  _numberField(calorieCtrl, 'Calories'),
-                  _numberField(proteinCtrl, 'Protein (g)'),
-                  _numberField(carbsCtrl, 'Carbs (g)'),
-                  _numberField(fatCtrl, 'Fat (g)'),
-                  _numberField(ironCtrl, 'Iron (mg)'),
-                  _numberField(folateCtrl, 'Folate (mcg)'),
-                ],
+    try {
+      await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(entry == null ? 'Add custom food' : 'Edit custom food'),
+          content: SizedBox(
+            width: 400,
+            child: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    TextFormField(
+                      controller: nameCtrl,
+                      decoration: const InputDecoration(labelText: 'Name'),
+                      validator: (v) =>
+                          v != null && v.trim().isNotEmpty ? null : 'Required',
+                    ),
+                    TextFormField(
+                      controller: servingCtrl,
+                      decoration: const InputDecoration(labelText: 'Serving'),
+                      validator: (v) =>
+                          v != null && v.trim().isNotEmpty ? null : 'Required',
+                    ),
+                    _numberField(calorieCtrl, 'Calories'),
+                    _numberField(proteinCtrl, 'Protein (g)'),
+                    _numberField(carbsCtrl, 'Carbs (g)'),
+                    _numberField(fatCtrl, 'Fat (g)'),
+                    _numberField(ironCtrl, 'Iron (mg)'),
+                    _numberField(folateCtrl, 'Folate (mcg)'),
+                  ],
+                ),
               ),
             ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).maybePop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                if (!formKey.currentState!.validate()) return;
+                final item = FoodItem(
+                  id: entry?.item.id ?? DateTime.now().microsecondsSinceEpoch.toString(),
+                  name: nameCtrl.text.trim(),
+                  servingSize: servingCtrl.text.trim(),
+                  caloriesPerServing: _parseIntField(calorieCtrl.text),
+                  proteinG: _parseIntField(proteinCtrl.text),
+                  carbG: _parseIntField(carbsCtrl.text),
+                  fatG: _parseIntField(fatCtrl.text),
+                  ironMg: _parseDoubleField(ironCtrl.text),
+                  folateMcg: _parseDoubleField(folateCtrl.text),
+                );
+                final ok = await _runCatalogAction(context, () async {
+                  if (entry == null) {
+                    await ref.read(foodDatabaseProvider).addCustomItem(item);
+                  } else {
+                    await ref.read(foodDatabaseProvider).updateCustomItem(item);
+                  }
+                  await ref.read(foodDatabaseProvider).refresh();
+                });
+                if (ok && context.mounted) {
+                  Navigator.of(context).maybePop();
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).maybePop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              if (!formKey.currentState!.validate()) return;
-              final item = FoodItem(
-                id: entry?.item.id ?? DateTime.now().microsecondsSinceEpoch.toString(),
-                name: nameCtrl.text.trim(),
-                servingSize: servingCtrl.text.trim(),
-                caloriesPerServing: int.tryParse(calorieCtrl.text) ?? 0,
-                proteinG: int.tryParse(proteinCtrl.text) ?? 0,
-                carbG: int.tryParse(carbsCtrl.text) ?? 0,
-                fatG: int.tryParse(fatCtrl.text) ?? 0,
-                ironMg: double.tryParse(ironCtrl.text) ?? 0,
-                folateMcg: double.tryParse(folateCtrl.text) ?? 0,
-              );
-              if (entry == null) {
-                await ref.read(foodDatabaseProvider).addCustomItem(item);
-              } else {
-                await ref.read(foodDatabaseProvider).updateCustomItem(item);
-              }
-              if (context.mounted) {
-                Navigator.of(context).maybePop();
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
+      );
+    } finally {
+      nameCtrl.dispose();
+      servingCtrl.dispose();
+      calorieCtrl.dispose();
+      proteinCtrl.dispose();
+      carbsCtrl.dispose();
+      fatCtrl.dispose();
+      ironCtrl.dispose();
+      folateCtrl.dispose();
+    }
   }
 
   Widget _numberField(TextEditingController controller, String label) {
@@ -408,5 +496,21 @@ class FoodCatalogScreen extends ConsumerWidget {
       keyboardType: TextInputType.number,
     );
   }
-}
 
+  Future<bool> _runCatalogAction(
+    BuildContext context,
+    Future<void> Function() action,
+  ) async {
+    try {
+      await action();
+      return true;
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Food database update failed: $e')),
+        );
+      }
+      return false;
+    }
+  }
+}

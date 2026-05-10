@@ -126,17 +126,31 @@ class FoodItem {
   }
 
   static int _intFrom(dynamic raw) {
-    if (raw is int) return raw;
-    if (raw is num) return raw.toInt();
-    if (raw is String) return int.tryParse(raw) ?? 0;
-    return 0;
+    final value = _numFrom(raw);
+    return value?.toInt() ?? 0;
   }
 
   static double _doubleFrom(dynamic raw) {
-    if (raw is double) return raw;
-    if (raw is num) return raw.toDouble();
-    if (raw is String) return double.tryParse(raw) ?? 0;
-    return 0;
+    final value = _numFrom(raw);
+    return value?.toDouble() ?? 0;
+  }
+
+  static num? _numFrom(dynamic raw) {
+    if (raw is num) return raw;
+    if (raw is String) {
+      final trimmed = raw.trim();
+      if (trimmed.isEmpty) return null;
+      var normalized = trimmed;
+      if (normalized.contains('.') && normalized.contains(',')) {
+        normalized = normalized.replaceAll(',', '');
+      } else {
+        normalized = normalized.replaceAll(',', '.');
+      }
+      final match = RegExp(r'[-+]?\d*\.?\d+').firstMatch(normalized);
+      if (match == null) return null;
+      return num.tryParse(match.group(0)!);
+    }
+    return null;
   }
 
   static dynamic _firstNonNull(List<dynamic> values) {

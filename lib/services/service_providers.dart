@@ -14,6 +14,7 @@ import 'firestore_data_store.dart';
 import 'firestore_nutrition_plan_repository.dart';
 import 'food_catalog_repository.dart';
 import 'food_database.dart';
+import 'food_image_classifier.dart';
 import 'nutrition_plan_repository.dart';
 import 'system_admin_repository.dart';
 
@@ -49,6 +50,12 @@ final foodDatabaseProvider = Provider<FoodCatalogRepository>((ref) {
   final repo = FoodCatalogRepository(FoodDatabase());
   ref.onDispose(repo.dispose);
   return repo;
+});
+
+final foodImageClassifierProvider = Provider<FoodImageClassifier>((ref) {
+  final classifier = FoodImageClassifier();
+  ref.onDispose(classifier.dispose);
+  return classifier;
 });
 
 final contentRepositoryProvider = Provider<FirestoreContentRepository>((ref) {

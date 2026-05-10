@@ -28,12 +28,14 @@ class AuthShell extends StatelessWidget {
 
     final textTheme = GoogleFonts.poppinsTextTheme(base.textTheme);
     final titleStyle = GoogleFonts.poppins(
-      textStyle: (textTheme.headlineSmall ?? const TextStyle(fontSize: 28)).copyWith(
+      textStyle:
+          (textTheme.headlineSmall ?? const TextStyle(fontSize: 28)).copyWith(
         fontWeight: FontWeight.w700,
         color: deep,
       ),
     );
-    final subtitleStyle = (textTheme.bodyMedium ?? const TextStyle(fontSize: 14)).copyWith(
+    final subtitleStyle =
+        (textTheme.bodyMedium ?? const TextStyle(fontSize: 14)).copyWith(
       color: deep.withValues(alpha: 170),
       height: 1.4,
     );
@@ -42,13 +44,15 @@ class AuthShell extends StatelessWidget {
       textTheme: textTheme.copyWith(
         titleLarge: titleStyle,
         titleMedium: GoogleFonts.poppins(
-          textStyle: (textTheme.titleMedium ?? const TextStyle(fontSize: 18)).copyWith(
+          textStyle:
+              (textTheme.titleMedium ?? const TextStyle(fontSize: 18)).copyWith(
             fontWeight: FontWeight.w600,
             color: deep,
           ),
         ),
         titleSmall: GoogleFonts.poppins(
-          textStyle: (textTheme.titleSmall ?? const TextStyle(fontSize: 16)).copyWith(
+          textStyle:
+              (textTheme.titleSmall ?? const TextStyle(fontSize: 16)).copyWith(
             fontWeight: FontWeight.w600,
             color: deep,
           ),
@@ -57,18 +61,20 @@ class AuthShell extends StatelessWidget {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: deep.withValues(alpha: 40)),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: deep.withValues(alpha: 40)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: deep.withValues(alpha: 140), width: 1.3),
+          borderRadius: BorderRadius.circular(8),
+          borderSide:
+              BorderSide(color: deep.withValues(alpha: 140), width: 1.3),
         ),
         labelStyle: (textTheme.bodyMedium ?? const TextStyle(fontSize: 14))
             .copyWith(color: deep.withValues(alpha: 150)),
@@ -79,7 +85,7 @@ class AuthShell extends StatelessWidget {
           backgroundColor: accent,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -87,7 +93,7 @@ class AuthShell extends StatelessWidget {
           foregroundColor: deep,
           side: BorderSide(color: deep.withValues(alpha: 90)),
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -115,21 +121,12 @@ class AuthShell extends StatelessWidget {
               ),
             ),
             Positioned(
-              top: -80,
-              right: -60,
-              child: _GlowCircle(color: accentAlt.withValues(alpha: 60), size: 220),
-            ),
-            Positioned(
-              bottom: -100,
-              left: -40,
-              child: _GlowCircle(color: accent.withValues(alpha: 35), size: 260),
-            ),
-            Positioned(
-              top: 140,
-              left: -20,
-              child: _GlowCircle(
-                color: Colors.white.withValues(alpha: 200),
-                size: 120,
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                height: 8,
+                color: accent,
               ),
             ),
             SafeArea(
@@ -156,8 +153,9 @@ class AuthShell extends StatelessWidget {
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
                             color: surface.withValues(alpha: 245),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.white.withValues(alpha: 220)),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                                color: Colors.white.withValues(alpha: 220)),
                             boxShadow: [
                               BoxShadow(
                                 color: accentAlt.withValues(alpha: 18),
@@ -210,7 +208,7 @@ class _BrandHeader extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              shape: BoxShape.circle,
+              borderRadius: BorderRadius.circular(8),
               gradient: LinearGradient(
                 colors: [accent, accent.withValues(alpha: 210)],
                 begin: Alignment.topLeft,
@@ -235,25 +233,6 @@ class _BrandHeader extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _GlowCircle extends StatelessWidget {
-  const _GlowCircle({required this.color, required this.size});
-
-  final Color color;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color,
       ),
     );
   }

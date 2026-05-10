@@ -18,21 +18,77 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="Smartbunda coordinates pregnancy nutrition tracking, appointments, reports, and care team recommendations.">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="smartbunda">
+  <meta name="apple-mobile-web-app-title" content="Smartbunda">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>smartbunda</title>
+  <title>Smartbunda | Pregnancy Nutrition Care</title>
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <script>
+    (function () {
+      const buildHashKey = 'smartbunda-build-hash';
+      const cleanedKey = 'smartbunda-cache-cleaned-v2';
+
+      async function clearOldOfflineCache() {
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map((registration) => registration.unregister()));
+        }
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((key) => caches.delete(key)));
+        }
+      }
+
+      function hashText(text) {
+        let hash = 0;
+        for (let index = 0; index < text.length; index += 1) {
+          hash = ((hash << 5) - hash + text.charCodeAt(index)) | 0;
+        }
+        return String(hash);
+      }
+
+      async function checkForAppUpdate() {
+        try {
+          const response = await fetch('flutter_bootstrap.js?update=' + Date.now(), {
+            cache: 'no-store',
+          });
+          if (!response.ok) return;
+          const currentHash = hashText(await response.text());
+          const previousHash = localStorage.getItem(buildHashKey);
+          if (previousHash && previousHash !== currentHash) {
+            localStorage.setItem(buildHashKey, currentHash);
+            await clearOldOfflineCache();
+            location.reload();
+            return;
+          }
+          localStorage.setItem(buildHashKey, currentHash);
+        } catch (_) {
+          // Network update checks should not block app startup.
+        }
+      }
+
+      clearOldOfflineCache().then(function () {
+        if (!sessionStorage.getItem(cleanedKey) && navigator.serviceWorker && navigator.serviceWorker.controller) {
+          sessionStorage.setItem(cleanedKey, 'true');
+          location.reload();
+        }
+      });
+      window.addEventListener('load', function () {
+        checkForAppUpdate();
+        setInterval(checkForAppUpdate, 60000);
+      });
+    })();
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

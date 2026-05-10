@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,6 +10,7 @@ import '../models/app_user.dart';
 import '../models/food_entry.dart';
 import '../models/firestore_doc.dart';
 import '../models/pregnancy.dart';
+import '../models/profile.dart';
 import '../providers/app_providers.dart';
 import '../services/service_providers.dart';
 import '../utils/nutrition_guides.dart';
@@ -78,8 +79,8 @@ class _PatientReportView extends ConsumerWidget {
               children: [
                 ScreenHeader(
                   title: strings.t('Weekly report'),
-                  subtitle:
-                      strings.t('Track your average intake and progress over the last 7 days.'),
+                  subtitle: strings.t(
+                      'Track your average intake and progress over the last 7 days.'),
                   icon: Icons.assessment_outlined,
                 ),
                 const SizedBox(height: 16),
@@ -124,10 +125,13 @@ class _PatientReportView extends ConsumerWidget {
                       return Text(strings.t('No saved reports yet.'));
                     }
                     return Column(
-                      children: reports.map((doc) => _reportTile(context, doc)).toList(),
+                      children: reports
+                          .map((doc) => _reportTile(context, doc))
+                          .toList(),
                     );
                   },
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
                   error: (e, _) => Text(strings.errorLoadingReports('$e')),
                 ),
               ],
@@ -142,7 +146,8 @@ class _PatientReportView extends ConsumerWidget {
 
   _EntryTotals _weeklySummary(List<FoodEntry> entries) {
     final now = DateTime.now();
-    final recent = entries.where((entry) => now.difference(entry.date).inDays <= 7);
+    final recent =
+        entries.where((entry) => now.difference(entry.date).inDays <= 7);
     if (recent.isEmpty) {
       return _EntryTotals(calories: 0, protein: 0);
     }
@@ -211,7 +216,9 @@ class _PatientReportView extends ConsumerWidget {
       child: ListTile(
         leading: const Icon(Icons.assessment_outlined),
         title: Text(doc.title ?? createdLabel),
-        subtitle: summary.isEmpty ? Text(createdLabel) : Text('$createdLabel | $summary'),
+        subtitle: summary.isEmpty
+            ? Text(createdLabel)
+            : Text('$createdLabel | $summary'),
       ),
     );
   }
@@ -228,6 +235,7 @@ class _ClinicianReportView extends ConsumerWidget {
     final usersAsync = ref.watch(usersProvider);
     final entriesAsync = ref.watch(allEntriesProvider);
     final pregnanciesAsync = ref.watch(allPregnanciesProvider);
+    final profilesAsync = ref.watch(allProfilesProvider);
 
     return Scaffold(
       appBar: showAppBar ? AppBar(title: Text(strings.t('Reports'))) : null,
@@ -235,22 +243,25 @@ class _ClinicianReportView extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         child: usersAsync.when(
           data: (users) {
-            final patients = users.where((u) => u.role == UserRole.patient).toList();
+            final patients =
+                users.where((u) => u.role == UserRole.patient).toList();
             final entriesByUser = entriesAsync.valueOrNull ?? {};
             final pregnancies = pregnanciesAsync.valueOrNull ?? {};
+            final profiles = profilesAsync.valueOrNull ?? {};
             if (patients.isEmpty) {
               return EmptyState(
                 icon: Icons.assessment_outlined,
                 title: strings.t('No patient reports yet'),
-                message: strings.t('Reports will appear once patients start logging meals.'),
+                message: strings.t(
+                    'Reports will appear once patients start logging meals.'),
               );
             }
             return ListView(
               children: [
                 ScreenHeader(
                   title: strings.t('Reports overview'),
-                  subtitle:
-                      strings.t('Tap a patient to review their last 7 days of intake.'),
+                  subtitle: strings.t(
+                      'Tap a patient to review their last 7 days of intake.'),
                   icon: Icons.assessment_outlined,
                 ),
                 const SizedBox(height: 16),
@@ -261,17 +272,33 @@ class _ClinicianReportView extends ConsumerWidget {
                   separatorBuilder: (_, __) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
                     final patient = patients[index];
-                    final entries = entriesByUser[patient.id] ?? const <FoodEntry>[];
+                    final entries =
+                        entriesByUser[patient.id] ?? const <FoodEntry>[];
                     final pregnancy = pregnancies[patient.id];
+                    final profile = profiles[patient.id];
                     final compliance = _compliance(entries, pregnancy);
                     return Card(
                       child: ListTile(
                         leading: const Icon(Icons.assessment_outlined),
                         title: Text(patient.displayName ?? patient.email),
-                        subtitle:
-                            Text(strings.complianceLast7Days(compliance.toStringAsFixed(0))),
+                        subtitle: Text(
+                          [
+                            strings.complianceLast7Days(
+                                compliance.toStringAsFixed(0)),
+                            if (pregnancy != null)
+                              '${strings.week}: ${pregnancy.gestationalWeek}',
+                            if (profile != null)
+                              '${strings.weight}: ${profile.currentWeightKg.toStringAsFixed(1)} kg',
+                          ].join(' | '),
+                        ),
                         trailing: const Icon(Icons.chevron_right),
-                        onTap: () => _showPatientReport(context, patient, entries, pregnancy),
+                        onTap: () => _showPatientReport(
+                          context,
+                          patient,
+                          entries,
+                          pregnancy,
+                          profile,
+                        ),
                       ),
                     );
                   },
@@ -289,7 +316,8 @@ class _ClinicianReportView extends ConsumerWidget {
   double _compliance(List<FoodEntry> entries, Pregnancy? pregnancy) {
     if (entries.isEmpty) return 0;
     final now = DateTime.now();
-    final recent = entries.where((e) => now.difference(e.date).inDays <= 7).toList();
+    final recent =
+        entries.where((e) => now.difference(e.date).inDays <= 7).toList();
     if (recent.isEmpty) return 0;
     final targets = recommendedFor(pregnancy);
     final calorieTarget = targets.calories;
@@ -308,6 +336,7 @@ class _ClinicianReportView extends ConsumerWidget {
     AppUser patient,
     List<FoodEntry> entries,
     Pregnancy? pregnancy,
+    Profile? profile,
   ) {
     final strings = AppStrings.of(context);
     final totals = entries.fold<int>(0, (sum, e) => sum + e.calories);
@@ -323,6 +352,35 @@ class _ClinicianReportView extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text(
+                strings.t('Medical report'),
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              _ReportRow(
+                label: strings.gestationalWeek,
+                value: pregnancy == null
+                    ? '--'
+                    : pregnancy.gestationalWeek.toString(),
+              ),
+              _ReportRow(
+                label: strings.weight,
+                value: _measurement(profile?.currentWeightKg, 'kg'),
+              ),
+              _ReportRow(
+                label: strings.hemoglobin,
+                value: _measurement(profile?.hemoglobinGdl, 'g/dL'),
+              ),
+              _ReportRow(
+                label: strings.abdominalCircumference,
+                value: _measurement(profile?.abdominalCircumferenceCm, 'cm'),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                strings.t('Nutrition report'),
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
               Text(strings.entriesLogged(count)),
               Text(strings.totalCaloriesLogged(totals)),
               const SizedBox(height: 8),
@@ -417,4 +475,39 @@ class _Targets {
   _Targets({required this.calories, required this.protein});
   final int calories;
   final int protein;
+}
+
+class _ReportRow extends StatelessWidget {
+  const _ReportRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Text(label, style: const TextStyle(color: Colors.black54)),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _measurement(double? value, String unit) {
+  if (value == null || value <= 0) return '--';
+  return '${value.toStringAsFixed(1)} $unit';
 }

@@ -24,6 +24,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   late final TextEditingController _dobCtrl;
   late final TextEditingController _heightCtrl;
   late final TextEditingController _weightCtrl;
+  late final TextEditingController _hemoglobinCtrl;
+  late final TextEditingController _abdominalCircumferenceCtrl;
   late final TextEditingController _bloodTypeCtrl;
   late final TextEditingController _weekCtrl;
   late final TextEditingController _eddCtrl;
@@ -40,6 +42,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _dobCtrl = TextEditingController();
     _heightCtrl = TextEditingController();
     _weightCtrl = TextEditingController();
+    _hemoglobinCtrl = TextEditingController();
+    _abdominalCircumferenceCtrl = TextEditingController();
     _bloodTypeCtrl = TextEditingController();
     _weekCtrl = TextEditingController();
     _eddCtrl = TextEditingController();
@@ -89,6 +93,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _dobCtrl.dispose();
     _heightCtrl.dispose();
     _weightCtrl.dispose();
+    _hemoglobinCtrl.dispose();
+    _abdominalCircumferenceCtrl.dispose();
     _bloodTypeCtrl.dispose();
     _weekCtrl.dispose();
     _eddCtrl.dispose();
@@ -100,9 +106,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _dobCtrl.text = profile.dob;
     _heightCtrl.text = profile.heightCm.toStringAsFixed(1);
     _weightCtrl.text = profile.currentWeightKg.toStringAsFixed(1);
+    _hemoglobinCtrl.text = profile.hemoglobinGdl?.toStringAsFixed(1) ?? '';
+    _abdominalCircumferenceCtrl.text =
+        profile.abdominalCircumferenceCm?.toStringAsFixed(1) ?? '';
     _bloodTypeCtrl.text = profile.bloodType;
     _hasAnemia = profile.medicalConditions.contains(MedicalCondition.anemia);
-    _hasGdm = profile.medicalConditions.contains(MedicalCondition.gestationalDiabetes);
+    _hasGdm = profile.medicalConditions
+        .contains(MedicalCondition.gestationalDiabetes);
   }
 
   void _syncPregnancy(Pregnancy pregnancy) {
@@ -114,7 +124,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   double? _currentBmi() {
     final heightCm = double.tryParse(_heightCtrl.text);
     final weightKg = double.tryParse(_weightCtrl.text);
-    if (heightCm == null || weightKg == null || heightCm <= 0 || weightKg <= 0) {
+    if (heightCm == null ||
+        weightKg == null ||
+        heightCm <= 0 ||
+        weightKg <= 0) {
       return null;
     }
     final heightM = heightCm / 100;
@@ -123,7 +136,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   String? _validateWeek(String? value) {
     final strings = AppStrings.of(context);
-    if (value == null || value.trim().isEmpty) return null;
+    if (value == null || value.trim().isEmpty) return strings.requiredField;
     final week = int.tryParse(value);
     if (week == null || week < 1 || week > 42) {
       return strings.weekRangeError;
@@ -144,6 +157,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       return strings.invalidDate;
     }
     return null;
+  }
+
+  String? _validateOptionalNumber(String? value) {
+    final strings = AppStrings.of(context);
+    final trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) return null;
+    return double.tryParse(trimmed) == null ? strings.numberField : null;
   }
 
   String _trimesterFromWeekLabel(AppStrings strings) {
@@ -201,7 +221,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final strings = AppStrings.of(context);
     if (user.role != UserRole.patient) {
       return Scaffold(
-        appBar: widget.showAppBar ? AppBar(title: Text(strings.accountTitle)) : null,
+        appBar: widget.showAppBar
+            ? AppBar(title: Text(strings.accountTitle))
+            : null,
         body: Padding(
           padding: const EdgeInsets.all(16),
           child: ListView(
@@ -232,7 +254,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     }
 
     return Scaffold(
-      appBar: widget.showAppBar ? AppBar(title: Text(strings.editProfile)) : null,
+      appBar:
+          widget.showAppBar ? AppBar(title: Text(strings.editProfile)) : null,
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: profileAsync.when(
@@ -252,15 +275,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     decoration: InputDecoration(
                       labelText: strings.dobLabel,
                     ),
-                    validator: (v) =>
-                        v != null && v.trim().isNotEmpty ? null : strings.requiredField,
+                    validator: (v) => v != null && v.trim().isNotEmpty
+                        ? null
+                        : strings.requiredField,
                   ),
                   Row(
                     children: [
                       Expanded(
                         child: TextFormField(
                           controller: _heightCtrl,
-                          decoration: InputDecoration(labelText: strings.heightLabel),
+                          decoration:
+                              InputDecoration(labelText: strings.heightLabel),
                           keyboardType: TextInputType.number,
                           validator: (v) =>
                               v != null && double.tryParse(v) != null
@@ -272,7 +297,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       Expanded(
                         child: TextFormField(
                           controller: _weightCtrl,
-                          decoration: InputDecoration(labelText: strings.weightLabel),
+                          decoration:
+                              InputDecoration(labelText: strings.weightLabel),
                           keyboardType: TextInputType.number,
                           validator: (v) =>
                               v != null && double.tryParse(v) != null
@@ -287,9 +313,34 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     decoration: InputDecoration(labelText: strings.bmiLabel),
                     child: Text(bmi == null ? '--' : bmi.toStringAsFixed(1)),
                   ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _hemoglobinCtrl,
+                          decoration: InputDecoration(
+                              labelText: strings.hemoglobinLabel),
+                          keyboardType: TextInputType.number,
+                          validator: _validateOptionalNumber,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _abdominalCircumferenceCtrl,
+                          decoration: InputDecoration(
+                            labelText: strings.abdominalCircumferenceLabel,
+                          ),
+                          keyboardType: TextInputType.number,
+                          validator: _validateOptionalNumber,
+                        ),
+                      ),
+                    ],
+                  ),
                   TextFormField(
                     controller: _bloodTypeCtrl,
-                    decoration: InputDecoration(labelText: strings.bloodTypeLabel),
+                    decoration:
+                        InputDecoration(labelText: strings.bloodTypeLabel),
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -327,8 +378,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           onChanged: (_) => setState(() {}),
                         ),
                         InputDecorator(
-                          decoration:
-                              InputDecoration(labelText: strings.trimesterLabelText),
+                          decoration: InputDecoration(
+                              labelText: strings.trimesterLabelText),
                           child: Text(_trimesterFromWeekLabel(strings)),
                         ),
                         TextFormField(
@@ -346,11 +397,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         ),
                         TextFormField(
                           controller: _riskCtrl,
-                          decoration: InputDecoration(labelText: strings.riskLevelLabel),
+                          decoration: InputDecoration(
+                              labelText: strings.riskLevelLabel),
                         ),
                       ],
                     ),
-                    loading: () => const Center(child: CircularProgressIndicator()),
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
                     error: (e, _) => Text('Error: $e'),
                   ),
                   const SizedBox(height: 16),
@@ -367,6 +420,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                                 final weightText = _weightCtrl.text.trim();
                                 final height = double.tryParse(heightText);
                                 final weight = double.tryParse(weightText);
+                                final hemoglobin = double.tryParse(
+                                  _hemoglobinCtrl.text.trim(),
+                                );
+                                final abdominalCircumference = double.tryParse(
+                                  _abdominalCircumferenceCtrl.text.trim(),
+                                );
                                 if (height == null || weight == null) {
                                   throw const FormatException('Height/weight');
                                 }
@@ -376,12 +435,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                                   heightCm: height,
                                   currentWeightKg: weight,
                                   bloodType: _bloodTypeCtrl.text.trim(),
+                                  hemoglobinGdl: hemoglobin,
+                                  abdominalCircumferenceCm:
+                                      abdominalCircumference,
                                   medicalConditions: {
                                     if (_hasAnemia) MedicalCondition.anemia,
-                                    if (_hasGdm) MedicalCondition.gestationalDiabetes,
+                                    if (_hasGdm)
+                                      MedicalCondition.gestationalDiabetes,
                                   },
                                 );
-                                await ref.read(dataStoreProvider).saveProfile(profile);
+                                await ref
+                                    .read(dataStoreProvider)
+                                    .saveProfile(profile);
 
                                 final weekText = _weekCtrl.text.trim();
                                 final eddText = _eddCtrl.text.trim();
@@ -391,16 +456,20 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                                     riskText.isNotEmpty;
                                 if (hasPregnancyInput) {
                                   final week = int.tryParse(weekText);
-                                  final eddDate =
-                                      eddText.isEmpty ? null : DateTime.tryParse(eddText);
+                                  final eddDate = eddText.isEmpty
+                                      ? null
+                                      : DateTime.tryParse(eddText);
                                   if (week == null) {
-                                    throw const FormatException('Pregnancy week');
+                                    throw const FormatException(
+                                        'Pregnancy week');
                                   }
                                   if (eddText.isNotEmpty && eddDate == null) {
                                     throw const FormatException('EDD');
                                   }
                                   final pregnancyId = _syncedPregnancy?.id ??
-                                      DateTime.now().microsecondsSinceEpoch.toString();
+                                      DateTime.now()
+                                          .microsecondsSinceEpoch
+                                          .toString();
                                   final trimesterIndex =
                                       Pregnancy.trimesterIndexFromWeek(week);
                                   final pregnancy = Pregnancy(
@@ -412,7 +481,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                                     riskLevel: riskText,
                                     updatedAt: DateTime.now(),
                                   );
-                                  await ref.read(dataStoreProvider).savePregnancy(pregnancy);
+                                  await ref
+                                      .read(dataStoreProvider)
+                                      .savePregnancy(pregnancy);
                                 }
 
                                 if (!context.mounted) return;
@@ -428,12 +499,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                                         ? strings.weekNumberError
                                         : strings.eddInvalidError);
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(strings.saveFailed(message))),
+                                  SnackBar(
+                                      content:
+                                          Text(strings.saveFailed(message))),
                                 );
                               } catch (e) {
                                 if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(strings.saveFailed('$e'))),
+                                  SnackBar(
+                                      content: Text(strings.saveFailed('$e'))),
                                 );
                               } finally {
                                 if (mounted) {

@@ -33,6 +33,7 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
     final pregnancyAsync = ref.watch(pregnancyProvider);
     final recommendationsAsync = ref.watch(recommendationsProvider);
     final strings = AppStrings.of(context);
+    final scheme = Theme.of(context).colorScheme;
     const maxDayOffset = 30.0;
 
     final dayLabel = DateFormat.MMMd().format(_selectedDate);
@@ -42,147 +43,163 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
       showAppBar: widget.showAppBar,
       message: strings.t('Please sign in to view your summary.'),
       child: Scaffold(
-        appBar:
-            widget.showAppBar ? AppBar(title: Text(strings.t('Summary'))) : null,
+        appBar: widget.showAppBar
+            ? AppBar(title: Text(strings.t('Summary')))
+            : null,
         body: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ScreenHeader(
-              title: strings.t('Summary'),
-              subtitle: strings.t('Review nutrition progress and recommendations by day.'),
-              icon: Icons.dashboard_outlined,
-              action: IconButton(
-                tooltip: strings.t('Pick date'),
-                onPressed: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: _selectedDate,
-                    firstDate: DateTime.now().subtract(const Duration(days: 30)),
-                    lastDate: DateTime.now(),
-                  );
-                  if (picked != null) {
-                    final offset = DateTime.now()
-                        .difference(picked)
-                        .inDays
-                        .toDouble()
-                        .clamp(0.0, maxDayOffset);
-                    setState(() {
-                      _selectedDate = picked;
-                      _dayOffset = offset;
-                    });
-                  }
-                },
-                icon: const Icon(Icons.calendar_month),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ScreenHeader(
+                title: strings.t('Summary'),
+                subtitle: strings
+                    .t('Review nutrition progress and recommendations by day.'),
+                icon: Icons.dashboard_outlined,
+                action: IconButton(
+                  tooltip: strings.t('Pick date'),
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: _selectedDate,
+                      firstDate:
+                          DateTime.now().subtract(const Duration(days: 30)),
+                      lastDate: DateTime.now(),
+                    );
+                    if (picked != null) {
+                      final offset = DateTime.now()
+                          .difference(picked)
+                          .inDays
+                          .toDouble()
+                          .clamp(0.0, maxDayOffset);
+                      setState(() {
+                        _selectedDate = picked;
+                        _dayOffset = offset;
+                      });
+                    }
+                  },
+                  icon: const Icon(Icons.calendar_month),
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(strings.viewingDay(dayLabel)),
-            if (profileAsync.valueOrNull == null)
-              Card(
-                color: const Color(0xFFFFF1F5),
-                child: ListTile(
-                  leading: const Icon(Icons.person, color: Colors.pink),
-                  title: Text(strings.t('Complete your profile to tailor targets')),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const EditProfileScreen(showAppBar: true),
+              const SizedBox(height: 8),
+              Text(strings.viewingDay(dayLabel)),
+              if (profileAsync.valueOrNull == null)
+                Card(
+                  color: Color.alphaBlend(
+                    scheme.secondary.withValues(alpha: 45),
+                    scheme.surface,
+                  ),
+                  child: ListTile(
+                    leading: Icon(Icons.person, color: scheme.primary),
+                    title: Text(
+                        strings.t('Complete your profile to tailor targets')),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            const EditProfileScreen(showAppBar: true),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            Slider(
-              min: 0,
-              max: maxDayOffset,
-              divisions: maxDayOffset.toInt(),
-              label: strings.daysAgo(_dayOffset.toInt()),
-              value: _dayOffset,
-              activeColor: Colors.pinkAccent,
-              onChanged: (v) {
-                final newDate = DateTime.now().subtract(Duration(days: v.toInt()));
-                setState(() {
-                  _dayOffset = v;
-                  _selectedDate = newDate;
-                });
-              },
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: entries.when(
-                data: (items) {
-                  final todays =
-                      items.where((e) => _isSameDay(e.date, _selectedDate)).toList();
-                  final profile = profileAsync.valueOrNull;
-                  final pregnancy = pregnancyAsync.valueOrNull;
-                  final targets = _targets(pregnancy);
-                  final totals = _totals(todays);
-                  final gaps = _gaps(totals, targets);
-                  final dbRecs = _recommendationsFromDocs(
-                    recommendationsAsync.valueOrNull ?? const <FirestoreDoc>[],
-                  );
-                  final computedRecs = _recommendations(profile, gaps, strings);
-                  final recs = dbRecs.isNotEmpty ? dbRecs : computedRecs;
-                  return SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _NutrientSplitCard(
-                          totals: totals,
-                          targets: targets,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          strings.t('Recommendations'),
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        if (recs.isEmpty)
-                          Text(strings.t('On track. Keep logging meals.'))
-                        else
-                          ...recs.map((r) => Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 2),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text('- '),
-                                    Expanded(child: Text(r)),
-                                  ],
-                                ),
-                              )),
-                        const SizedBox(height: 16),
-                        Text(
-                          strings.entriesForDay(dayLabel),
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        todays.isEmpty
-                            ? Text(strings.t('Nothing logged for this day.'))
-                            : Column(
-                                children: todays
-                                    .map(
-                                      (e) => Card(
-                                        child: ListTile(
-                                          title: Text(e.meal),
-                                          subtitle: Text(
-                                            '${e.calories} kcal | P ${e.protein}g | C ${e.carbs}g | F ${e.fat}g | ${_mealTypeLabel(e.mealType ?? _mealTypeFromDate(e.date), strings)}',
-                                          ),
-                                          trailing: Text(DateFormat.Md().format(e.date)),
-                                        ),
-                                      ),
-                                    )
-                                    .toList(),
-                              ),
-                      ],
-                    ),
-                  );
+              Slider(
+                min: 0,
+                max: maxDayOffset,
+                divisions: maxDayOffset.toInt(),
+                label: strings.daysAgo(_dayOffset.toInt()),
+                value: _dayOffset,
+                activeColor: scheme.primary,
+                onChanged: (v) {
+                  final newDate =
+                      DateTime.now().subtract(Duration(days: v.toInt()));
+                  setState(() {
+                    _dayOffset = v;
+                    _selectedDate = newDate;
+                  });
                 },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Center(child: Text('Error: $e')),
               ),
-            ),
-          ],
+              const SizedBox(height: 8),
+              Expanded(
+                child: entries.when(
+                  data: (items) {
+                    final todays = items
+                        .where((e) => _isSameDay(e.date, _selectedDate))
+                        .toList();
+                    final profile = profileAsync.valueOrNull;
+                    final pregnancy = pregnancyAsync.valueOrNull;
+                    final targets = _targets(pregnancy);
+                    final totals = _totals(todays);
+                    final gaps = _gaps(totals, targets);
+                    final dbRecs = _recommendationsFromDocs(
+                      recommendationsAsync.valueOrNull ??
+                          const <FirestoreDoc>[],
+                    );
+                    final computedRecs =
+                        _recommendations(profile, gaps, strings);
+                    final recs = dbRecs.isNotEmpty ? dbRecs : computedRecs;
+                    return SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _NutrientSplitCard(
+                            totals: totals,
+                            targets: targets,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            strings.t('Recommendations'),
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 8),
+                          if (recs.isEmpty)
+                            Text(strings.t('On track. Keep logging meals.'))
+                          else
+                            ...recs.map((r) => Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 2),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('- '),
+                                      Expanded(child: Text(r)),
+                                    ],
+                                  ),
+                                )),
+                          const SizedBox(height: 16),
+                          Text(
+                            strings.entriesForDay(dayLabel),
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 8),
+                          todays.isEmpty
+                              ? Text(strings.t('Nothing logged for this day.'))
+                              : Column(
+                                  children: todays
+                                      .map(
+                                        (e) => Card(
+                                          child: ListTile(
+                                            title: Text(e.meal),
+                                            subtitle: Text(
+                                              '${e.calories} kcal | P ${e.protein}g | C ${e.carbs}g | F ${e.fat}g | ${_mealTypeLabel(e.mealType ?? _mealTypeFromDate(e.date), strings)}',
+                                            ),
+                                            trailing: Text(
+                                                DateFormat.Md().format(e.date)),
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                ),
+                        ],
+                      ),
+                    );
+                  },
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => Center(child: Text('Error: $e')),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -232,7 +249,8 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
   List<_Gap> _gaps(_EntryTotals totals, _EntryTotals targets) {
     return [
       _Gap(label: 'Iron', intake: totals.ironMg, target: targets.ironMg),
-      _Gap(label: 'Folate', intake: totals.folateMcg, target: targets.folateMcg),
+      _Gap(
+          label: 'Folate', intake: totals.folateMcg, target: targets.folateMcg),
     ];
   }
 
@@ -247,18 +265,22 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
         switch (gap.label) {
           case 'Iron':
             recs.add(
-              strings.t('Add spinach, legumes, and lean meat for iron support.'),
+              strings
+                  .t('Add spinach, legumes, and lean meat for iron support.'),
             );
             break;
           case 'Folate':
-            recs.add(strings.t('Add leafy greens or beans to raise folate intake.'));
+            recs.add(
+                strings.t('Add leafy greens or beans to raise folate intake.'));
             break;
         }
       }
     }
-    if (profile != null && profile.medicalConditions.contains(MedicalCondition.anemia)) {
+    if (profile != null &&
+        profile.medicalConditions.contains(MedicalCondition.anemia)) {
       recs.add(
-        strings.t('For anemia: pair iron sources with vitamin C to improve absorption.'),
+        strings.t(
+            'For anemia: pair iron sources with vitamin C to improve absorption.'),
       );
     }
     return recs;
@@ -329,7 +351,8 @@ class _NutrientSplitCard extends StatelessWidget {
     final total = segments.fold<double>(0, (sum, s) => sum + s.value);
     final empty = total <= 0;
     final titleStyle = Theme.of(context).textTheme.titleMedium;
-    final muted = Theme.of(context).colorScheme.onSurface.withValues(alpha: 140);
+    final muted =
+        Theme.of(context).colorScheme.onSurface.withValues(alpha: 140);
 
     return Card(
       child: Padding(
@@ -360,7 +383,8 @@ class _NutrientSplitCard extends StatelessWidget {
                           style: TextStyle(color: muted),
                         )
                       else ...[
-                        Text(strings.t('Progress by target'), style: TextStyle(color: muted)),
+                        Text(strings.t('Progress by target'),
+                            style: TextStyle(color: muted)),
                         const SizedBox(height: 6),
                         ...segments.map(
                           (segment) => _MacroLegendItem(
@@ -368,7 +392,8 @@ class _NutrientSplitCard extends StatelessWidget {
                             intake: segment.intake,
                             target: segment.target,
                             color: segment.color,
-                            percent: total == 0 ? 0 : (segment.value / total * 100),
+                            percent:
+                                total == 0 ? 0 : (segment.value / total * 100),
                             unit: segment.unit,
                           ),
                         ),
@@ -396,7 +421,7 @@ class _NutrientSplitCard extends StatelessWidget {
         intake: totals.calories.toDouble(),
         target: targets.calories.toDouble(),
         unit: 'kcal',
-        color: Colors.pink.shade300,
+        color: Colors.red.shade300,
       ),
       _MacroSegment(
         label: strings.t('Protein'),
@@ -404,7 +429,7 @@ class _NutrientSplitCard extends StatelessWidget {
         intake: totals.protein.toDouble(),
         target: targets.protein.toDouble(),
         unit: 'g',
-        color: Colors.pinkAccent,
+        color: Colors.redAccent,
       ),
       _MacroSegment(
         label: strings.t('Carbs'),
@@ -412,7 +437,7 @@ class _NutrientSplitCard extends StatelessWidget {
         intake: totals.carbs.toDouble(),
         target: targets.carbs.toDouble(),
         unit: 'g',
-        color: Colors.pinkAccent.withValues(alpha: 160),
+        color: Colors.red.shade400.withValues(alpha: 180),
       ),
       _MacroSegment(
         label: strings.t('Fat'),
@@ -420,7 +445,7 @@ class _NutrientSplitCard extends StatelessWidget {
         intake: totals.fat.toDouble(),
         target: targets.fat.toDouble(),
         unit: 'g',
-        color: Colors.purpleAccent,
+        color: Colors.deepOrange.shade300,
       ),
       _MacroSegment(
         label: strings.t('Iron'),
@@ -428,7 +453,7 @@ class _NutrientSplitCard extends StatelessWidget {
         intake: totals.ironMg,
         target: targets.ironMg,
         unit: 'mg',
-        color: Colors.deepPurpleAccent,
+        color: Colors.red.shade700,
       ),
       _MacroSegment(
         label: strings.t('Folate'),
@@ -436,7 +461,7 @@ class _NutrientSplitCard extends StatelessWidget {
         intake: totals.folateMcg,
         target: targets.folateMcg,
         unit: 'mcg',
-        color: Colors.purple.shade300,
+        color: Colors.orange.shade300,
       ),
     ].map(_withProgress).whereType<_MacroSegment>().toList();
   }
@@ -467,7 +492,8 @@ class _MacroLegendItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final muted = Theme.of(context).colorScheme.onSurface.withValues(alpha: 150);
+    final muted =
+        Theme.of(context).colorScheme.onSurface.withValues(alpha: 150);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
@@ -510,7 +536,8 @@ class _MacroPieChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
     final total = segments.fold<double>(0, (sum, s) => sum + s.value);
-    final muted = Theme.of(context).colorScheme.onSurface.withValues(alpha: 120);
+    final muted =
+        Theme.of(context).colorScheme.onSurface.withValues(alpha: 120);
     final average = segments.isEmpty ? 0 : (total / segments.length * 100);
     return Stack(
       alignment: Alignment.center,

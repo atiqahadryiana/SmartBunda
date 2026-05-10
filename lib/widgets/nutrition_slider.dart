@@ -40,6 +40,14 @@ class _NutritionSliderState extends State<NutritionSlider> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final accent = scheme.primary;
+    final accentSoft = scheme.secondary;
+    final accentStrong = Color.alphaBlend(
+      Colors.black.withValues(alpha: 45),
+      accent,
+    );
+
     return Scaffold(
       body: Stack(
         children: [
@@ -50,21 +58,22 @@ class _NutritionSliderState extends State<NutritionSlider> {
                 height: 400,
                 child: PageView.builder(
                   controller: _pageController,
-                  onPageChanged: (index) => setState(() => _currentPage = index),
+                  onPageChanged: (index) =>
+                      setState(() => _currentPage = index),
                   itemCount: _slides.length,
                   itemBuilder: (context, index) {
                     final slide = _slides[index];
                     return Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(slide.icon, size: 96, color: Colors.pink[400]),
+                        Icon(slide.icon, size: 96, color: accent),
                         const SizedBox(height: 20),
                         Text(
                           slide.title,
                           style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
-                            color: Colors.pink[800],
+                            color: accentStrong,
                           ),
                         ),
                         const SizedBox(height: 10),
@@ -73,7 +82,10 @@ class _NutritionSliderState extends State<NutritionSlider> {
                           child: Text(
                             slide.description,
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 18, color: Colors.pink[600]),
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: accentStrong.withValues(alpha: 210),
+                            ),
                           ),
                         ),
                       ],
@@ -92,7 +104,9 @@ class _NutritionSliderState extends State<NutritionSlider> {
                     height: 10,
                     width: _currentPage == index ? 30 : 10,
                     decoration: BoxDecoration(
-                      color: _currentPage == index ? Colors.pink : Colors.pink[200],
+                      color: _currentPage == index
+                          ? accent
+                          : accentSoft.withValues(alpha: 180),
                       borderRadius: BorderRadius.circular(5),
                     ),
                   ),
@@ -111,8 +125,9 @@ class _NutritionSliderState extends State<NutritionSlider> {
                   }
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.pink[400],
-                  padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                  backgroundColor: accent,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -131,7 +146,7 @@ class _NutritionSliderState extends State<NutritionSlider> {
               onPressed: _goToLogin,
               child: Text(
                 'Skip',
-                style: TextStyle(color: Colors.pink[800], fontSize: 16),
+                style: TextStyle(color: accentStrong, fontSize: 16),
               ),
             ),
           ),

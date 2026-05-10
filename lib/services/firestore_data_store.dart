@@ -18,8 +18,13 @@ class FirestoreDataStore implements DataStore {
 
   @override
   Stream<Profile?> watchProfile(String userId) {
-    return _firestore.collection(FS.patientProfiles).doc(userId).snapshots().map(
-          (doc) => doc.exists ? _profileFromMap(doc.data()!, userId: doc.id) : null,
+    return _firestore
+        .collection(FS.patientProfiles)
+        .doc(userId)
+        .snapshots()
+        .map(
+          (doc) =>
+              doc.exists ? _profileFromMap(doc.data()!, userId: doc.id) : null,
         );
   }
 
@@ -33,7 +38,10 @@ class FirestoreDataStore implements DataStore {
 
   @override
   Stream<Map<String, Profile>> watchAllProfiles() {
-    return _firestore.collection(FS.patientProfiles).snapshots().map((snapshot) {
+    return _firestore
+        .collection(FS.patientProfiles)
+        .snapshots()
+        .map((snapshot) {
       final map = <String, Profile>{};
       for (final doc in snapshot.docs) {
         final profile = _profileFromMap(doc.data(), userId: doc.id);
@@ -45,27 +53,17 @@ class FirestoreDataStore implements DataStore {
 
   @override
   Stream<Pregnancy?> watchPregnancy(String patientId) {
-    final controller = StreamController<Pregnancy?>.broadcast();
-    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? sub;
-    controller.onListen = () {
-      sub = _firestore
-          .collection(FS.pregnancies)
-          .where('patientId', isEqualTo: patientId)
-          .orderBy('updatedAt', descending: true)
-          .limit(1)
-          .snapshots()
-          .listen((snapshot) {
-        if (snapshot.docs.isEmpty) {
-          controller.add(null);
-          return;
-        }
-        controller.add(_pregnancyFromMap(snapshot.docs.first.data()));
-      });
-    };
-    controller.onCancel = () async {
-      await sub?.cancel();
-    };
-    return controller.stream;
+    return _firestore
+        .collection(FS.pregnancies)
+        .where('patientId', isEqualTo: patientId)
+        .snapshots()
+        .map((snapshot) {
+      if (snapshot.docs.isEmpty) return null;
+      final pregnancies = snapshot.docs
+          .map((doc) => _pregnancyFromMap(doc.data(), docId: doc.id))
+          .toList();
+      return _latestPregnancy(pregnancies);
+    });
   }
 
   @override
@@ -79,11 +77,20 @@ class FirestoreDataStore implements DataStore {
   @override
   Stream<Map<String, Pregnancy>> watchAllPregnancies() {
     return _firestore.collection(FS.pregnancies).snapshots().map((snapshot) {
-      final map = <String, Pregnancy>{};
+      final byPatient = <String, List<Pregnancy>>{};
       for (final doc in snapshot.docs) {
-        final pregnancy = _pregnancyFromMap(doc.data());
-        map[pregnancy.patientId] = pregnancy;
+        final pregnancy = _pregnancyFromMap(doc.data(), docId: doc.id);
+        final patientId = pregnancy.patientId;
+        if (patientId.isEmpty) continue;
+        byPatient.putIfAbsent(patientId, () => []).add(pregnancy);
       }
+      final map = <String, Pregnancy>{};
+      byPatient.forEach((patientId, list) {
+        final latest = _latestPregnancy(list);
+        if (latest != null) {
+          map[patientId] = latest;
+        }
+      });
       return map;
     });
   }
@@ -229,8 +236,9 @@ class FirestoreDataStore implements DataStore {
     final logRef = _firestore.collection(FS.foodLogs).doc(entry.userId);
     final dayRef = logRef.collection('Days').doc(logDate);
     final itemRef = dayRef.collection('Entries').doc(entry.id);
-    final logItemRef =
-        _firestore.collection(FS.foodLogItems).doc('${entry.userId}_${entry.id}');
+    final logItemRef = _firestore
+        .collection(FS.foodLogItems)
+        .doc('${entry.userId}_${entry.id}');
     final batch = _firestore.batch();
     batch.set(
       logRef,
@@ -265,7 +273,8 @@ class FirestoreDataStore implements DataStore {
 
   @override
   Stream<Map<String, List<FoodEntry>>> watchAllEntries() {
-    final controller = StreamController<Map<String, List<FoodEntry>>>.broadcast();
+    final controller =
+        StreamController<Map<String, List<FoodEntry>>>.broadcast();
     StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? entriesSub;
 
     void emit(QuerySnapshot<Map<String, dynamic>> snapshot) {
@@ -292,10 +301,8 @@ class FirestoreDataStore implements DataStore {
     }
 
     controller.onListen = () {
-      entriesSub = _firestore
-          .collectionGroup('Entries')
-          .snapshots()
-          .listen(emit);
+      entriesSub =
+          _firestore.collectionGroup('Entries').snapshots().listen(emit);
     };
 
     controller.onCancel = () async {
@@ -313,8 +320,9 @@ class FirestoreDataStore implements DataStore {
         .orderBy('date', descending: true)
         .snapshots()
         .map(
-          (snapshot) =>
-              snapshot.docs.map((doc) => _hydrationFromMap(doc.data())).toList(),
+          (snapshot) => snapshot.docs
+              .map((doc) => _hydrationFromMap(doc.data()))
+              .toList(),
         );
   }
 
@@ -372,8 +380,12 @@ class FirestoreDataStore implements DataStore {
       'heightCm': profile.heightCm,
       'currentWeightKg': profile.currentWeightKg,
       'bloodType': profile.bloodType,
-      'medicalConditions': profile.medicalConditions.map(_conditionToString).toList(),
-      if (profile.conditionNotes != null) 'conditionNotes': profile.conditionNotes,
+      'hemoglobinGdl': profile.hemoglobinGdl,
+      'abdominalCircumferenceCm': profile.abdominalCircumferenceCm,
+      'medicalConditions':
+          profile.medicalConditions.map(_conditionToString).toList(),
+      if (profile.conditionNotes != null)
+        'conditionNotes': profile.conditionNotes,
     };
   }
 
@@ -384,6 +396,28 @@ class FirestoreDataStore implements DataStore {
       heightCm: (json['heightCm'] as num?)?.toDouble() ?? 0,
       currentWeightKg: (json['currentWeightKg'] as num?)?.toDouble() ?? 0,
       bloodType: json['bloodType'] as String? ?? '',
+      hemoglobinGdl: _doubleFrom(
+        _firstNonNull([
+          json['hemoglobinGdl'],
+          json['haemoglobinGdl'],
+          json['hemoglobin'],
+          json['hemoglobins'],
+          json['haemoglobin'],
+          json['haemoglobins'],
+          json['hbGdl'],
+          json['hb'],
+        ]),
+      ),
+      abdominalCircumferenceCm: _doubleFrom(
+        _firstNonNull([
+          json['abdominalCircumferenceCm'],
+          json['stomachCircumferenceCm'],
+          json['abdomenCircumferenceCm'],
+          json['abdominalCircumference'],
+          json['stomachCircumference'],
+          json['circumferenceOfStomach'],
+        ]),
+      ),
       medicalConditions: _conditionsFromJson(json['medicalConditions']),
       conditionNotes: _stringOrNull(json['conditionNotes']),
     );
@@ -428,9 +462,12 @@ class FirestoreDataStore implements DataStore {
     };
   }
 
-  Pregnancy _pregnancyFromMap(Map<String, dynamic> json) {
+  Pregnancy _pregnancyFromMap(Map<String, dynamic> json, {String? docId}) {
     return Pregnancy(
-      id: json['pregnancyId'] as String? ?? json['id'] as String? ?? '',
+      id: json['pregnancyId'] as String? ??
+          json['id'] as String? ??
+          docId ??
+          '',
       patientId: json['patientId'] as String? ?? '',
       gestationalWeek: (json['gestationalWeek'] as num?)?.toInt() ?? 0,
       trimester: (json['trimester'] as num?)?.toInt() ?? 0,
@@ -438,6 +475,18 @@ class FirestoreDataStore implements DataStore {
       riskLevel: json['riskLevel'] as String? ?? '',
       updatedAt: _asDate(json['updatedAt']),
     );
+  }
+
+  Pregnancy? _latestPregnancy(List<Pregnancy> pregnancies) {
+    if (pregnancies.isEmpty) return null;
+    pregnancies.sort((a, b) {
+      final aTime = a.updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final bTime = b.updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final timeCompare = bTime.compareTo(aTime);
+      if (timeCompare != 0) return timeCompare;
+      return b.gestationalWeek.compareTo(a.gestationalWeek);
+    });
+    return pregnancies.first;
   }
 
   Map<String, dynamic> _entryToLogEntryMap(FoodEntry entry) {
@@ -469,7 +518,8 @@ class FirestoreDataStore implements DataStore {
     required String userId,
     DateTime? logDate,
   }) {
-    final nutrients = (json['nutrients'] as Map?)?.cast<String, dynamic>() ?? {};
+    final nutrients =
+        (json['nutrients'] as Map?)?.cast<String, dynamic>() ?? {};
     final portion = _stringOrNull(json['portion']) ??
         _stringOrNull(json['serving']) ??
         _stringOrNull(json['servingSize']);
@@ -488,10 +538,12 @@ class FirestoreDataStore implements DataStore {
       id: id,
       userId: userId,
       logId: _stringOrNull(json['logId']) ?? '',
-      foodId: _stringOrNull(json['foodId']) ?? _stringOrNull(json['source']) ?? '',
+      foodId:
+          _stringOrNull(json['foodId']) ?? _stringOrNull(json['source']) ?? '',
       date: date,
       meal: meal,
-      quantity: _doubleFrom(json['quantity']) ?? _quantityFromPortion(portion) ?? 1,
+      quantity:
+          _doubleFrom(json['quantity']) ?? _quantityFromPortion(portion) ?? 1,
       unit: _stringOrNull(json['unit']) ?? _unitFromPortion(portion) ?? '',
       calories: _intFrom(
             _firstNonNull([
@@ -653,7 +705,9 @@ class FirestoreDataStore implements DataStore {
     final trimmedUnit = unit.trim();
     final unitLabel = trimmedUnit;
     if (quantity == quantity.roundToDouble()) {
-      return unitLabel.isEmpty ? '${quantity.toInt()}' : '${quantity.toInt()} $unitLabel';
+      return unitLabel.isEmpty
+          ? '${quantity.toInt()}'
+          : '${quantity.toInt()} $unitLabel';
     }
     return unitLabel.isEmpty
         ? quantity.toStringAsFixed(2)

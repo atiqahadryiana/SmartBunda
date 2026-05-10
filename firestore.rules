@@ -13,16 +13,29 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/Users/$(request.auth.uid)).data.role;
     }
 
+    function hasPermission(permission) {
+      return signedIn() &&
+        get(/databases/$(database)/documents/Users/$(request.auth.uid)).data.permissions != null &&
+        get(/databases/$(database)/documents/Users/$(request.auth.uid))
+          .data
+          .permissions
+          .hasAny([permission]);
+    }
+
     function isStaff() {
       return signedIn() && (userRole() in [
         'admin',
         'doctor',
         'nurse',
         'dietitian',
+        'nutrition',
+        'nutritionist',
         'ADMIN',
         'DOCTOR',
         'NURSE',
-        'DIETITIAN'
+        'DIETITIAN',
+        'NUTRITION',
+        'NUTRITIONIST'
       ]);
     }
 
@@ -42,7 +55,7 @@ service cloud.firestore {
 
     match /Foods/{foodId} {
       allow read: if signedIn();
-      allow write: if isStaff();
+      allow write: if isStaff() || hasPermission('foodDatabase');
     }
 
     match /FoodLogs/{userId} {
@@ -56,10 +69,24 @@ service cloud.firestore {
     }
 
     match /FoodLogItems/{id} {
-      allow read, write: if signedIn() &&
-        (request.auth.uid == resource.data.userId ||
+      allow read: if signedIn() &&
+        (isStaff() ||
+         request.auth.uid == resource.data.userId ||
+         request.auth.uid == resource.data.patientId);
+      allow create: if signedIn() &&
+        (isStaff() ||
          request.auth.uid == request.resource.data.userId ||
-         isStaff());
+         request.auth.uid == request.resource.data.patientId);
+      allow update: if signedIn() &&
+        (isStaff() ||
+         request.auth.uid == resource.data.userId ||
+         request.auth.uid == resource.data.patientId ||
+         request.auth.uid == request.resource.data.userId ||
+         request.auth.uid == request.resource.data.patientId);
+      allow delete: if signedIn() &&
+        (isStaff() ||
+         request.auth.uid == resource.data.userId ||
+         request.auth.uid == resource.data.patientId);
     }
 
     match /PatientProfiles/{userId} {
@@ -74,24 +101,42 @@ service cloud.firestore {
     }
 
     match /HydrationLogs/{logId} {
-      allow read, write: if signedIn() &&
-        (request.auth.uid == resource.data.userId ||
-         request.auth.uid == request.resource.data.userId ||
-         isStaff());
+      allow read: if signedIn() &&
+        (isStaff() || request.auth.uid == resource.data.userId);
+      allow create: if signedIn() &&
+        (isStaff() || request.auth.uid == request.resource.data.userId);
+      allow update: if signedIn() &&
+        (isStaff() ||
+         request.auth.uid == resource.data.userId ||
+         request.auth.uid == request.resource.data.userId);
+      allow delete: if signedIn() &&
+        (isStaff() || request.auth.uid == resource.data.userId);
     }
 
     match /Feedback/{id} {
-      allow read, write: if signedIn() &&
-        (request.auth.uid == resource.data.userId ||
-         request.auth.uid == request.resource.data.userId ||
-         isStaff());
+      allow read: if signedIn() &&
+        (isStaff() || request.auth.uid == resource.data.userId);
+      allow create: if signedIn() &&
+        (isStaff() || request.auth.uid == request.resource.data.userId);
+      allow update: if signedIn() &&
+        (isStaff() ||
+         request.auth.uid == resource.data.userId ||
+         request.auth.uid == request.resource.data.userId);
+      allow delete: if signedIn() &&
+        (isStaff() || request.auth.uid == resource.data.userId);
     }
 
     match /Alerts/{id} {
-      allow read, write: if signedIn() &&
-        (request.auth.uid == resource.data.patientId ||
-         request.auth.uid == request.resource.data.patientId ||
-         isStaff());
+      allow read: if signedIn() &&
+        (isStaff() || request.auth.uid == resource.data.patientId);
+      allow create: if signedIn() &&
+        (isStaff() || request.auth.uid == request.resource.data.patientId);
+      allow update: if signedIn() &&
+        (isStaff() ||
+         request.auth.uid == resource.data.patientId ||
+         request.auth.uid == request.resource.data.patientId);
+      allow delete: if signedIn() &&
+        (isStaff() || request.auth.uid == resource.data.patientId);
     }
 
     match /Appointments/{id} {

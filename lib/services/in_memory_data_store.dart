@@ -17,9 +17,12 @@ class InMemoryDataStore implements DataStore {
   final _profileControllers = <String, StreamController<Profile?>>{};
   final _pregnancyControllers = <String, StreamController<Pregnancy?>>{};
   final _entryControllers = <String, StreamController<List<FoodEntry>>>{};
-  final _hydrationControllers = <String, StreamController<List<HydrationEntry>>>{};
-  final _feedbackControllers = <String, StreamController<List<FeedbackEntry>>>{};
-  late final StreamController<Map<String, List<FoodEntry>>> _allEntriesController;
+  final _hydrationControllers =
+      <String, StreamController<List<HydrationEntry>>>{};
+  final _feedbackControllers =
+      <String, StreamController<List<FeedbackEntry>>>{};
+  late final StreamController<Map<String, List<FoodEntry>>>
+      _allEntriesController;
   late final StreamController<List<FeedbackEntry>> _allFeedbackController;
   late final StreamController<Map<String, Profile>> _allProfilesController;
   late final StreamController<Map<String, Pregnancy>> _allPregnanciesController;
@@ -46,8 +49,8 @@ class InMemoryDataStore implements DataStore {
   Stream<Profile?> watchProfile(String userId) {
     return (_profileControllers[userId] ??=
             StreamController<Profile?>.broadcast(
-              onListen: () => _emitProfile(userId),
-            ))
+      onListen: () => _emitProfile(userId),
+    ))
         .stream;
   }
 
@@ -74,8 +77,8 @@ class InMemoryDataStore implements DataStore {
   Stream<Pregnancy?> watchPregnancy(String patientId) {
     return (_pregnancyControllers[patientId] ??=
             StreamController<Pregnancy?>.broadcast(
-              onListen: () => _emitPregnancy(patientId),
-            ))
+      onListen: () => _emitPregnancy(patientId),
+    ))
         .stream;
   }
 
@@ -102,8 +105,8 @@ class InMemoryDataStore implements DataStore {
   Stream<List<FoodEntry>> watchEntries(String userId) {
     return (_entryControllers[userId] ??=
             StreamController<List<FoodEntry>>.broadcast(
-              onListen: () => _emitEntries(userId),
-            ))
+      onListen: () => _emitEntries(userId),
+    ))
         .stream;
   }
 
@@ -131,8 +134,8 @@ class InMemoryDataStore implements DataStore {
   Stream<List<HydrationEntry>> watchHydrationEntries(String userId) {
     return (_hydrationControllers[userId] ??=
             StreamController<List<HydrationEntry>>.broadcast(
-              onListen: () => _emitHydration(userId),
-            ))
+      onListen: () => _emitHydration(userId),
+    ))
         .stream;
   }
 
@@ -144,20 +147,22 @@ class InMemoryDataStore implements DataStore {
   }
 
   void _emitHydration(String userId) {
-    _hydrationControllers[userId]?.add(List.unmodifiable(_hydration[userId] ?? []));
+    _hydrationControllers[userId]
+        ?.add(List.unmodifiable(_hydration[userId] ?? []));
   }
 
   @override
   Stream<List<FeedbackEntry>> watchFeedback(String userId) {
     return (_feedbackControllers[userId] ??=
             StreamController<List<FeedbackEntry>>.broadcast(
-              onListen: () => _emitFeedback(userId),
-            ))
+      onListen: () => _emitFeedback(userId),
+    ))
         .stream;
   }
 
   @override
-  Stream<List<FeedbackEntry>> watchAllFeedback() => _allFeedbackController.stream;
+  Stream<List<FeedbackEntry>> watchAllFeedback() =>
+      _allFeedbackController.stream;
 
   @override
   Future<void> addFeedback(FeedbackEntry entry) async {
@@ -167,7 +172,8 @@ class InMemoryDataStore implements DataStore {
   }
 
   void _emitFeedback(String userId) {
-    _feedbackControllers[userId]?.add(List.unmodifiable(_feedback[userId] ?? []));
+    _feedbackControllers[userId]
+        ?.add(List.unmodifiable(_feedback[userId] ?? []));
     _emitAllFeedback();
   }
 
@@ -184,8 +190,10 @@ class InMemoryDataStore implements DataStore {
       'profiles': _profiles.values.map(_profileToJson).toList(),
       'pregnancies': _pregnancies.values.map(_pregnancyToJson).toList(),
       'entries': _entries.values.expand((e) => e).map(_entryToJson).toList(),
-      'hydration': _hydration.values.expand((e) => e).map(_hydrationToJson).toList(),
-      'feedback': _feedback.values.expand((e) => e).map(_feedbackToJson).toList(),
+      'hydration':
+          _hydration.values.expand((e) => e).map(_hydrationToJson).toList(),
+      'feedback':
+          _feedback.values.expand((e) => e).map(_feedbackToJson).toList(),
     };
   }
 
@@ -265,8 +273,12 @@ class InMemoryDataStore implements DataStore {
       'heightCm': profile.heightCm,
       'currentWeightKg': profile.currentWeightKg,
       'bloodType': profile.bloodType,
-      'medicalConditions': profile.medicalConditions.map(_conditionToString).toList(),
-      if (profile.conditionNotes != null) 'conditionNotes': profile.conditionNotes,
+      'hemoglobinGdl': profile.hemoglobinGdl,
+      'abdominalCircumferenceCm': profile.abdominalCircumferenceCm,
+      'medicalConditions':
+          profile.medicalConditions.map(_conditionToString).toList(),
+      if (profile.conditionNotes != null)
+        'conditionNotes': profile.conditionNotes,
     };
   }
 
@@ -277,6 +289,28 @@ class InMemoryDataStore implements DataStore {
       heightCm: (json['heightCm'] as num?)?.toDouble() ?? 0,
       currentWeightKg: (json['currentWeightKg'] as num?)?.toDouble() ?? 0,
       bloodType: json['bloodType'] as String? ?? '',
+      hemoglobinGdl: _doubleFrom(
+        _firstNonNull([
+          json['hemoglobinGdl'],
+          json['haemoglobinGdl'],
+          json['hemoglobin'],
+          json['hemoglobins'],
+          json['haemoglobin'],
+          json['haemoglobins'],
+          json['hbGdl'],
+          json['hb'],
+        ]),
+      ),
+      abdominalCircumferenceCm: _doubleFrom(
+        _firstNonNull([
+          json['abdominalCircumferenceCm'],
+          json['stomachCircumferenceCm'],
+          json['abdomenCircumferenceCm'],
+          json['abdominalCircumference'],
+          json['stomachCircumference'],
+          json['circumferenceOfStomach'],
+        ]),
+      ),
       medicalConditions: _conditionsFromJson(json['medicalConditions']),
       conditionNotes: json['conditionNotes'] as String?,
     );
@@ -309,6 +343,20 @@ class InMemoryDataStore implements DataStore {
         .toSet();
   }
 
+  dynamic _firstNonNull(List<dynamic> values) {
+    for (final value in values) {
+      if (value != null) return value;
+    }
+    return null;
+  }
+
+  double? _doubleFrom(dynamic raw) {
+    if (raw is double) return raw;
+    if (raw is num) return raw.toDouble();
+    if (raw is String) return double.tryParse(raw);
+    return null;
+  }
+
   Map<String, dynamic> _pregnancyToJson(Pregnancy pregnancy) {
     return {
       'id': pregnancy.id,
@@ -329,7 +377,8 @@ class InMemoryDataStore implements DataStore {
       trimester: (json['trimester'] as num?)?.toInt() ?? 0,
       edd: json['edd'] as String? ?? '',
       riskLevel: json['riskLevel'] as String? ?? '',
-      updatedAt: json['updatedAt'] == null ? null : DateTime.parse(json['updatedAt']),
+      updatedAt:
+          json['updatedAt'] == null ? null : DateTime.parse(json['updatedAt']),
     );
   }
 

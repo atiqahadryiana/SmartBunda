@@ -42,12 +42,14 @@ class PatientProfilesScreen extends ConsumerWidget {
             if (profiles == null || entries == null || pregnancies == null) {
               return const Center(child: CircularProgressIndicator());
             }
-            final patients = users.where((u) => u.role == UserRole.patient).toList();
+            final patients =
+                users.where((u) => u.role == UserRole.patient).toList();
             if (patients.isEmpty) {
               return EmptyState(
                 icon: Icons.people_outline,
                 title: strings.t('No patients yet'),
-                message: strings.t('Patients will appear here after registration.'),
+                message:
+                    strings.t('Patients will appear here after registration.'),
               );
             }
             return ListView(
@@ -55,18 +57,21 @@ class PatientProfilesScreen extends ConsumerWidget {
               children: [
                 ScreenHeader(
                   title: strings.t('Patient profiles'),
-                  subtitle: strings.t('Open a patient to review their profile and logs.'),
+                  subtitle: strings
+                      .t('Open a patient to review their profile and logs.'),
                   icon: Icons.people_outline,
                 ),
                 const SizedBox(height: 16),
                 ...patients.map((patient) {
                   final profile = profiles[patient.id];
-                  final patientEntries = entries[patient.id] ?? const <FoodEntry>[];
+                  final patientEntries =
+                      entries[patient.id] ?? const <FoodEntry>[];
                   return Card(
                     child: ListTile(
-                      leading: _avatar(profile, patient),
+                      leading: _avatar(context, patient),
                       title: Text(patient.displayName ?? patient.email),
-                      subtitle: Text(_profileSummary(profile, pregnancies[patient.id], strings)),
+                      subtitle: Text(_profileSummary(
+                          profile, pregnancies[patient.id], strings)),
                       trailing: Text(strings.logsCount(patientEntries.length)),
                       onTap: () {
                         Navigator.of(context).push(
@@ -93,7 +98,8 @@ class PatientProfilesScreen extends ConsumerWidget {
     );
   }
 
-  String _profileSummary(Profile? profile, Pregnancy? pregnancy, AppStrings strings) {
+  String _profileSummary(
+      Profile? profile, Pregnancy? pregnancy, AppStrings strings) {
     final parts = <String>[];
     if (profile == null) {
       parts.add(strings.t('Profile missing'));
@@ -111,15 +117,17 @@ class PatientProfilesScreen extends ConsumerWidget {
     return parts.join(' | ');
   }
 
-  Widget _avatar(Profile? profile, AppUser patient) {
+  Widget _avatar(BuildContext context, AppUser patient) {
     final name = patient.displayName ?? patient.email;
     final parts = name.trim().split(RegExp(r'\s+'));
-    final initials = parts.where((p) => p.isNotEmpty).take(2).map((p) => p[0]).join();
+    final initials =
+        parts.where((p) => p.isNotEmpty).take(2).map((p) => p[0]).join();
     final fallback = initials.isEmpty ? '?' : initials.toUpperCase();
+    final base = Theme.of(context).colorScheme;
     return CircleAvatar(
-      backgroundColor: Colors.pink.shade100,
-      child: Text(fallback, style: const TextStyle(fontWeight: FontWeight.bold)),
+      backgroundColor: base.secondary.withValues(alpha: 120),
+      child:
+          Text(fallback, style: const TextStyle(fontWeight: FontWeight.bold)),
     );
   }
-
 }

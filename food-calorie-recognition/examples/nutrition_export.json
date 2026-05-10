@@ -1,0 +1,14 @@
+[
+  {
+    "food_key": "nasi_lemak",
+    "food_name": "Nasi Lemak",
+    "calories": 644,
+    "protein": 18,
+    "carbohydrates": 80,
+    "fat": 28,
+    "sugar": 5,
+    "sodium": 800,
+    "serving_size": "per plate",
+    "source": "offline_seed"
+  }
+]

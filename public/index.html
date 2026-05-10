@@ -1,87 +1,2900 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Welcome to Firebase Hosting</title>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1"
+    />
+    <title>SmartBunda Admin Dashboard</title>
+    <meta
+      name="description"
+      content="SmartBunda admin dashboard website for user approvals, system health, content management, and operational monitoring."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Sora:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary-red: #ff5c72;
+        --primary-red-deep: #e34b64;
+        --secondary-blush: #ffb4bf;
+        --tertiary-peach: #ffd6c8;
+        --surface-base: #fff5f6;
+        --surface-panel: rgba(255, 255, 255, 0.82);
+        --text-strong: #42232b;
+        --text-body: #6b4a53;
+        --text-soft: #8f6f78;
+        --success: #2f9f75;
+        --warning: #e08b2e;
+        --danger: #dd495d;
+        --shadow-strong: 0 22px 55px rgba(138, 53, 70, 0.15);
+        --shadow-card: 0 14px 34px rgba(119, 55, 69, 0.12);
+        --radius-xl: 32px;
+        --radius-lg: 24px;
+        --radius-md: 18px;
+        --shell-max: 1480px;
+      }
 
-    <!-- update the version number as needed -->
-    <script defer src="/__/firebase/12.7.0/firebase-app-compat.js"></script>
-    <!-- include only the Firebase features as you need -->
-    <script defer src="/__/firebase/12.7.0/firebase-auth-compat.js"></script>
-    <script defer src="/__/firebase/12.7.0/firebase-database-compat.js"></script>
-    <script defer src="/__/firebase/12.7.0/firebase-firestore-compat.js"></script>
-    <script defer src="/__/firebase/12.7.0/firebase-functions-compat.js"></script>
-    <script defer src="/__/firebase/12.7.0/firebase-messaging-compat.js"></script>
-    <script defer src="/__/firebase/12.7.0/firebase-storage-compat.js"></script>
-    <script defer src="/__/firebase/12.7.0/firebase-analytics-compat.js"></script>
-    <script defer src="/__/firebase/12.7.0/firebase-remote-config-compat.js"></script>
-    <script defer src="/__/firebase/12.7.0/firebase-performance-compat.js"></script>
-    <!-- 
-      initialize the SDK after all desired features are loaded, set useEmulator to false
-      to avoid connecting the SDK to running emulators.
-    -->
-    <script defer src="/__/firebase/init.js?useEmulator=true"></script>
+      * {
+        box-sizing: border-box;
+      }
 
-    <style media="screen">
-      body { background: #ECEFF1; color: rgba(0,0,0,0.87); font-family: Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; }
-      #message { background: white; max-width: 360px; margin: 100px auto 16px; padding: 32px 24px; border-radius: 3px; }
-      #message h2 { color: #ffa100; font-weight: bold; font-size: 16px; margin: 0 0 8px; }
-      #message h1 { font-size: 22px; font-weight: 300; color: rgba(0,0,0,0.6); margin: 0 0 16px;}
-      #message p { line-height: 140%; margin: 16px 0 24px; font-size: 14px; }
-      #message a { display: block; text-align: center; background: #039be5; text-transform: uppercase; text-decoration: none; color: white; padding: 16px; border-radius: 4px; }
-      #message, #message a { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); }
-      #load { color: rgba(0,0,0,0.4); text-align: center; font-size: 13px; }
-      @media (max-width: 600px) {
-        body, #message { margin-top: 0; background: white; box-shadow: none; }
-        body { border-top: 16px solid #ffa100; }
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Manrope", sans-serif;
+        color: var(--text-strong);
+        background:
+          radial-gradient(circle at top left, rgba(255, 180, 191, 0.62), transparent 28%),
+          radial-gradient(circle at top right, rgba(255, 214, 200, 0.72), transparent 22%),
+          linear-gradient(180deg, #fffdfd 0%, var(--surface-base) 45%, #fff9f8 100%);
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.42) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.42) 1px, transparent 1px);
+        background-size: 42px 42px;
+        mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.25), transparent 70%);
+        opacity: 0.4;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      .dashboard-shell {
+        width: min(calc(100% - 32px), var(--shell-max));
+        margin: 18px auto;
+        padding: 16px;
+        display: grid;
+        grid-template-columns: 300px minmax(0, 1fr);
+        gap: 18px;
+      }
+
+      .sidebar,
+      .content-panel,
+      .card,
+      .queue-item,
+      .timeline-item,
+      .mini-card,
+      .health-card,
+      .role-row,
+      .table-row,
+      .backup-item,
+      .message-card {
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+      }
+
+      .sidebar {
+        position: sticky;
+        top: 18px;
+        align-self: start;
+        min-height: calc(100vh - 36px);
+        display: flex;
+        flex-direction: column;
+        padding: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        border-radius: var(--radius-xl);
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 245, 246, 0.88)),
+          linear-gradient(135deg, rgba(255, 180, 191, 0.18), transparent 65%);
+        box-shadow: var(--shadow-strong);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 28px;
+      }
+
+      .brand-mark {
+        width: 52px;
+        height: 52px;
+        border-radius: 18px;
+        display: grid;
+        place-items: center;
+        font-family: "Sora", sans-serif;
+        font-weight: 700;
+        color: white;
+        background:
+          radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.44), transparent 36%),
+          linear-gradient(135deg, var(--primary-red), #ff7a7b);
+        box-shadow: 0 16px 28px rgba(255, 92, 114, 0.3);
+      }
+
+      .brand-copy h1 {
+        margin: 0;
+        font-family: "Sora", sans-serif;
+        font-size: 1.15rem;
+        letter-spacing: -0.03em;
+      }
+
+      .brand-copy p {
+        margin: 4px 0 0;
+        color: var(--text-soft);
+        font-size: 0.92rem;
+      }
+
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 22px;
+        padding: 10px 14px;
+        border-radius: 999px;
+        background: rgba(255, 92, 114, 0.1);
+        color: var(--primary-red-deep);
+        font-size: 0.88rem;
+        font-weight: 700;
+      }
+
+      .status-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--success);
+        box-shadow: 0 0 0 6px rgba(47, 159, 117, 0.12);
+      }
+
+      .nav-group {
+        margin-bottom: 26px;
+      }
+
+      .nav-label {
+        margin: 0 0 12px;
+        color: var(--text-soft);
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        font-size: 0.74rem;
+        font-weight: 800;
+      }
+
+      .nav-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .nav-link {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 13px 14px;
+        border-radius: 18px;
+        color: var(--text-body);
+        transition: transform 180ms ease, background 180ms ease, color 180ms ease;
+      }
+
+      .nav-link:hover,
+      .nav-link:focus-visible,
+      .nav-link.active {
+        background: linear-gradient(135deg, rgba(255, 92, 114, 0.14), rgba(255, 214, 200, 0.6));
+        color: var(--text-strong);
+        transform: translateX(3px);
+        outline: none;
+      }
+
+      .nav-icon {
+        width: 36px;
+        height: 36px;
+        display: grid;
+        place-items: center;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.72);
+        font-size: 1rem;
+      }
+
+      .sidebar-footer {
+        margin-top: auto;
+        padding: 20px;
+        border-radius: var(--radius-lg);
+        background:
+          linear-gradient(135deg, rgba(255, 92, 114, 0.12), rgba(255, 214, 200, 0.56)),
+          white;
+      }
+
+      .sidebar-footer h2 {
+        margin: 0 0 8px;
+        font-size: 1rem;
+      }
+
+      .sidebar-footer p {
+        margin: 0 0 14px;
+        color: var(--text-body);
+        line-height: 1.55;
+        font-size: 0.92rem;
+      }
+
+      .ghost-button,
+      .primary-button,
+      .secondary-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        min-height: 48px;
+        padding: 0 18px;
+        border-radius: 16px;
+        border: none;
+        cursor: pointer;
+        font-weight: 800;
+        transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+      }
+
+      .primary-button {
+        color: white;
+        background: linear-gradient(135deg, var(--primary-red), #ff7f7c);
+        box-shadow: 0 16px 24px rgba(255, 92, 114, 0.22);
+      }
+
+      .secondary-button {
+        color: var(--primary-red-deep);
+        background: rgba(255, 255, 255, 0.88);
+        border: 1px solid rgba(255, 92, 114, 0.14);
+      }
+
+      .ghost-button {
+        color: var(--text-body);
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(246, 204, 211, 0.82);
+      }
+
+      .primary-button:hover,
+      .secondary-button:hover,
+      .ghost-button:hover {
+        transform: translateY(-2px);
+      }
+
+      .auth-shell {
+        width: min(440px, calc(100% - 24px));
+        margin: 32px auto 0;
+      }
+
+      .auth-card,
+      .modal-card {
+        padding: 26px;
+        border-radius: 30px;
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.82);
+        box-shadow: var(--shadow-strong);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+      }
+
+      .auth-card h2,
+      .modal-card h2 {
+        margin: 0 0 8px;
+        font-family: "Sora", sans-serif;
+        letter-spacing: -0.04em;
+      }
+
+      .auth-card p,
+      .modal-card p {
+        margin: 0;
+        color: var(--text-body);
+        line-height: 1.6;
+      }
+
+      .form-stack {
+        display: grid;
+        gap: 14px;
+        margin-top: 20px;
+      }
+
+      .field {
+        display: grid;
+        gap: 8px;
+      }
+
+      .field label {
+        color: var(--text-body);
+        font-size: 0.9rem;
+        font-weight: 700;
+      }
+
+      .field input,
+      .field select {
+        width: 100%;
+        min-height: 50px;
+        padding: 0 16px;
+        border-radius: 16px;
+        border: 1px solid rgba(246, 204, 211, 0.9);
+        background: rgba(255, 255, 255, 0.92);
+        color: var(--text-strong);
+        outline: none;
+      }
+
+      .field input:focus,
+      .field select:focus {
+        border-color: rgba(255, 92, 114, 0.62);
+        box-shadow: 0 0 0 4px rgba(255, 92, 114, 0.12);
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .inline-check {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 16px;
+        border-radius: 16px;
+        background: rgba(255, 245, 246, 0.9);
+        color: var(--text-body);
+      }
+
+      .inline-check input {
+        width: 18px;
+        height: 18px;
+      }
+
+      .auth-message,
+      .app-banner {
+        margin-top: 16px;
+        padding: 12px 14px;
+        border-radius: 16px;
+        font-size: 0.9rem;
+        font-weight: 700;
+      }
+
+      .auth-message.error,
+      .app-banner.error {
+        background: rgba(221, 73, 93, 0.12);
+        color: var(--danger);
+      }
+
+      .auth-message.success,
+      .app-banner.success {
+        background: rgba(47, 159, 117, 0.12);
+        color: var(--success);
+      }
+
+      .small-copy {
+        margin-top: 16px;
+        color: var(--text-soft);
+        font-size: 0.84rem;
+        line-height: 1.6;
+      }
+
+      .app-banner {
+        width: min(calc(100% - 32px), var(--shell-max));
+        margin: 16px auto 0;
+      }
+
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 18px;
+        background: rgba(66, 35, 43, 0.28);
+        z-index: 999;
+      }
+
+      .modal-card {
+        width: min(100%, 560px);
+      }
+
+      .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 20px;
+      }
+
+      .content-panel {
+        min-width: 0;
+        padding: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.82);
+        border-radius: 36px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(255, 251, 251, 0.78));
+        box-shadow: var(--shadow-strong);
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 22px;
+      }
+
+      .searchbar {
+        flex: 1;
+        min-width: 240px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 16px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid rgba(246, 204, 211, 0.75);
+      }
+
+      .searchbar input {
+        width: 100%;
+        border: none;
+        background: transparent;
+        color: var(--text-strong);
+        outline: none;
+      }
+
+      .topbar-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .icon-button {
+        width: 48px;
+        height: 48px;
+        border: none;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.86);
+        color: var(--text-strong);
+        cursor: pointer;
+        box-shadow: var(--shadow-card);
+      }
+
+      .profile-chip {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 10px 8px 8px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.86);
+        box-shadow: var(--shadow-card);
+      }
+
+      .profile-avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(135deg, var(--secondary-blush), var(--tertiary-peach));
+        font-weight: 800;
+      }
+
+      .profile-meta strong,
+      .profile-meta span {
+        display: block;
+      }
+
+      .profile-meta span {
+        color: var(--text-soft);
+        font-size: 0.82rem;
+      }
+
+      .hero {
+        position: relative;
+        overflow: hidden;
+        padding: 28px;
+        margin-bottom: 22px;
+        border-radius: 30px;
+        background:
+          radial-gradient(circle at top right, rgba(255, 255, 255, 0.35), transparent 30%),
+          linear-gradient(135deg, rgba(255, 92, 114, 0.96), rgba(255, 153, 144, 0.92));
+        color: white;
+      }
+
+      .hero::after {
+        content: "";
+        position: absolute;
+        right: -36px;
+        bottom: -54px;
+        width: 220px;
+        height: 220px;
+        border-radius: 42%;
+        background: rgba(255, 255, 255, 0.16);
+        transform: rotate(16deg);
+      }
+
+      .hero-grid {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-columns: minmax(0, 1.5fr) minmax(300px, 0.95fr);
+        gap: 22px;
+        align-items: end;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.16);
+        font-size: 0.82rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .hero h2 {
+        margin: 16px 0 10px;
+        max-width: 14ch;
+        font-family: "Sora", sans-serif;
+        font-size: clamp(2rem, 4vw, 3.35rem);
+        line-height: 1.02;
+        letter-spacing: -0.05em;
+      }
+
+      .hero p {
+        margin: 0;
+        max-width: 64ch;
+        color: rgba(255, 255, 255, 0.86);
+        line-height: 1.65;
+      }
+
+      .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 22px;
+      }
+
+      .hero .secondary-button {
+        color: white;
+        background: rgba(255, 255, 255, 0.14);
+        border: 1px solid rgba(255, 255, 255, 0.24);
+      }
+
+      .hero-panel {
+        display: grid;
+        gap: 14px;
+      }
+
+      .signal-card {
+        padding: 20px;
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .signal-card h3,
+      .signal-card p {
+        margin: 0;
+      }
+
+      .signal-card h3 {
+        font-size: 0.86rem;
+        color: rgba(255, 255, 255, 0.78);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+
+      .signal-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 14px;
+      }
+
+      .signal-grid strong {
+        display: block;
+        font-size: 1.2rem;
+        margin-bottom: 4px;
+      }
+
+      .signal-grid span {
+        font-size: 0.82rem;
+        color: rgba(255, 255, 255, 0.82);
+      }
+
+      .main-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.88fr);
+        gap: 18px;
+      }
+
+      .section-stack {
+        display: grid;
+        gap: 18px;
+      }
+
+      .card {
+        padding: 22px;
+        border-radius: 28px;
+        background: var(--surface-panel);
+        border: 1px solid rgba(255, 255, 255, 0.76);
+        box-shadow: var(--shadow-card);
+      }
+
+      .section-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+
+      .section-header h3 {
+        margin: 0 0 6px;
+        font-size: 1.12rem;
+      }
+
+      .section-header p {
+        margin: 0;
+        color: var(--text-body);
+        line-height: 1.55;
+      }
+
+      .section-tools {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+
+      .mini-card {
+        position: relative;
+        overflow: hidden;
+        padding: 18px;
+        border-radius: 24px;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 245, 246, 0.88));
+        border: 1px solid rgba(246, 204, 211, 0.62);
+      }
+
+      .mini-card::after {
+        content: "";
+        position: absolute;
+        right: -22px;
+        bottom: -30px;
+        width: 96px;
+        height: 96px;
+        border-radius: 50%;
+        background: rgba(255, 180, 191, 0.2);
+      }
+
+      .metric-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 18px;
+      }
+
+      .metric-label {
+        color: var(--text-soft);
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        font-weight: 800;
+      }
+
+      .metric-value {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 800;
+        letter-spacing: -0.05em;
+      }
+
+      .metric-trend {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 10px;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 800;
+      }
+
+      .trend-up {
+        color: var(--success);
+        background: rgba(47, 159, 117, 0.12);
+      }
+
+      .trend-warn {
+        color: var(--warning);
+        background: rgba(224, 139, 46, 0.12);
+      }
+
+      .trend-down {
+        color: var(--danger);
+        background: rgba(221, 73, 93, 0.12);
+      }
+
+      .metric-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        color: var(--text-body);
+        font-size: 0.9rem;
+      }
+
+      .progress-track {
+        width: 100%;
+        height: 9px;
+        border-radius: 999px;
+        background: rgba(255, 180, 191, 0.3);
+        overflow: hidden;
+      }
+
+      .progress-track span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--primary-red), #ff9488);
+      }
+
+      .split-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.08fr) minmax(280px, 0.92fr);
+        gap: 16px;
+      }
+
+      .queue-list,
+      .timeline-list,
+      .backup-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .queue-item,
+      .timeline-item,
+      .backup-item,
+      .message-card {
+        padding: 18px;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(246, 204, 211, 0.66);
+      }
+
+      .queue-head,
+      .timeline-head,
+      .backup-head,
+      .message-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+        margin-bottom: 10px;
+      }
+
+      .queue-head h4,
+      .timeline-head h4,
+      .backup-head h4,
+      .message-head h4 {
+        margin: 0 0 4px;
+        font-size: 1rem;
+      }
+
+      .queue-meta,
+      .timeline-meta,
+      .backup-meta,
+      .message-meta {
+        color: var(--text-soft);
+        font-size: 0.86rem;
+      }
+
+      .tag-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .tag,
+      .chip,
+      .soft-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        font-size: 0.82rem;
+        font-weight: 800;
+      }
+
+      .tag {
+        background: rgba(255, 180, 191, 0.26);
+        color: var(--primary-red-deep);
+      }
+
+      .chip {
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(246, 204, 211, 0.92);
+        color: var(--text-body);
+      }
+
+      .soft-chip {
+        background: rgba(255, 214, 200, 0.42);
+        color: #a45d4d;
+      }
+
+      .queue-actions,
+      .inline-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .small-button {
+        min-height: 40px;
+        padding: 0 14px;
+        border-radius: 14px;
+        border: none;
+        cursor: pointer;
+        font-weight: 800;
+      }
+
+      .small-button.approve {
+        color: white;
+        background: var(--success);
+      }
+
+      .small-button.review {
+        color: var(--text-strong);
+        background: rgba(255, 214, 200, 0.74);
+      }
+
+      .small-button.reject {
+        color: var(--danger);
+        background: rgba(221, 73, 93, 0.12);
+      }
+
+      .overview-bars {
+        display: grid;
+        gap: 14px;
+      }
+
+      .bar-group {
+        display: grid;
+        gap: 8px;
+      }
+
+      .bar-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        color: var(--text-body);
+        font-size: 0.9rem;
+      }
+
+      .bar-track {
+        height: 12px;
+        border-radius: 999px;
+        background: rgba(255, 180, 191, 0.28);
+        overflow: hidden;
+      }
+
+      .bar-track span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--primary-red), #ff9589);
+      }
+
+      .filter-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      .filter-chip {
+        padding: 10px 14px;
+        border-radius: 999px;
+        border: 1px solid rgba(246, 204, 211, 0.9);
+        background: white;
+        color: var(--text-body);
+        cursor: pointer;
+        font-weight: 800;
+      }
+
+      .filter-chip.active {
+        background: linear-gradient(135deg, rgba(255, 92, 114, 0.16), rgba(255, 214, 200, 0.6));
+        color: var(--text-strong);
+        border-color: rgba(255, 92, 114, 0.3);
+      }
+
+      .table-head,
+      .table-row {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr 1fr 1fr auto;
+        gap: 14px;
+        align-items: center;
+      }
+
+      .table-head {
+        padding: 0 14px 12px;
+        color: var(--text-soft);
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        font-weight: 800;
+      }
+
+      .table-row {
+        padding: 16px 14px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(246, 204, 211, 0.6);
+        margin-bottom: 10px;
+      }
+
+      .user-cell strong,
+      .user-cell span {
+        display: block;
+      }
+
+      .user-cell span {
+        color: var(--text-soft);
+        font-size: 0.84rem;
+      }
+
+      .message-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .message-card p {
+        margin: 0;
+        color: var(--text-body);
+        line-height: 1.6;
+      }
+
+      .health-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .health-card {
+        padding: 18px;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.84);
+        border: 1px solid rgba(246, 204, 211, 0.62);
+      }
+
+      .health-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      .health-card strong {
+        display: block;
+        font-size: 1.55rem;
+        letter-spacing: -0.04em;
+      }
+
+      .health-card span,
+      .health-card p {
+        color: var(--text-body);
+      }
+
+      .health-card p {
+        margin: 10px 0 0;
+        font-size: 0.9rem;
+        line-height: 1.55;
+      }
+
+      .role-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .role-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 160px;
+        gap: 16px;
+        align-items: center;
+        padding: 16px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(246, 204, 211, 0.62);
+      }
+
+      .role-row span,
+      .role-row strong {
+        display: block;
+      }
+
+      .role-row span {
+        margin-top: 4px;
+        color: var(--text-soft);
+        font-size: 0.86rem;
+      }
+
+      .role-value {
+        text-align: right;
+      }
+
+      .role-value strong {
+        font-size: 1.5rem;
+        letter-spacing: -0.04em;
+      }
+
+      .timeline-line {
+        position: relative;
+        padding-left: 22px;
+      }
+
+      .timeline-line::before {
+        content: "";
+        position: absolute;
+        top: 3px;
+        bottom: 3px;
+        left: 5px;
+        width: 2px;
+        background: rgba(255, 180, 191, 0.62);
+      }
+
+      .timeline-line .timeline-item {
+        position: relative;
+      }
+
+      .timeline-line .timeline-item::before {
+        content: "";
+        position: absolute;
+        left: -21px;
+        top: 20px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--primary-red);
+        box-shadow: 0 0 0 6px rgba(255, 92, 114, 0.14);
+      }
+
+      .footer-note {
+        margin-top: 18px;
+        color: var(--text-soft);
+        font-size: 0.88rem;
+        line-height: 1.6;
+      }
+
+      .reveal {
+        opacity: 0;
+        transform: translateY(18px);
+        animation: rise 620ms ease forwards;
+      }
+
+      .delay-1 {
+        animation-delay: 90ms;
+      }
+
+      .delay-2 {
+        animation-delay: 180ms;
+      }
+
+      .delay-3 {
+        animation-delay: 270ms;
+      }
+
+      .delay-4 {
+        animation-delay: 360ms;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      @keyframes rise {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (max-width: 1260px) {
+        .dashboard-shell {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          position: static;
+          min-height: auto;
+        }
+
+        .main-grid,
+        .hero-grid,
+        .kpi-grid,
+        .split-grid,
+        .message-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 920px) {
+        .content-panel {
+          padding: 18px;
+          border-radius: 28px;
+        }
+
+        .topbar {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .topbar-actions {
+          justify-content: space-between;
+        }
+
+        .table-head {
+          display: none;
+        }
+
+        .table-row,
+        .role-row,
+        .health-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .dashboard-shell {
+          width: min(calc(100% - 16px), var(--shell-max));
+          margin: 8px auto 16px;
+          padding: 0;
+        }
+
+        .sidebar,
+        .content-panel,
+        .hero,
+        .card {
+          border-radius: 24px;
+        }
+
+        .sidebar,
+        .content-panel {
+          padding: 16px;
+        }
+
+        .hero {
+          padding: 22px;
+        }
+
+        .hero h2 {
+          max-width: none;
+        }
+
+        .signal-grid,
+        .message-grid,
+        .health-grid,
+        .kpi-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .profile-chip {
+          width: 100%;
+          justify-content: space-between;
+        }
       }
     </style>
   </head>
   <body>
-    <div id="message">
-      <h2>Welcome</h2>
-      <h1>Firebase Hosting Setup Complete</h1>
-      <p>You're seeing this because you've successfully setup Firebase Hosting. Now it's time to go build something extraordinary!</p>
-      <a target="_blank" href="https://firebase.google.com/docs/hosting/">Open Hosting Documentation</a>
-    </div>
-    <p id="load">Firebase SDK Loading&hellip;</p>
+    <section class="auth-shell" id="auth-shell">
+      <div class="auth-card">
+        <h2>Admin sign in</h2>
+        <p>
+          Use your Firebase account to load live SmartBunda admin data from
+          Firestore. This dashboard expects an admin or staff account with
+          system-level access.
+        </p>
 
-    <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        const loadEl = document.querySelector('#load');
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-        // // The Firebase SDK is initialized and available here!
-        //
-        // firebase.auth().onAuthStateChanged(user => { });
-        // firebase.database().ref('/path/to/ref').on('value', snapshot => { });
-        // firebase.firestore().doc('/foo/bar').get().then(() => { });
-        // firebase.functions().httpsCallable('yourFunction')().then(() => { });
-        // firebase.messaging().requestPermission().then(() => { });
-        // firebase.storage().ref('/path/to/ref').getDownloadURL().then(() => { });
-        // firebase.analytics(); // call to activate
-        // firebase.analytics().logEvent('tutorial_completed');
-        // firebase.performance(); // call to activate
-        //
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+        <form class="form-stack" id="login-form">
+          <div class="field">
+            <label for="login-email">Email</label>
+            <input id="login-email" name="email" type="email" autocomplete="username" required />
+          </div>
+          <div class="field">
+            <label for="login-password">Password</label>
+            <input
+              id="login-password"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              required
+            />
+          </div>
+          <button class="primary-button" type="submit">Sign in to Firebase</button>
+        </form>
+
+        <div id="auth-message" class="auth-message hidden"></div>
+        <p class="small-copy">
+          Reads and admin actions on this website depend on your Firestore rules,
+          so the browser must be authenticated before any dashboard data loads.
+        </p>
+      </div>
+    </section>
+
+    <div id="app-banner" class="app-banner hidden"></div>
+
+    <div class="dashboard-shell hidden" id="dashboard-shell">
+      <aside class="sidebar reveal">
+        <div class="brand">
+          <div class="brand-mark">SB</div>
+          <div class="brand-copy">
+            <h1 id="app-name">SmartBunda Admin</h1>
+            <p>Care operations dashboard</p>
+          </div>
+        </div>
+
+        <div class="status-pill" id="status-pill">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span id="system-status-text">Loading Firebase data...</span>
+        </div>
+
+        <div class="nav-group">
+          <p class="nav-label">Core modules</p>
+          <nav class="nav-list" aria-label="Primary">
+            <a class="nav-link active" href="#overview">
+              <span class="nav-icon">01</span>
+              Overview
+            </a>
+            <a class="nav-link" href="#approvals">
+              <span class="nav-icon">02</span>
+              Pending approvals
+            </a>
+            <a class="nav-link" href="#users">
+              <span class="nav-icon">03</span>
+              User management
+            </a>
+            <a class="nav-link" href="#content">
+              <span class="nav-icon">04</span>
+              Content control
+            </a>
+            <a class="nav-link" href="#health">
+              <span class="nav-icon">05</span>
+              System health
+            </a>
+          </nav>
+        </div>
+
+        <div class="nav-group">
+          <p class="nav-label">Operations</p>
+          <div class="nav-list">
+            <a class="nav-link" href="#backup">
+              <span class="nav-icon">06</span>
+              Backups
+            </a>
+            <a class="nav-link" href="#activity">
+              <span class="nav-icon">07</span>
+              Activity log
+            </a>
+            <a class="nav-link" href="#policy">
+              <span class="nav-icon">08</span>
+              Access rules
+            </a>
+          </div>
+        </div>
+
+        <div class="sidebar-footer">
+          <h2>Design fit</h2>
+          <p>
+            This website uses the same coral, blush, peach, and warm surface
+            shades defined in the app theme so the admin dashboard stays aligned
+            with SmartBunda's existing UI language.
+          </p>
+          <button class="primary-button" type="button" data-toast="Export summary queued">
+            Export weekly summary
+          </button>
+        </div>
+      </aside>
+
+      <main class="content-panel">
+        <header class="topbar reveal delay-1">
+          <label class="searchbar" for="dashboard-search">
+            <span aria-hidden="true">Search</span>
+            <input
+              id="dashboard-search"
+              type="search"
+              placeholder="Search users, approvals, reports, recommendations"
+            />
+          </label>
+
+          <div class="topbar-actions">
+            <button class="icon-button" type="button" data-toast="Notifications reviewed">
+              Bell
+            </button>
+            <button class="icon-button" id="refresh-button" type="button">
+              Sync
+            </button>
+            <button class="ghost-button" id="sign-out-button" type="button">Sign out</button>
+            <div class="profile-chip">
+              <div class="profile-avatar" id="profile-avatar">SB</div>
+              <div class="profile-meta">
+                <strong id="profile-name">Loading user</strong>
+                <span id="profile-role">Authenticating</span>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <section class="hero reveal delay-2" id="overview">
+          <div class="hero-grid">
+            <div>
+              <span class="eyebrow">Admin website dashboard</span>
+              <h2>One place to run SmartBunda safely.</h2>
+              <p>
+                The layout focuses on the actual admin requirements already present
+                in the app: approve staff, manage users, control content, monitor
+                backups, and keep system health visible without clutter.
+              </p>
+              <div class="hero-actions">
+                <button class="primary-button" id="hero-create-user" type="button">
+                  Create user
+                </button>
+                <button class="secondary-button" type="button" data-toast="Backup job scheduled">
+                  Create backup
+                </button>
+              </div>
+            </div>
+
+            <div class="hero-panel">
+              <div class="signal-card">
+                <h3>Today at a glance</h3>
+                <div class="signal-grid">
+                  <div>
+                    <strong id="today-entries-count">0</strong>
+                    <span>New meal logs received</span>
+                  </div>
+                  <div>
+                    <strong id="today-alerts-count">0</strong>
+                    <span>Alerts need review</span>
+                  </div>
+                  <div>
+                    <strong id="service-availability">0%</strong>
+                    <span>Sync coverage</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="signal-card">
+                <h3>Priority focus</h3>
+                <p id="priority-focus-copy">Waiting for live approval data.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="kpi-grid reveal delay-2" id="kpi-grid">
+          <article class="mini-card">
+            <div class="metric-header">
+              <span class="metric-label">Registered users</span>
+              <span class="metric-trend trend-up">+8.2%</span>
+            </div>
+            <p class="metric-value">2,184</p>
+            <div class="metric-footer">
+              <span>Across patient and staff roles</span>
+              <span>1,992 active</span>
+            </div>
+          </article>
+
+          <article class="mini-card">
+            <div class="metric-header">
+              <span class="metric-label">Pending approvals</span>
+              <span class="metric-trend trend-warn">5 urgent</span>
+            </div>
+            <p class="metric-value">17</p>
+            <div class="metric-footer">
+              <span>MMC and JLM verification</span>
+              <span>42% aged 24h+</span>
+            </div>
+          </article>
+
+          <article class="mini-card">
+            <div class="metric-header">
+              <span class="metric-label">Content coverage</span>
+              <span class="metric-trend trend-up">Healthy</span>
+            </div>
+            <p class="metric-value">91%</p>
+            <div class="metric-footer">
+              <span class="progress-track"><span style="width: 91%"></span></span>
+            </div>
+          </article>
+
+          <article class="mini-card">
+            <div class="metric-header">
+              <span class="metric-label">System incidents</span>
+              <span class="metric-trend trend-down">2 open</span>
+            </div>
+            <p class="metric-value">06</p>
+            <div class="metric-footer">
+              <span>Four resolved in the last 7 days</span>
+              <span>MTTR 31m</span>
+            </div>
+          </article>
+        </div>
+
+        <div class="main-grid">
+          <div class="section-stack">
+            <section class="card reveal delay-3" id="approvals">
+              <div class="section-header">
+                <div>
+                  <h3>Pending staff approvals</h3>
+                  <p>
+                    The queue reflects the Flutter admin flow: approve or reject
+                    staff registrations, review license numbers, and prioritize
+                    cases waiting longest.
+                  </p>
+                </div>
+                <div class="section-tools">
+                  <button class="ghost-button" type="button">Sort by age</button>
+                  <button class="secondary-button" type="button">Open queue</button>
+                </div>
+              </div>
+
+              <div class="split-grid">
+                <div class="queue-list" id="approvals-list"></div>
+
+                <div class="card" style="padding: 20px">
+                  <div class="section-header">
+                    <div>
+                      <h3>Approval pressure</h3>
+                      <p>Distribution by role and waiting time.</p>
+                    </div>
+                  </div>
+                  <div class="overview-bars" id="approval-pressure"></div>
+                  <p class="footer-note">
+                    Requirement alignment: the website keeps approvals visible as
+                    a dedicated primary module instead of burying them under generic
+                    notifications.
+                  </p>
+                </div>
+              </div>
+            </section>
+            <section class="card reveal delay-3" id="users">
+              <div class="section-header">
+                <div>
+                  <h3>User management</h3>
+                  <p>
+                    Admins can create accounts, inspect roles, reset access, and
+                    identify inactive users quickly.
+                  </p>
+                </div>
+                <div class="section-tools">
+                  <button class="primary-button" id="open-create-user" type="button">
+                    Add user
+                  </button>
+                </div>
+              </div>
+
+              <div class="filter-row" aria-label="User filters">
+                <button class="filter-chip active" type="button" data-filter="all">All roles</button>
+                <button class="filter-chip" type="button" data-filter="patient">Patients</button>
+                <button class="filter-chip" type="button" data-filter="doctor">Doctors</button>
+                <button class="filter-chip" type="button" data-filter="nurse">Nurses</button>
+                <button class="filter-chip" type="button" data-filter="dietitian">Dietitians</button>
+              </div>
+
+              <div class="table-head">
+                <span>User</span>
+                <span>Role</span>
+                <span>Status</span>
+                <span>Today</span>
+                <span>Actions</span>
+              </div>
+
+              <div class="table-body" id="users-table"></div>
+            </section>
+
+            <section class="card reveal delay-4" id="content">
+              <div class="section-header">
+                <div>
+                  <h3>Content and communication control</h3>
+                  <p>
+                    Education, recommendations, notifications, and reports are
+                    split into clear blocks so admins can manage each content type
+                    without confusion.
+                  </p>
+                </div>
+                <div class="section-tools">
+                  <button class="ghost-button" type="button">View reports</button>
+                  <button class="secondary-button" type="button">Publish update</button>
+                </div>
+              </div>
+
+              <div class="message-grid" id="content-grid"></div>
+            </section>
+          </div>
+
+          <div class="section-stack">
+            <section class="card reveal delay-3" id="health">
+              <div class="section-header">
+                <div>
+                  <h3>System health</h3>
+                  <p>Health signals that match the system admin responsibilities.</p>
+                </div>
+              </div>
+
+              <div class="health-grid" id="health-grid"></div>
+            </section>
+            <section class="card reveal delay-4" id="policy">
+              <div class="section-header">
+                <div>
+                  <h3>Access policy snapshot</h3>
+                  <p>
+                    Roles are visible at a glance so the admin can spot access
+                    imbalances and unauthorized growth.
+                  </p>
+                </div>
+              </div>
+
+              <div class="role-list" id="role-list"></div>
+            </section>
+
+            <section class="card reveal delay-4" id="backup">
+              <div class="section-header">
+                <div>
+                  <h3>Backups and recovery</h3>
+                  <p>
+                    The website keeps backup actions front and visible because they
+                    are core system-admin tasks in the existing app.
+                  </p>
+                </div>
+              </div>
+
+              <div class="backup-list" id="backup-list"></div>
+            </section>
+
+            <section class="card reveal delay-4" id="activity">
+              <div class="section-header">
+                <div>
+                  <h3>Recent activity</h3>
+                  <p>Readable audit trail for high-value admin actions.</p>
+                </div>
+              </div>
+
+              <div class="timeline-line">
+                <div class="timeline-list" id="activity-list"></div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <div class="modal-overlay hidden" id="user-modal">
+      <div class="modal-card">
+        <h2 id="user-modal-title">Create user</h2>
+        <p id="user-modal-copy">
+          Create a Firebase Auth account and sync its profile into Firestore.
+        </p>
+
+        <form class="form-stack" id="user-form">
+          <div class="form-grid">
+            <div class="field">
+              <label for="user-name">Display name</label>
+              <input id="user-name" name="displayName" type="text" required />
+            </div>
+            <div class="field">
+              <label for="user-role">Role</label>
+              <select id="user-role" name="role">
+                <option value="patient">Patient</option>
+                <option value="doctor">Doctor</option>
+                <option value="nurse">Nurse</option>
+                <option value="dietitian">Dietitian</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="user-email">Email</label>
+            <input id="user-email" name="email" type="email" required />
+          </div>
+
+          <div class="field" id="user-password-field">
+            <label for="user-password">Password</label>
+            <input id="user-password" name="password" type="password" minlength="8" />
+          </div>
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="user-mmc">MMC number</label>
+              <input id="user-mmc" name="mmcNumber" type="text" />
+            </div>
+            <div class="field">
+              <label for="user-jlm">JLM number</label>
+              <input id="user-jlm" name="jlmNumber" type="text" />
+            </div>
+          </div>
+
+          <label class="inline-check">
+            <input id="user-active" name="isActive" type="checkbox" checked />
+            Set account as active immediately
+          </label>
+
+          <div id="user-form-message" class="auth-message hidden"></div>
+
+          <div class="modal-actions">
+            <button class="ghost-button" id="close-user-modal" type="button">Cancel</button>
+            <button class="primary-button" type="submit" id="save-user-button">Save user</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div
+      id="toast"
+      aria-live="polite"
+      aria-atomic="true"
+      class="hidden"
+      style="
+        position: fixed;
+        right: 18px;
+        bottom: 18px;
+        padding: 14px 18px;
+        border-radius: 16px;
+        background: rgba(66, 35, 43, 0.94);
+        color: white;
+        font-weight: 700;
+        box-shadow: var(--shadow-strong);
+        z-index: 1000;
+      "
+    ></div>
+
+    <script type="module">
+      import { deleteApp, initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+      import {
+        browserLocalPersistence,
+        createUserWithEmailAndPassword,
+        getAuth,
+        onAuthStateChanged,
+        sendPasswordResetEmail,
+        setPersistence,
+        signInWithEmailAndPassword,
+        signOut,
+        updateProfile,
+      } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+      import {
+        addDoc,
+        collection,
+        doc,
+        getDoc,
+        getFirestore,
+        limit,
+        onSnapshot,
+        orderBy,
+        query,
+        serverTimestamp,
+        setDoc,
+        updateDoc,
+        deleteField,
+      } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyD4IKPU04aT--qppe59hXPtd7GdhmrsbzY",
+        authDomain: "smartbunda-d7761.firebaseapp.com",
+        projectId: "smartbunda-d7761",
+        storageBucket: "smartbunda-d7761.firebasestorage.app",
+        messagingSenderId: "762965727838",
+        appId: "1:762965727838:web:869adac9bbae1977c072cf",
+        measurementId: "G-Y2LER6DEQ8",
+      };
+
+      const ROLE_LABELS = {
+        admin: "Admin",
+        doctor: "Doctor",
+        nurse: "Nurse",
+        patient: "Patient",
+        dietitian: "Dietitian",
+      };
+
+      const ROLE_DESCRIPTIONS = {
+        admin: "User management, security, content control, reporting, and system administration.",
+        doctor: "Patient review, monitoring, clinical notes, and reports.",
+        nurse: "Monitoring, triage alerts, and patient coordination.",
+        patient: "Profile, meal logging, appointments, and summaries.",
+        dietitian: "Plans, nutrition analysis, recommendations, and follow-up.",
+      };
+
+      const TOTAL_SOURCES = 10;
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+
+      try {
+        await setPersistence(auth, browserLocalPersistence);
+      } catch (_) {
+        // Keep the session running even if persistence cannot be set.
+      }
+
+      const dom = {
+        authShell: document.getElementById("auth-shell"),
+        authMessage: document.getElementById("auth-message"),
+        appBanner: document.getElementById("app-banner"),
+        dashboardShell: document.getElementById("dashboard-shell"),
+        loginForm: document.getElementById("login-form"),
+        loginEmail: document.getElementById("login-email"),
+        loginPassword: document.getElementById("login-password"),
+        appName: document.getElementById("app-name"),
+        systemStatusText: document.getElementById("system-status-text"),
+        profileAvatar: document.getElementById("profile-avatar"),
+        profileName: document.getElementById("profile-name"),
+        profileRole: document.getElementById("profile-role"),
+        refreshButton: document.getElementById("refresh-button"),
+        signOutButton: document.getElementById("sign-out-button"),
+        searchInput: document.getElementById("dashboard-search"),
+        todayEntriesCount: document.getElementById("today-entries-count"),
+        todayAlertsCount: document.getElementById("today-alerts-count"),
+        serviceAvailability: document.getElementById("service-availability"),
+        priorityFocusCopy: document.getElementById("priority-focus-copy"),
+        kpiGrid: document.getElementById("kpi-grid"),
+        approvalsList: document.getElementById("approvals-list"),
+        approvalPressure: document.getElementById("approval-pressure"),
+        usersTable: document.getElementById("users-table"),
+        contentGrid: document.getElementById("content-grid"),
+        healthGrid: document.getElementById("health-grid"),
+        roleList: document.getElementById("role-list"),
+        backupList: document.getElementById("backup-list"),
+        activityList: document.getElementById("activity-list"),
+        openCreateUser: document.getElementById("open-create-user"),
+        heroCreateUser: document.getElementById("hero-create-user"),
+        userModal: document.getElementById("user-modal"),
+        userModalTitle: document.getElementById("user-modal-title"),
+        userModalCopy: document.getElementById("user-modal-copy"),
+        closeUserModal: document.getElementById("close-user-modal"),
+        userForm: document.getElementById("user-form"),
+        userFormMessage: document.getElementById("user-form-message"),
+        userName: document.getElementById("user-name"),
+        userRole: document.getElementById("user-role"),
+        userEmail: document.getElementById("user-email"),
+        userPassword: document.getElementById("user-password"),
+        userPasswordField: document.getElementById("user-password-field"),
+        userMmc: document.getElementById("user-mmc"),
+        userJlm: document.getElementById("user-jlm"),
+        userActive: document.getElementById("user-active"),
+        toast: document.getElementById("toast"),
+        filterButtons: [...document.querySelectorAll("[data-filter]")],
+      };
+
+      const state = {
+        currentAdmin: null,
+        users: [],
+        foodItems: [],
+        alerts: [],
+        appointments: [],
+        education: [],
+        recommendations: [],
+        notifications: [],
+        reports: [],
+        logs: [],
+        settings: null,
+        filter: "all",
+        search: "",
+        editingUserId: null,
+        unsubscribers: [],
+        loadedSources: new Set(),
+      };
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function setVisible(element, visible) {
+        element.classList.toggle("hidden", !visible);
+      }
+
+      function showToast(message) {
+        dom.toast.textContent = message;
+        dom.toast.classList.remove("hidden");
+        clearTimeout(showToast.timeoutId);
+        showToast.timeoutId = setTimeout(() => {
+          dom.toast.classList.add("hidden");
+        }, 2200);
+      }
+
+      function setMessage(element, message, type = "error") {
+        if (!message) {
+          element.textContent = "";
+          element.className = element.className.replace(/\s?(error|success)/g, "");
+          element.classList.add("hidden");
+          return;
+        }
+        element.textContent = message;
+        element.classList.remove("hidden", "error", "success");
+        element.classList.add(type);
+      }
+
+      function toDate(raw) {
+        if (!raw) return null;
+        if (raw instanceof Date) return raw;
+        if (typeof raw?.toDate === "function") return raw.toDate();
+        if (typeof raw === "string") {
+          const parsed = new Date(raw);
+          return Number.isNaN(parsed.getTime()) ? null : parsed;
+        }
+        return null;
+      }
+
+      function numberFrom(raw, fallback = 0) {
+        if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+        if (typeof raw === "string" && raw.trim()) {
+          const parsed = Number(raw);
+          if (Number.isFinite(parsed)) return parsed;
+        }
+        return fallback;
+      }
+
+      function formatCount(value) {
+        return new Intl.NumberFormat("en-US").format(value ?? 0);
+      }
+
+      function formatDateTime(raw) {
+        const date = toDate(raw);
+        if (!date) return "Unknown time";
+        return new Intl.DateTimeFormat("en-US", {
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        }).format(date);
+      }
+
+      function formatRelativeHours(raw) {
+        const date = toDate(raw);
+        if (!date) return "Waiting";
+        const diffHours = Math.max(1, Math.round((Date.now() - date.getTime()) / 3600000));
+        return `Pending ${diffHours}h`;
+      }
+
+      function normalizeRole(raw) {
+        const value = String(raw ?? "").trim().toLowerCase();
+        if (value === "nutritionist") return "dietitian";
+        if (value in ROLE_LABELS) return value;
+        return "patient";
+      }
+
+      function roleLabel(role) {
+        return ROLE_LABELS[normalizeRole(role)] ?? "Patient";
+      }
+
+      function defaultPermissionsForRole(role) {
+        switch (normalizeRole(role)) {
+          case "admin":
+            return [
+              "userManagement",
+              "authentication",
+              "patientProfiles",
+              "foodLogging",
+              "nutritionAnalysis",
+              "nutritionPlans",
+              "monitoringAlerts",
+              "appointments",
+              "reporting",
+              "education",
+              "systemAdministration",
+              "foodDatabase",
+            ];
+          case "doctor":
+            return [
+              "authentication",
+              "patientProfiles",
+              "nutritionAnalysis",
+              "nutritionPlans",
+              "monitoringAlerts",
+              "appointments",
+              "reporting",
+            ];
+          case "nurse":
+            return [
+              "authentication",
+              "patientProfiles",
+              "monitoringAlerts",
+              "appointments",
+              "reporting",
+            ];
+          case "dietitian":
+            return [
+              "authentication",
+              "patientProfiles",
+              "nutritionAnalysis",
+              "nutritionPlans",
+              "monitoringAlerts",
+              "appointments",
+              "reporting",
+            ];
+          default:
+            return [
+              "authentication",
+              "patientProfiles",
+              "foodLogging",
+              "monitoringAlerts",
+              "appointments",
+              "reporting",
+              "education",
+            ];
+        }
+      }
+
+      function isActiveUser(user) {
+        const status = String(user.status ?? "").toLowerCase();
+        if (status === "inactive" || status === "pending" || status === "rejected") {
+          return false;
+        }
+        if (typeof user.isActive === "boolean") return user.isActive;
+        return true;
+      }
+
+      function isPendingApproval(user) {
+        const role = normalizeRole(user.role);
+        return user.status === "PENDING" && ["doctor", "nurse", "dietitian"].includes(role);
+      }
+
+      function hasSystemAccess(user) {
+        const permissions = Array.isArray(user.permissions) ? user.permissions : [];
+        return normalizeRole(user.role) === "admin" ||
+          permissions.includes("systemAdministration") ||
+          permissions.includes("userManagement");
+      }
+
+      function displayName(user) {
+        return user.displayName?.trim() || user.email || "Unknown user";
+      }
+
+      function userInitials(user) {
+        const source = displayName(user);
+        const parts = source.split(/\s+/).filter(Boolean);
+        return parts.slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("") || "SB";
+      }
+
+      function mapUserDoc(snapshot) {
+        const data = snapshot.data() ?? {};
+        return {
+          id: snapshot.id,
+          email: String(data.email ?? "").trim().toLowerCase(),
+          role: normalizeRole(data.role),
+          status: String(data.status ?? (data.isActive === false ? "INACTIVE" : "ACTIVE")).toUpperCase(),
+          displayName: String(data.fullName ?? data.displayName ?? "").trim(),
+          permissions: Array.isArray(data.permissions) ? data.permissions : defaultPermissionsForRole(data.role),
+          mmcNumber: String(data.mmcNumber ?? "").trim(),
+          jlmNumber: String(data.jlmNumber ?? "").trim(),
+          lastLoginAt: toDate(data.lastLoginAt),
+          createdAt: toDate(data.createdAt),
+          updatedAt: toDate(data.updatedAt),
+        };
+      }
+
+      function mapFoodItem(snapshot) {
+        const data = snapshot.data() ?? {};
+        const nutrients = data.nutrients ?? {};
+        return {
+          id: snapshot.id,
+          userId: String(data.userId ?? data.patientId ?? "").trim(),
+          loggedAt: toDate(data.loggedAt ?? data.date),
+          calories: numberFrom(data.calories, 0),
+          protein: numberFrom(
+            nutrients.protein_g ?? nutrients.protein ?? data.proteinG ?? data.protein_g,
+            0
+          ),
+        };
+      }
+
+      function mapAlert(snapshot) {
+        const data = snapshot.data() ?? {};
+        return {
+          id: snapshot.id,
+          message: String(data.message ?? "").trim(),
+          severity: String(data.severity ?? "MEDIUM").toUpperCase(),
+          status: String(data.status ?? "SENT").toUpperCase(),
+          createdAt: toDate(data.createdAt),
+        };
+      }
+
+      function mapAppointment(snapshot) {
+        const data = snapshot.data() ?? {};
+        return {
+          id: snapshot.id,
+          status: String(data.status ?? "SCHEDULED").toUpperCase(),
+          type: String(data.type ?? "Consultation"),
+          dateTime: toDate(data.dateTime),
+        };
+      }
+
+      function mapContent(snapshot) {
+        const data = snapshot.data() ?? {};
+        return {
+          id: snapshot.id,
+          title: String(data.title ?? data.name ?? data.recommendation ?? data.message ?? snapshot.id),
+          isActive: data.isActive !== false,
+          updatedAt: toDate(data.updatedAt ?? data.createdAt),
+        };
+      }
+
+      function mapLog(snapshot) {
+        const data = snapshot.data() ?? {};
+        return {
+          id: snapshot.id,
+          type: String(data.type ?? "login"),
+          message: String(data.message ?? "").trim(),
+          actorId: String(data.actorId ?? "").trim(),
+          subjectId: String(data.subjectId ?? "").trim(),
+          timestamp: toDate(data.timestamp),
+        };
+      }
+
+      function settingsSummary() {
+        if (!state.settings) return "System settings not found yet.";
+        const reminder = state.settings.reminder ?? {};
+        const thresholds = state.settings.alertThresholds ?? {};
+        return `Reminder hour ${reminder.defaultReminderHour ?? "--"}:00, calories ${
+          thresholds.caloriesMin ?? "--"
+        }-${thresholds.caloriesMax ?? "--"}, protein ${thresholds.proteinGMin ?? "--"}g.`;
+      }
+
+      function matchesSearch(...parts) {
+        if (!state.search) return true;
+        const haystack = parts.join(" ").toLowerCase();
+        return haystack.includes(state.search);
+      }
+
+      function todayEntryTotalsByUser() {
+        const today = new Date();
+        const sameDay = (value) =>
+          value &&
+          value.getFullYear() === today.getFullYear() &&
+          value.getMonth() === today.getMonth() &&
+          value.getDate() === today.getDate();
+
+        return state.foodItems.reduce((map, entry) => {
+          if (!entry.userId || !sameDay(entry.loggedAt)) return map;
+          const current = map.get(entry.userId) ?? { count: 0, calories: 0, protein: 0 };
+          current.count += 1;
+          current.calories += entry.calories;
+          current.protein += entry.protein;
+          map.set(entry.userId, current);
+          return map;
+        }, new Map());
+      }
+
+      function pendingUsers() {
+        return state.users
+          .filter((user) => isPendingApproval(user))
+          .sort((a, b) => (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0));
+      }
+
+      function updateLoadedSource(name) {
+        state.loadedSources.add(name);
+      }
+
+      function renderProfile() {
+        if (!state.currentAdmin) return;
+        const appName = state.settings?.appName || "SmartBunda";
+        dom.appName.textContent = `${appName} Admin`;
+        dom.profileName.textContent = displayName(state.currentAdmin);
+        dom.profileRole.textContent = `${roleLabel(state.currentAdmin.role)} access`;
+        dom.profileAvatar.textContent = userInitials(state.currentAdmin);
+        dom.systemStatusText.textContent = "Firebase live data connected";
+      }
+
+      function renderOverviewSignals() {
+        const openAlerts = state.alerts.filter((alert) => alert.status !== "READ");
+        const pending = pendingUsers();
+        const stalePending = pending.filter((user) => {
+          const createdAt = user.createdAt?.getTime();
+          return createdAt ? Date.now() - createdAt > 24 * 60 * 60 * 1000 : false;
+        });
+        const todayEntries = [...todayEntryTotalsByUser().values()].reduce(
+          (sum, item) => sum + item.count,
+          0
+        );
+
+        dom.todayEntriesCount.textContent = formatCount(todayEntries);
+        dom.todayAlertsCount.textContent = formatCount(openAlerts.length);
+        dom.serviceAvailability.textContent = `${Math.round(
+          (state.loadedSources.size / TOTAL_SOURCES) * 100
+        )}%`;
+        dom.priorityFocusCopy.textContent = pending.length
+          ? `${pending.length} staff approvals are waiting in Firestore. ${stalePending.length} have been pending for more than 24 hours and should be reviewed first.`
+          : "No pending staff approvals in the current Firebase dataset.";
+      }
+
+      function renderKpis() {
+        const pending = pendingUsers();
+        const activeUsers = state.users.filter((user) => isActiveUser(user)).length;
+        const contentDocs = [
+          ...state.education,
+          ...state.recommendations,
+          ...state.notifications,
+          ...state.reports,
+        ];
+        const activeContent = contentDocs.filter((item) => item.isActive !== false).length;
+        const contentCoverage = contentDocs.length
+          ? Math.round((activeContent / contentDocs.length) * 100)
+          : 0;
+        const openIncidents = state.alerts.filter(
+          (alert) => alert.status !== "READ" && alert.severity === "HIGH"
+        ).length;
+        const stalePending = pending.filter((user) => {
+          const createdAt = user.createdAt?.getTime();
+          return createdAt ? Date.now() - user.createdAt.getTime() > 24 * 60 * 60 * 1000 : false;
+        }).length;
+
+        dom.kpiGrid.innerHTML = `
+          <article class="mini-card">
+            <div class="metric-header">
+              <span class="metric-label">Registered users</span>
+              <span class="metric-trend trend-up">${formatCount(activeUsers)} active</span>
+            </div>
+            <p class="metric-value">${formatCount(state.users.length)}</p>
+            <div class="metric-footer">
+              <span>Across patient and staff roles</span>
+              <span>${formatCount(activeUsers)} active</span>
+            </div>
+          </article>
+
+          <article class="mini-card">
+            <div class="metric-header">
+              <span class="metric-label">Pending approvals</span>
+              <span class="metric-trend trend-warn">${formatCount(stalePending)} urgent</span>
+            </div>
+            <p class="metric-value">${formatCount(pending.length)}</p>
+            <div class="metric-footer">
+              <span>MMC and JLM verification</span>
+              <span>${pending.length ? Math.round((stalePending / pending.length) * 100) : 0}% aged 24h+</span>
+            </div>
+          </article>
+
+          <article class="mini-card">
+            <div class="metric-header">
+              <span class="metric-label">Content coverage</span>
+              <span class="metric-trend trend-up">${contentCoverage}% active</span>
+            </div>
+            <p class="metric-value">${contentCoverage}%</p>
+            <div class="metric-footer">
+              <span class="progress-track"><span style="width: ${contentCoverage}%"></span></span>
+            </div>
+          </article>
+
+          <article class="mini-card">
+            <div class="metric-header">
+              <span class="metric-label">Open incidents</span>
+              <span class="metric-trend ${openIncidents ? "trend-down" : "trend-up"}">${formatCount(openIncidents)} active</span>
+            </div>
+            <p class="metric-value">${formatCount(openIncidents)}</p>
+            <div class="metric-footer">
+              <span>High-severity alerts awaiting review</span>
+              <span>${formatCount(state.alerts.length)} total alerts</span>
+            </div>
+          </article>
+        `;
+      }
+
+      function renderApprovals() {
+        const pending = pendingUsers().filter((user) =>
+          matchesSearch(displayName(user), user.email, roleLabel(user.role), user.mmcNumber, user.jlmNumber)
+        );
+
+        dom.approvalsList.innerHTML = pending.length
+          ? pending
+              .map((user) => `
+                <article class="queue-item">
+                  <div class="queue-head">
+                    <div>
+                      <h4>${escapeHtml(displayName(user))}</h4>
+                      <div class="queue-meta">${escapeHtml(user.email)}</div>
+                    </div>
+                    <span class="tag">${escapeHtml(formatRelativeHours(user.createdAt))}</span>
+                  </div>
+                  <div class="tag-row">
+                    <span class="chip">${escapeHtml(roleLabel(user.role))}</span>
+                    ${user.mmcNumber ? `<span class="chip">MMC ${escapeHtml(user.mmcNumber)}</span>` : ""}
+                    ${user.jlmNumber ? `<span class="chip">JLM ${escapeHtml(user.jlmNumber)}</span>` : ""}
+                    <span class="soft-chip">${user.createdAt ? "Verification pending" : "Created time unavailable"}</span>
+                  </div>
+                  <div class="queue-actions">
+                    <button class="small-button approve" type="button" data-action="approve-user" data-user-id="${escapeHtml(user.id)}">Approve</button>
+                    <button class="small-button review" type="button" data-action="edit-user" data-user-id="${escapeHtml(user.id)}">Review details</button>
+                    <button class="small-button reject" type="button" data-action="reject-user" data-user-id="${escapeHtml(user.id)}">Reject</button>
+                  </div>
+                </article>
+              `)
+              .join("")
+          : `<article class="queue-item"><div class="queue-head"><div><h4>No pending approvals</h4><div class="queue-meta">Firestore does not currently have pending doctor, nurse, or dietitian registrations.</div></div></div></article>`;
+
+        const counts = { doctor: 0, nurse: 0, dietitian: 0, older: 0 };
+        pending.forEach((user) => {
+          const role = normalizeRole(user.role);
+          if (role in counts) counts[role] += 1;
+          if (user.createdAt && Date.now() - user.createdAt.getTime() > 24 * 60 * 60 * 1000) {
+            counts.older += 1;
+          }
+        });
+        const maxCount = Math.max(counts.doctor, counts.nurse, counts.dietitian, counts.older, 1);
+        dom.approvalPressure.innerHTML = [
+          ["Doctors", counts.doctor],
+          ["Nurses", counts.nurse],
+          ["Dietitians", counts.dietitian],
+          ["Older than 24h", counts.older],
+        ]
+          .map(
+            ([label, value]) => `
+              <div class="bar-group">
+                <div class="bar-head">
+                  <span>${label}</span>
+                  <strong>${formatCount(value)}</strong>
+                </div>
+                <div class="bar-track"><span style="width: ${Math.round((value / maxCount) * 100)}%"></span></div>
+              </div>
+            `
+          )
+          .join("");
+      }
+
+      function renderUsers() {
+        const todayByUser = todayEntryTotalsByUser();
+        const users = state.users
+          .filter((user) => (state.filter === "all" ? true : normalizeRole(user.role) === state.filter))
+          .filter((user) => matchesSearch(displayName(user), user.email, roleLabel(user.role), user.status))
+          .sort((a, b) => displayName(a).localeCompare(displayName(b)));
+
+        dom.usersTable.innerHTML = users.length
+          ? users
+              .map((user) => {
+                const today = todayByUser.get(user.id);
+                const todayText = today
+                  ? `${Math.round(today.calories)} kcal | ${Math.round(today.protein)}g protein`
+                  : user.lastLoginAt
+                    ? `Last login ${formatDateTime(user.lastLoginAt)}`
+                    : "No recent activity";
+                const active = isActiveUser(user);
+                return `
+                  <article class="table-row" data-role="${escapeHtml(normalizeRole(user.role))}">
+                    <div class="user-cell">
+                      <strong>${escapeHtml(displayName(user))}</strong>
+                      <span>${escapeHtml(user.email)}</span>
+                    </div>
+                    <span>${escapeHtml(roleLabel(user.role))}</span>
+                    <span class="chip">${active ? "Active" : user.status === "PENDING" ? "Pending" : "Inactive"}</span>
+                    <span>${escapeHtml(todayText)}</span>
+                    <div class="inline-actions">
+                      <button class="small-button review" type="button" data-action="edit-user" data-user-id="${escapeHtml(user.id)}">Edit</button>
+                      <button class="small-button reject" type="button" data-action="reset-password" data-user-id="${escapeHtml(user.id)}">Reset</button>
+                      <button class="small-button ${active ? "reject" : "approve"}" type="button" data-action="toggle-active" data-user-id="${escapeHtml(user.id)}">
+                        ${active ? "Disable" : "Activate"}
+                      </button>
+                    </div>
+                  </article>
+                `;
+              })
+              .join("")
+          : `<article class="table-row"><div class="user-cell"><strong>No users match this filter</strong><span>Adjust the role filter or search term.</span></div><span>-</span><span class="chip">-</span><span>-</span><div></div></article>`;
+      }
+
+      function renderContent() {
+        const cards = [
+          { title: "Education content", items: state.education, empty: "No education content documents in Firestore yet." },
+          { title: "Recommendations", items: state.recommendations, empty: "No recommendation documents in Firestore yet." },
+          { title: "Notifications", items: state.notifications, empty: "No notification documents in Firestore yet." },
+          { title: "Reports", items: state.reports, empty: "No report documents in Firestore yet." },
+        ];
+
+        dom.contentGrid.innerHTML = cards
+          .map(({ title, items, empty }) => {
+            const activeItems = items.filter((item) => item.isActive !== false).length;
+            const latest = items
+              .slice()
+              .sort((a, b) => (b.updatedAt?.getTime() ?? 0) - (a.updatedAt?.getTime() ?? 0))[0];
+            return `
+              <article class="message-card">
+                <div class="message-head">
+                  <div>
+                    <h4>${escapeHtml(title)}</h4>
+                    <div class="message-meta">${formatCount(items.length)} total | ${formatCount(activeItems)} active</div>
+                  </div>
+                  <span class="tag">${items.length ? "Synced" : "Empty"}</span>
+                </div>
+                <p>${escapeHtml(
+                  latest ? `Latest update: ${latest.title} on ${formatDateTime(latest.updatedAt)}.` : empty
+                )}</p>
+              </article>
+            `;
+          })
+          .join("");
+      }
+
+      function renderHealth() {
+        const openAlerts = state.alerts.filter((alert) => alert.status !== "READ");
+        const scheduledAppointments = state.appointments.filter(
+          (appointment) => appointment.status === "SCHEDULED"
+        ).length;
+        const cards = [
+          {
+            label: "Users synced",
+            value: state.users.length,
+            trend: state.users.length ? "trend-up" : "trend-warn",
+            status: `${state.users.filter((user) => isActiveUser(user)).length} active`,
+            body: "Identity records currently visible from the Users collection.",
+          },
+          {
+            label: "Food entries",
+            value: state.foodItems.length,
+            trend: "trend-up",
+            status: `${formatCount(
+              [...todayEntryTotalsByUser().values()].reduce((sum, item) => sum + item.count, 0)
+            )} today`,
+            body: "Live total from the FoodLogItems collection mirrored by the app.",
+          },
+          {
+            label: "Appointments",
+            value: state.appointments.length,
+            trend: scheduledAppointments ? "trend-warn" : "trend-up",
+            status: `${formatCount(scheduledAppointments)} scheduled`,
+            body: "Client-side count of appointments currently readable by this admin account.",
+          },
+          {
+            label: "Active alerts",
+            value: openAlerts.length,
+            trend: openAlerts.length ? "trend-down" : "trend-up",
+            status: `${formatCount(
+              openAlerts.filter((alert) => alert.severity === "HIGH").length
+            )} high severity`,
+            body: "Alerts marked READ are excluded from this open-alert view.",
+          },
+        ];
+
+        dom.healthGrid.innerHTML = cards
+          .map(
+            (card) => `
+              <article class="health-card">
+                <div class="health-top">
+                  <span class="metric-label">${escapeHtml(card.label)}</span>
+                  <span class="metric-trend ${card.trend}">${escapeHtml(card.status)}</span>
+                </div>
+                <strong>${formatCount(card.value)}</strong>
+                <p>${escapeHtml(card.body)}</p>
+              </article>
+            `
+          )
+          .join("");
+      }
+
+      function renderRoles() {
+        const counts = state.users.reduce((map, user) => {
+          const role = normalizeRole(user.role);
+          map[role] = (map[role] ?? 0) + 1;
+          return map;
+        }, {});
+        const total = Math.max(state.users.length, 1);
+        dom.roleList.innerHTML = ["patient", "doctor", "nurse", "dietitian", "admin"]
+          .map((role) => {
+            const count = counts[role] ?? 0;
+            const percentage = Math.round((count / total) * 1000) / 10;
+            return `
+              <article class="role-row">
+                <div>
+                  <strong>${escapeHtml(roleLabel(role))}</strong>
+                  <span>${escapeHtml(ROLE_DESCRIPTIONS[role])}</span>
+                </div>
+                <div class="role-value">
+                  <strong>${formatCount(count)}</strong>
+                  <span>${percentage}% of users</span>
+                </div>
+              </article>
+            `;
+          })
+          .join("");
+      }
+
+      function renderBackups() {
+        dom.backupList.innerHTML = `
+          <article class="backup-item">
+            <div class="backup-head">
+              <div>
+                <h4>Firebase project connection</h4>
+                <div class="backup-meta">${escapeHtml(firebaseConfig.projectId)}</div>
+              </div>
+              <span class="chip">Live</span>
+            </div>
+            <p>${escapeHtml(
+              state.currentAdmin
+                ? "This website is reading live Firebase Auth and Firestore data from the browser."
+                : "Sign in to connect the browser dashboard to Firebase."
+            )}</p>
+          </article>
+          <article class="backup-item">
+            <div class="backup-head">
+              <div>
+                <h4>System settings snapshot</h4>
+                <div class="backup-meta">${state.settings ? "Synced from SystemSettings/global" : "No settings document loaded"}</div>
+              </div>
+              <span class="chip">${state.settings ? "Firestore" : "Missing"}</span>
+            </div>
+            <p>${escapeHtml(settingsSummary())}</p>
+          </article>
+        `;
+      }
+
+      function renderActivity() {
+        const relevantLogs = state.logs.filter((log) =>
+          matchesSearch(log.message, log.type, log.actorId, log.subjectId)
+        );
+        dom.activityList.innerHTML = relevantLogs.length
+          ? relevantLogs
+              .map(
+                (log) => `
+                  <article class="timeline-item">
+                    <div class="timeline-head">
+                      <div>
+                        <h4>${escapeHtml(log.message || log.type)}</h4>
+                        <div class="timeline-meta">${escapeHtml(formatDateTime(log.timestamp))}</div>
+                      </div>
+                      <span class="chip">${escapeHtml(log.type)}</span>
+                    </div>
+                    <div class="tag-row">
+                      ${log.actorId ? `<span class="soft-chip">Actor ${escapeHtml(log.actorId)}</span>` : ""}
+                      ${log.subjectId ? `<span class="soft-chip">Subject ${escapeHtml(log.subjectId)}</span>` : ""}
+                    </div>
+                  </article>
+                `
+              )
+              .join("")
+          : `<article class="timeline-item"><div class="timeline-head"><div><h4>No recent activity</h4><div class="timeline-meta">AuditLogs did not return items for the current query.</div></div></div></article>`;
+      }
+
+      function renderAll() {
+        if (!state.currentAdmin) return;
+        renderProfile();
+        renderOverviewSignals();
+        renderKpis();
+        renderApprovals();
+        renderUsers();
+        renderContent();
+        renderHealth();
+        renderRoles();
+        renderBackups();
+        renderActivity();
+      }
+
+      function cleanupSubscriptions() {
+        state.unsubscribers.forEach((unsubscribe) => unsubscribe());
+        state.unsubscribers = [];
+        state.loadedSources.clear();
+      }
+
+      function showBanner(message, type = "success") {
+        setMessage(dom.appBanner, message, type);
+      }
+
+      function friendlyError(error) {
+        const code = error?.code ?? "";
+        if (code.includes("permission-denied")) return "permission denied by Firestore rules";
+        if (code.includes("auth/invalid-credential")) return "invalid email or password";
+        if (code.includes("auth/email-already-in-use")) return "that email already has a Firebase Auth account";
+        return error?.message ?? "unexpected Firebase error";
+      }
+
+      function resetDashboardState() {
+        state.currentAdmin = null;
+        state.users = [];
+        state.foodItems = [];
+        state.alerts = [];
+        state.appointments = [];
+        state.education = [];
+        state.recommendations = [];
+        state.notifications = [];
+        state.reports = [];
+        state.logs = [];
+        state.settings = null;
+        cleanupSubscriptions();
+      }
+
+      function pushSubscription(name, ref, mapFn, assign) {
+        const unsubscribe = onSnapshot(
+          ref,
+          (snapshot) => {
+            updateLoadedSource(name);
+            assign(snapshot.docs ? snapshot.docs.map(mapFn) : snapshot.exists() ? snapshot.data() : null);
+            renderAll();
+          },
+          (error) => {
+            showBanner(`Firebase could not load ${name}: ${friendlyError(error)}`, "error");
+          }
+        );
+        state.unsubscribers.push(unsubscribe);
+      }
+
+      function subscribeDashboardData() {
+        cleanupSubscriptions();
+        pushSubscription("users", collection(db, "Users"), mapUserDoc, (value) => {
+          state.users = value;
+        });
+        pushSubscription("food entries", collection(db, "FoodLogItems"), mapFoodItem, (value) => {
+          state.foodItems = value;
+        });
+        pushSubscription("alerts", collection(db, "Alerts"), mapAlert, (value) => {
+          state.alerts = value;
+        });
+        pushSubscription("appointments", collection(db, "Appointments"), mapAppointment, (value) => {
+          state.appointments = value;
+        });
+        pushSubscription("education content", collection(db, "EducationContent"), mapContent, (value) => {
+          state.education = value;
+        });
+        pushSubscription("recommendations", collection(db, "Recommendations"), mapContent, (value) => {
+          state.recommendations = value;
+        });
+        pushSubscription("notifications", collection(db, "Notifications"), mapContent, (value) => {
+          state.notifications = value;
+        });
+        pushSubscription("reports", collection(db, "Reports"), mapContent, (value) => {
+          state.reports = value;
+        });
+        pushSubscription(
+          "activity logs",
+          query(collection(db, "AuditLogs"), orderBy("timestamp", "desc"), limit(6)),
+          mapLog,
+          (value) => {
+            state.logs = value;
+          }
+        );
+        const settingsUnsubscribe = onSnapshot(
+          doc(db, "SystemSettings", "global"),
+          (snapshot) => {
+            updateLoadedSource("settings");
+            state.settings = snapshot.exists() ? snapshot.data() : null;
+            renderAll();
+          },
+          (error) => {
+            showBanner(`Firebase could not load settings: ${friendlyError(error)}`, "error");
+          }
+        );
+        state.unsubscribers.push(settingsUnsubscribe);
+      }
+
+      function openUserModal(user = null) {
+        state.editingUserId = user?.id ?? null;
+        const isEdit = Boolean(user);
+        dom.userModalTitle.textContent = isEdit ? "Edit user" : "Create user";
+        dom.userModalCopy.textContent = isEdit
+          ? "Update the Firestore profile for this account. Email stays read-only here."
+          : "Create a Firebase Auth account and sync its role document into Firestore.";
+        dom.userForm.reset();
+        dom.userName.value = user?.displayName ?? "";
+        dom.userRole.value = normalizeRole(user?.role ?? "patient");
+        dom.userEmail.value = user?.email ?? "";
+        dom.userEmail.readOnly = isEdit;
+        dom.userPasswordField.classList.toggle("hidden", isEdit);
+        dom.userPassword.required = !isEdit;
+        dom.userPassword.value = "";
+        dom.userMmc.value = user?.mmcNumber ?? "";
+        dom.userJlm.value = user?.jlmNumber ?? "";
+        dom.userActive.checked = user ? isActiveUser(user) : true;
+        setMessage(dom.userFormMessage, "");
+        setVisible(dom.userModal, true);
+      }
+
+      function closeUserModal() {
+        state.editingUserId = null;
+        setVisible(dom.userModal, false);
+        setMessage(dom.userFormMessage, "");
+      }
+
+      async function logAudit(type, message, subjectId = "") {
+        if (!state.currentAdmin) return;
+        try {
+          await addDoc(collection(db, "AuditLogs"), {
+            timestamp: serverTimestamp(),
+            type,
+            message,
+            actorId: state.currentAdmin.id,
+            subjectId,
+          });
+        } catch (_) {
+          // Audit logs should not block the UI.
+        }
+      }
+
+      async function handleLogin(event) {
+        event.preventDefault();
+        setMessage(dom.authMessage, "");
+        try {
+          await signInWithEmailAndPassword(
+            auth,
+            dom.loginEmail.value.trim(),
+            dom.loginPassword.value
+          );
+          dom.loginForm.reset();
+        } catch (error) {
+          setMessage(dom.authMessage, friendlyError(error), "error");
+        }
+      }
+
+      async function handleUserFormSubmit(event) {
+        event.preventDefault();
+        if (!state.currentAdmin) return;
+
+        const payload = {
+          displayName: dom.userName.value.trim(),
+          role: normalizeRole(dom.userRole.value),
+          email: dom.userEmail.value.trim().toLowerCase(),
+          password: dom.userPassword.value,
+          mmcNumber: dom.userMmc.value.trim(),
+          jlmNumber: dom.userJlm.value.trim(),
+          isActive: dom.userActive.checked,
+        };
+
+        if (!payload.displayName || !payload.email || (!state.editingUserId && !payload.password)) {
+          setMessage(dom.userFormMessage, "Name, email, and password are required.", "error");
+          return;
+        }
 
         try {
-          let app = firebase.app();
-          let features = [
-            'auth', 
-            'database', 
-            'firestore',
-            'functions',
-            'messaging', 
-            'storage', 
-            'analytics', 
-            'remoteConfig',
-            'performance',
-          ].filter(feature => typeof app[feature] === 'function');
-          loadEl.textContent = `Firebase SDK loaded with ${features.join(', ')}`;
-        } catch (e) {
-          console.error(e);
-          loadEl.textContent = 'Error loading the Firebase SDK, check the console.';
+          if (state.editingUserId) {
+            await setDoc(
+              doc(db, "Users", state.editingUserId),
+              {
+                fullName: payload.displayName,
+                role: payload.role.toUpperCase(),
+                status: payload.isActive ? "ACTIVE" : "INACTIVE",
+                permissions: defaultPermissionsForRole(payload.role),
+                updatedAt: serverTimestamp(),
+                mmcNumber: payload.mmcNumber || deleteField(),
+                jlmNumber: payload.jlmNumber || deleteField(),
+              },
+              { merge: true }
+            );
+            await logAudit("userUpdated", `Updated ${payload.email}`, state.editingUserId);
+            showToast("User updated in Firestore");
+          } else {
+            const tempName = `admin-create-${Date.now()}`;
+            const tempApp = initializeApp(firebaseConfig, tempName);
+            const tempAuth = getAuth(tempApp);
+            try {
+              const credential = await createUserWithEmailAndPassword(
+                tempAuth,
+                payload.email,
+                payload.password
+              );
+              if (credential.user) {
+                await updateProfile(credential.user, { displayName: payload.displayName });
+                await setDoc(
+                  doc(db, "Users", credential.user.uid),
+                  {
+                    email: payload.email,
+                    fullName: payload.displayName,
+                    role: payload.role.toUpperCase(),
+                    status: payload.isActive ? "ACTIVE" : "INACTIVE",
+                    permissions: defaultPermissionsForRole(payload.role),
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp(),
+                    ...(payload.mmcNumber ? { mmcNumber: payload.mmcNumber } : {}),
+                    ...(payload.jlmNumber ? { jlmNumber: payload.jlmNumber } : {}),
+                  },
+                  { merge: true }
+                );
+                await logAudit("userCreated", `Created ${payload.email}`, credential.user.uid);
+                showToast("Firebase user created");
+              }
+            } finally {
+              await signOut(tempAuth);
+              await deleteApp(tempApp);
+            }
+          }
+
+          closeUserModal();
+        } catch (error) {
+          setMessage(dom.userFormMessage, friendlyError(error), "error");
+        }
+      }
+
+      async function withUserRecord(userId, callback) {
+        const user = state.users.find((entry) => entry.id === userId);
+        if (!user) {
+          showToast("User record not found");
+          return;
+        }
+        await callback(user);
+      }
+
+      async function handleApprovalClick(event) {
+        const button = event.target.closest("button[data-action]");
+        if (!button) return;
+        const { action, userId } = button.dataset;
+        if (!userId) return;
+
+        await withUserRecord(userId, async (user) => {
+          try {
+            if (action === "approve-user") {
+              await updateDoc(doc(db, "Users", userId), {
+                status: "ACTIVE",
+                updatedAt: serverTimestamp(),
+              });
+              await logAudit("approvalCompleted", `Approved ${user.email}`, userId);
+              showToast("User approved");
+            } else if (action === "reject-user") {
+              await updateDoc(doc(db, "Users", userId), {
+                status: "REJECTED",
+                updatedAt: serverTimestamp(),
+              });
+              await logAudit("userUpdated", `Rejected ${user.email}`, userId);
+              showToast("User rejected");
+            } else if (action === "edit-user") {
+              openUserModal(user);
+            }
+          } catch (error) {
+            showBanner(friendlyError(error), "error");
+          }
+        });
+      }
+
+      async function handleUserTableClick(event) {
+        const button = event.target.closest("button[data-action]");
+        if (!button) return;
+        const { action, userId } = button.dataset;
+        if (!userId) return;
+
+        await withUserRecord(userId, async (user) => {
+          try {
+            if (action === "edit-user") {
+              openUserModal(user);
+              return;
+            }
+            if (action === "reset-password") {
+              await sendPasswordResetEmail(auth, user.email);
+              await logAudit("passwordResetAdmin", `Sent password reset for ${user.email}`, userId);
+              showToast("Password reset email sent");
+              return;
+            }
+            if (action === "toggle-active") {
+              const nextActive = !isActiveUser(user);
+              await updateDoc(doc(db, "Users", userId), {
+                status: nextActive ? "ACTIVE" : "INACTIVE",
+                updatedAt: serverTimestamp(),
+              });
+              await logAudit(
+                nextActive ? "userUpdated" : "userDeactivated",
+                `${nextActive ? "Activated" : "Deactivated"} ${user.email}`,
+                userId
+              );
+              showToast(nextActive ? "User activated" : "User deactivated");
+            }
+          } catch (error) {
+            showBanner(friendlyError(error), "error");
+          }
+        });
+      }
+
+      dom.loginForm.addEventListener("submit", handleLogin);
+      dom.userForm.addEventListener("submit", handleUserFormSubmit);
+      dom.closeUserModal.addEventListener("click", closeUserModal);
+      dom.openCreateUser.addEventListener("click", () => openUserModal());
+      dom.heroCreateUser.addEventListener("click", () => openUserModal());
+      dom.refreshButton.addEventListener("click", () => {
+        renderAll();
+        showToast("Dashboard refreshed from live Firebase state");
+      });
+      dom.signOutButton.addEventListener("click", async () => {
+        await signOut(auth);
+      });
+      dom.searchInput.addEventListener("input", (event) => {
+        state.search = event.target.value.trim().toLowerCase();
+        renderApprovals();
+        renderUsers();
+        renderActivity();
+      });
+      dom.approvalsList.addEventListener("click", handleApprovalClick);
+      dom.usersTable.addEventListener("click", handleUserTableClick);
+      dom.filterButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          state.filter = button.dataset.filter;
+          dom.filterButtons.forEach((chip) => chip.classList.remove("active"));
+          button.classList.add("active");
+          renderUsers();
+        });
+      });
+
+      document.querySelectorAll("[data-toast]").forEach((button) => {
+        button.addEventListener("click", () => showToast(button.dataset.toast));
+      });
+
+      const navLinks = document.querySelectorAll(".nav-link");
+      const sections = [...navLinks]
+        .map((link) => document.querySelector(link.getAttribute("href")))
+        .filter(Boolean);
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            navLinks.forEach((link) => {
+              const active = link.getAttribute("href") === `#${entry.target.id}`;
+              link.classList.toggle("active", active);
+            });
+          });
+        },
+        { rootMargin: "-35% 0px -55% 0px", threshold: 0.1 }
+      );
+
+      sections.forEach((section) => observer.observe(section));
+
+      onAuthStateChanged(auth, async (user) => {
+        resetDashboardState();
+        setMessage(dom.authMessage, "");
+        showBanner("");
+
+        if (!user) {
+          setVisible(dom.authShell, true);
+          setVisible(dom.dashboardShell, false);
+          return;
+        }
+
+        try {
+          const userSnapshot = await getDoc(doc(db, "Users", user.uid));
+          if (!userSnapshot.exists()) {
+            throw new Error("No Users document was found for this Firebase account.");
+          }
+          const adminProfile = mapUserDoc(userSnapshot);
+          if (!hasSystemAccess(adminProfile)) {
+            throw new Error("This Firebase account does not have admin dashboard access.");
+          }
+
+          state.currentAdmin = adminProfile;
+          setVisible(dom.authShell, false);
+          setVisible(dom.dashboardShell, true);
+          showBanner(`Connected to Firebase as ${displayName(adminProfile)}.`, "success");
+          subscribeDashboardData();
+          renderAll();
+        } catch (error) {
+          setVisible(dom.authShell, true);
+          setVisible(dom.dashboardShell, false);
+          setMessage(dom.authMessage, friendlyError(error), "error");
+          await signOut(auth);
         }
       });
     </script>

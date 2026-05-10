@@ -14,22 +14,25 @@ class ThemeProvider extends ChangeNotifier {
 }
 
 class AppTheme {
-  static const Color primaryPink = Color(0xFFFF4D8D);
-  static const Color secondaryPink = Color(0xFFFFA1C2);
-  static const Color tertiaryPeach = Color(0xFFFFC7A8);
-  static const Color surfaceBase = Color(0xFFFFF4F8);
-  static const Color surfaceElevated = Color(0xFFFFFBFD);
+  static const Color primaryRose = Color(0xFFC24879);
+  static const Color secondaryPetal = Color(0xFFE59BB4);
+  static const Color tertiaryBloom = Color(0xFFF3C3D2);
+  static const Color surfaceBase = Color(0xFFFFF7FA);
+  static const Color surfaceElevated = Color(0xFFFFFFFF);
 
   static final ColorScheme _lightScheme = ColorScheme.fromSeed(
-    seedColor: primaryPink,
+    seedColor: primaryRose,
     brightness: Brightness.light,
   ).copyWith(
-    primary: primaryPink,
-    secondary: secondaryPink,
-    tertiary: tertiaryPeach,
+    primary: primaryRose,
+    onPrimary: Colors.white,
+    secondary: secondaryPetal,
+    tertiary: tertiaryBloom,
     surface: surfaceBase,
-    surfaceContainerHighest: const Color(0xFFFFE4EE),
-    outlineVariant: const Color(0xFFF5C5D7),
+    onSurface: const Color(0xFF2F1F27),
+    onSurfaceVariant: const Color(0xFF6F5561),
+    surfaceContainerHighest: const Color(0xFFF5E2E9),
+    outlineVariant: const Color(0xFFE8D2DA),
   );
 
   static ThemeData lightTheme = ThemeData(
@@ -51,22 +54,22 @@ class AppTheme {
       color: surfaceElevated,
       elevation: 1,
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: surfaceElevated,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(8),
         borderSide: BorderSide(color: _lightScheme.outlineVariant),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(8),
         borderSide: BorderSide(color: _lightScheme.outlineVariant),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(8),
         borderSide: BorderSide(color: _lightScheme.primary, width: 1.3),
       ),
     ),
@@ -75,7 +78,7 @@ class AppTheme {
         backgroundColor: _lightScheme.primary,
         foregroundColor: _lightScheme.onPrimary,
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
@@ -83,7 +86,7 @@ class AppTheme {
         backgroundColor: _lightScheme.primary,
         foregroundColor: _lightScheme.onPrimary,
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         elevation: 1,
       ),
     ),
@@ -92,7 +95,7 @@ class AppTheme {
         foregroundColor: _lightScheme.primary,
         side: BorderSide(color: _lightScheme.primary.withValues(alpha: 140)),
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     ),
     textButtonTheme: TextButtonThemeData(

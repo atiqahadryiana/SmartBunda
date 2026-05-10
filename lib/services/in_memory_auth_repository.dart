@@ -8,6 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart' as fb;
 import '../models/activity_log.dart';
 import '../models/app_user.dart';
 import 'auth_repository.dart';
+import '../utils/password_policy.dart';
 
 class _AuthRecord {
   _AuthRecord({
@@ -130,7 +131,8 @@ class InMemoryAuthRepository implements AuthRepository {
   Stream<List<AppUser>> watchUsers() => _usersController.stream;
 
   @override
-  Stream<List<ActivityLogEntry>> watchActivityLogs() => _activityController.stream;
+  Stream<List<ActivityLogEntry>> watchActivityLogs() =>
+      _activityController.stream;
 
   @override
   Future<AppUser> signIn({
@@ -219,6 +221,10 @@ class InMemoryAuthRepository implements AuthRepository {
     String? mmcNumber,
     String? jlmNumber,
   }) async {
+    if (role == UserRole.admin) {
+      throw Exception(
+          'Admin accounts must be created by a system administrator.');
+    }
     final normalized = _normalizeEmail(email);
     if (_idByEmail.containsKey(normalized)) {
       throw Exception('Email already in use');
@@ -253,7 +259,8 @@ class InMemoryAuthRepository implements AuthRepository {
     _currentUser = user;
     _authController.add(_currentUser);
     _emitUsers();
-    _log(ActivityType.register, 'User registered', actorId: user.id, subjectId: user.id);
+    _log(ActivityType.register, 'User registered',
+        actorId: user.id, subjectId: user.id);
     return user;
   }
 
@@ -332,7 +339,8 @@ class InMemoryAuthRepository implements AuthRepository {
     record.user = updated;
     _emitUsers();
     if (_currentUser?.id == userId) {
-      if (updated.isActive && updated.hasPermission(AccessPermission.authentication)) {
+      if (updated.isActive &&
+          updated.hasPermission(AccessPermission.authentication)) {
         _currentUser = updated;
         _authController.add(_currentUser);
       } else {
@@ -506,7 +514,8 @@ class InMemoryAuthRepository implements AuthRepository {
               'role': record.user.role.name,
               'displayName': record.user.displayName,
               'isActive': record.user.isActive,
-              'permissions': record.user.permissions?.map((p) => p.name).toList(),
+              'permissions':
+                  record.user.permissions?.map((p) => p.name).toList(),
               'passwordHash': record.passwordHash,
               'salt': record.salt,
             },
@@ -646,8 +655,8 @@ class InMemoryAuthRepository implements AuthRepository {
   String _normalizeEmail(String email) => email.trim().toLowerCase();
 
   void _validatePassword(String password) {
-    if (password.length < 6) {
-      throw Exception('Password must be at least 6 characters.');
+    if (!PasswordPolicy.isValid(password)) {
+      throw Exception(PasswordPolicy.errorMessage);
     }
   }
 
@@ -680,6 +689,8 @@ class InMemoryAuthRepository implements AuthRepository {
       case 'nurse':
         return UserRole.nurse;
       case 'dietitian':
+      case 'nutrition':
+      case 'nutritionist':
         return UserRole.dietitian;
       case 'patient':
       default:
