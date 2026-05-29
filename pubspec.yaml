@@ -26,6 +26,7 @@ dependencies:
   tflite_flutter: ^0.12.1
   file_picker: ^8.0.0
   excel: ^4.0.2
+  table_calendar: ^3.0.0
 
 dev_dependencies:
   flutter_test:

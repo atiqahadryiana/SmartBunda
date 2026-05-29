@@ -1,16 +1,20 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../localization/app_strings.dart';
 import '../models/alert_item.dart';
 import '../models/appointment.dart';
 import '../models/app_user.dart';
 import '../providers/app_providers.dart';
+import '../screens/appointment_calendar_screen.dart';
+import '../services/appointment_filter_service.dart';
 import '../services/service_providers.dart';
+import '../theme/app_theme.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/screen_header.dart';
 
-class AppointmentsScreen extends ConsumerWidget {
+class AppointmentsScreen extends ConsumerStatefulWidget {
   const AppointmentsScreen({
     super.key,
     required this.role,
@@ -21,8 +25,20 @@ class AppointmentsScreen extends ConsumerWidget {
   final bool showAppBar;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AppointmentsScreen> createState() =>
+      _AppointmentsScreenState();
+}
+
+class _AppointmentsScreenState extends ConsumerState<AppointmentsScreen> {
+  AppointmentFilter _selectedFilter = AppointmentFilter.all;
+  bool _showCalendarView = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final ref = this.ref;
     final strings = AppStrings.of(context);
+    final role = widget.role;
+    final showAppBar = widget.showAppBar;
     final user = ref.watch(currentUserProvider);
     if (user == null) {
       return Scaffold(
@@ -82,27 +98,78 @@ class AppointmentsScreen extends ConsumerWidget {
                     );
                   }
                   relevant.sort((a, b) => a.dateTime.compareTo(b.dateTime));
-                  return ListView.separated(
-                    itemCount: relevant.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
-                    itemBuilder: (context, index) {
-                      final appt = relevant[index];
-                      final patient =
-                          allUsers.firstWhere((u) => u.id == appt.patientId, orElse: () => user);
-                      final provider = allUsers.firstWhere(
-                        (u) => u.id == appt.providerId,
-                        orElse: () => user,
-                      );
-                      return Card(
-                        child: ListTile(
-                          title: Text(_title(appt, patient, provider, user, strings)),
-                          subtitle: Text(
-                            '${appt.type} | ${_dateLabel(appt.dateTime)} | ${appt.status}',
-                          ),
-                          trailing: _actions(context, ref, user, appt),
+
+                  // Find the next upcoming appointment for the patient banner
+                  final now = DateTime.now();
+                  final upcoming = relevant.where(
+                    (a) => a.dateTime.isAfter(now) &&
+                        a.status.toUpperCase() != 'CANCELLED',
+                  ).toList();
+                  final nextAppt = upcoming.isNotEmpty ? upcoming.first : null;
+
+                  return Column(
+                    children: [
+                      // ── Next Appointment Banner (patients only) ──────────
+                      if (user.role == UserRole.patient && nextAppt != null) ...[
+                        _NextAppointmentBanner(
+                          appointment: nextAppt,
+                          providerName: allUsers
+                              .firstWhere(
+                                (u) => u.id == nextAppt.providerId,
+                                orElse: () => user,
+                              )
+                              .displayName ?? 'Your provider',
                         ),
-                      );
-                    },
+                        const SizedBox(height: 14),
+                      ],
+
+                      // ── View Toggle + Filter ──────────────────────────────
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: _AppointmentFilterBar(
+                              strings: strings,
+                              selectedFilter: _selectedFilter,
+                              onFilterChanged: (filter) {
+                                setState(() => _selectedFilter = filter);
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: Icon(
+                              _showCalendarView
+                                  ? Icons.list_outlined
+                                  : Icons.calendar_month_outlined,
+                            ),
+                            onPressed: () {
+                              setState(() => _showCalendarView = !_showCalendarView);
+                            },
+                            tooltip:
+                                _showCalendarView ? 'List View' : 'Calendar View',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+
+                      // ── Appointment List / Calendar View ──────────────────
+                      Expanded(
+                        child: _showCalendarView
+                            ? AppointmentCalendarScreen(
+                                appointments: relevant,
+                              )
+                            : _buildAppointmentListView(
+                                context,
+                                ref,
+                                user,
+                                strings,
+                                allUsers,
+                                relevant,
+                                nextAppt,
+                              ),
+                      ),
+                    ],
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -509,6 +576,408 @@ class AppointmentsScreen extends ConsumerWidget {
             child: Text(strings.t('Save')),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAppointmentListView(
+    BuildContext context,
+    WidgetRef ref,
+    AppUser user,
+    AppStrings strings,
+    List<AppUser> allUsers,
+    List<Appointment> appointments,
+    Appointment? nextAppt,
+  ) {
+    final filtered =
+        AppointmentFilterService.filter(appointments, _selectedFilter);
+    return ListView.separated(
+      itemCount: filtered.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final appt = filtered[index];
+        final patient = allUsers.firstWhere(
+          (u) => u.id == appt.patientId,
+          orElse: () => user,
+        );
+        final provider = allUsers.firstWhere(
+          (u) => u.id == appt.providerId,
+          orElse: () => user,
+        );
+        return _EnhancedAppointmentCard(
+          appointment: appt,
+          title: _title(appt, patient, provider, user, strings),
+          isNext: appt == nextAppt,
+          actions: _actions(context, ref, user, appt),
+        );
+      },
+    );
+  }
+}
+
+// ── Status helpers ────────────────────────────────────────────────────────────
+
+Color _statusColor(String status) {
+  switch (status.toUpperCase()) {
+    case 'COMPLETED':
+      return AppTheme.success;
+    case 'CANCELLED':
+      return AppTheme.errorColor;
+    case 'CONFIRMED':
+      return AppTheme.healthcareTeal;
+    default:
+      return AppTheme.warning; // SCHEDULED / UPCOMING
+  }
+}
+
+IconData _statusIcon(String status) {
+  switch (status.toUpperCase()) {
+    case 'COMPLETED':
+      return Icons.check_circle;
+    case 'CANCELLED':
+      return Icons.cancel;
+    case 'CONFIRMED':
+      return Icons.event_available;
+    default:
+      return Icons.schedule;
+  }
+}
+
+String _statusLabel(String status) {
+  switch (status.toUpperCase()) {
+    case 'COMPLETED':
+      return 'Completed';
+    case 'CANCELLED':
+      return 'Cancelled';
+    case 'CONFIRMED':
+      return 'Confirmed';
+    default:
+      return 'Upcoming';
+  }
+}
+
+// ── Next Appointment Banner ───────────────────────────────────────────────────
+
+class _NextAppointmentBanner extends StatelessWidget {
+  const _NextAppointmentBanner({
+    required this.appointment,
+    required this.providerName,
+  });
+
+  final Appointment appointment;
+  final String providerName;
+
+  @override
+  Widget build(BuildContext context) {
+    final dateLabel =
+        DateFormat('EEE, d MMM yyyy').format(appointment.dateTime);
+    final timeLabel = DateFormat('h:mm a').format(appointment.dateTime);
+    final daysLeft = appointment.dateTime
+        .difference(DateTime.now())
+        .inDays;
+    final countdown = daysLeft == 0
+        ? 'Today'
+        : daysLeft == 1
+            ? 'Tomorrow'
+            : 'In $daysLeft days';
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: AppTheme.heroGradient,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFF8BBD0)),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryPink.withValues(alpha: 30),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              gradient: AppTheme.primaryGradient,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(Icons.event_available,
+                color: Colors.white, size: 26),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Next Appointment',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: AppTheme.darkPink,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  appointment.type,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.primaryText,
+                      ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '$dateLabel · $timeLabel',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.secondaryText,
+                      ),
+                ),
+                Text(
+                  'with $providerName',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.secondaryText,
+                      ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppTheme.darkPink.withValues(alpha: 20),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                  color: AppTheme.darkPink.withValues(alpha: 80)),
+            ),
+            child: Text(
+              countdown,
+              style: const TextStyle(
+                color: AppTheme.darkPink,
+                fontWeight: FontWeight.w800,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Appointment Filter Bar ────────────────────────────────────────────────────
+
+class _AppointmentFilterBar extends StatelessWidget {
+  const _AppointmentFilterBar({
+    required this.strings,
+    required this.selectedFilter,
+    required this.onFilterChanged,
+  });
+
+  final AppStrings strings;
+  final AppointmentFilter selectedFilter;
+  final ValueChanged<AppointmentFilter> onFilterChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    const filters = AppointmentFilter.values;
+    return SizedBox(
+      height: 36,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: filters.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final filter = filters[index];
+          final isSelected = filter == selectedFilter;
+          return GestureDetector(
+            onTap: () => onFilterChanged(filter),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppTheme.darkPink
+                    : AppTheme.cardBackground,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: isSelected
+                      ? AppTheme.darkPink
+                      : const Color(0xFFF8BBD0),
+                ),
+              ),
+              child: Text(
+                filter.label,
+                style: TextStyle(
+                  color:
+                      isSelected ? Colors.white : AppTheme.secondaryText,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ── Enhanced Appointment Card ─────────────────────────────────────────────────
+
+class _EnhancedAppointmentCard extends StatelessWidget {
+  const _EnhancedAppointmentCard({
+    required this.appointment,
+    required this.title,
+    required this.isNext,
+    required this.actions,
+  });
+
+  final Appointment appointment;
+  final String title;
+  final bool isNext;
+  final Widget actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final color  = _statusColor(appointment.status);
+    final icon   = _statusIcon(appointment.status);
+    final label  = _statusLabel(appointment.status);
+    final date   = DateFormat('EEE, d MMM').format(appointment.dateTime);
+    final time   = DateFormat('h:mm a').format(appointment.dateTime);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.cardBackground,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isNext
+              ? AppTheme.primaryPink.withValues(alpha: 120)
+              : const Color(0xFFF8BBD0),
+          width: isNext ? 1.5 : 1.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryPink.withValues(alpha: isNext ? 20 : 10),
+            blurRadius: isNext ? 14 : 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            // Date column
+            Container(
+              width: 48,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 18),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    DateFormat('d').format(appointment.dateTime),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          color: color,
+                        ),
+                  ),
+                  Text(
+                    DateFormat('MMM').format(appointment.dateTime),
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: color,
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      // Status badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 18),
+                          borderRadius: BorderRadius.circular(999),
+                          border:
+                              Border.all(color: color.withValues(alpha: 70)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(icon, size: 11, color: color),
+                            const SizedBox(width: 4),
+                            Text(
+                              label,
+                              style: TextStyle(
+                                color: color,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    appointment.type,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.secondaryText,
+                        ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.schedule,
+                          size: 13, color: AppTheme.secondaryText),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$date · $time',
+                        style:
+                            Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppTheme.secondaryText,
+                                ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            actions,
+          ],
+        ),
       ),
     );
   }
