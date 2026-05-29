@@ -65,7 +65,7 @@ class _PatientReportViewState extends ConsumerState<_PatientReportView> {
   bool _generatingPdf = false;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final showAppBar = widget.showAppBar;
     final strings = AppStrings.of(context);
     final entriesAsync = ref.watch(entriesProvider);
