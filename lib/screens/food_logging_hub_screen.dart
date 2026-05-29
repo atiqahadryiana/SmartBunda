@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../localization/app_strings.dart';
 import '../screens/food_picker_modal.dart';
+import '../screens/food_picker_confirm_screen.dart';
 import '../theme/app_theme.dart';
 import 'food_scan_screen.dart';
 import 'hydration_screen.dart';
@@ -54,11 +55,10 @@ class FoodLoggingHubScreen extends StatelessWidget {
             onTap: () async {
               final result = await showFoodPickerModal(context);
               if (result != null && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      '${result.food.name} (${result.quantity.toStringAsFixed(0)}g) added',
-                    ),
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        FoodPickerConfirmScreen(result: result),
                   ),
                 );
               }

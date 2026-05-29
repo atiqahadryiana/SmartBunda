@@ -1,8 +1,9 @@
-import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:printing/printing.dart' as printing;
 
 import '../localization/app_strings.dart';
 import '../models/activity_log.dart';
@@ -12,9 +13,11 @@ import '../models/firestore_doc.dart';
 import '../models/pregnancy.dart';
 import '../models/profile.dart';
 import '../providers/app_providers.dart';
+import '../services/report_pdf_service.dart';
 import '../services/service_providers.dart';
 import '../utils/nutrition_guides.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/report_preview_widget.dart';
 import '../widgets/require_sign_in.dart';
 import '../widgets/screen_header.dart';
 
@@ -47,13 +50,23 @@ class ReportsScreen extends ConsumerWidget {
   }
 }
 
-class _PatientReportView extends ConsumerWidget {
+class _PatientReportView extends ConsumerStatefulWidget {
   const _PatientReportView({required this.showAppBar});
 
   final bool showAppBar;
 
   @override
+  ConsumerState<_PatientReportView> createState() =>
+      _PatientReportViewState();
+}
+
+class _PatientReportViewState extends ConsumerState<_PatientReportView> {
+  List<int>? _pdfBytes;
+  bool _generatingPdf = false;
+
+  @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final showAppBar = widget.showAppBar;
     final strings = AppStrings.of(context);
     final entriesAsync = ref.watch(entriesProvider);
     final pregnancyAsync = ref.watch(pregnancyProvider);
@@ -102,17 +115,78 @@ class _PatientReportView extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                FilledButton.icon(
-                  onPressed: () => _exportPatientReport(
-                    context,
-                    ref,
-                    user?.id,
-                    summary,
-                    targets,
-                  ),
-                  icon: const Icon(Icons.share),
-                  label: Text(strings.t('Export report')),
+                // ── PDF Preview Section ────────────────────────────────
+                ReportTitleSection(
+                  title: strings.t('Download Report'),
+                  subtitle: strings.t('Generate and download your weekly nutrition report as PDF.'),
                 ),
+                const SizedBox(height: 12),
+                ReportMetadataGrid(
+                  category: 'Medical Report',
+                  status: 'Completed',
+                  preparedBy: 'SMARTBUNDA Care Team',
+                  date: DateFormat('d MMM yyyy').format(DateTime.now()),
+                ),
+                const SizedBox(height: 14),
+                PDFPreviewSection(
+                  pdfUrl: _pdfBytes != null ? 'generated' : null,
+                  onOpen: _pdfBytes != null
+                      ? () async {
+                          await printing.Printing.sharePdf(
+                            bytes: Uint8List.fromList(_pdfBytes!),
+                            filename:
+                                'nutrition-report-${DateTime.now().millisecondsSinceEpoch}.pdf',
+                          );
+                        }
+                      : null,
+                  onDownload: _pdfBytes != null
+                      ? () async {
+                          await printing.Printing.sharePdf(
+                            bytes: Uint8List.fromList(_pdfBytes!),
+                            filename:
+                                'nutrition-report-${DateTime.now().millisecondsSinceEpoch}.pdf',
+                          );
+                        }
+                      : null,
+                  onShare: _pdfBytes != null
+                      ? () async {
+                          await printing.Printing.sharePdf(
+                            bytes: Uint8List.fromList(_pdfBytes!),
+                            filename:
+                                'nutrition-report-${DateTime.now().millisecondsSinceEpoch}.pdf',
+                          );
+                        }
+                      : null,
+                ),
+                const SizedBox(height: 14),
+                FilledButton.icon(
+                  onPressed: _generatingPdf
+                      ? null
+                      : () => _generateAndSavePdf(
+                            context,
+                            ref,
+                            user,
+                            entries,
+                            summary,
+                            targets,
+                          ),
+                  icon: _generatingPdf
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation(Colors.white),
+                          ),
+                        )
+                      : const Icon(Icons.download),
+                  label: Text(_generatingPdf
+                      ? strings.t('Generating...')
+                      : strings.t('Generate PDF')),
+                ),
+                const SizedBox(height: 16),
+                MedicalDisclaimerBanner(),
                 const SizedBox(height: 16),
                 Text(
                   strings.t('Saved reports'),
@@ -170,36 +244,6 @@ class _PatientReportView extends ConsumerWidget {
 
   String _dayKey(DateTime date) => '${date.year}-${date.month}-${date.day}';
 
-  Future<void> _exportPatientReport(
-    BuildContext context,
-    WidgetRef ref,
-    String? userId,
-    _EntryTotals summary,
-    _Targets targets,
-  ) async {
-    final strings = AppStrings.of(context);
-    final payload = {
-      'avgCalories': summary.calories,
-      'avgProtein': summary.protein,
-      'calorieTarget': targets.calories,
-      'proteinTarget': targets.protein,
-      'generatedAt': DateTime.now().toIso8601String(),
-    };
-    if (userId != null) {
-      await ref.read(contentRepositoryProvider).saveReport(
-            patientId: userId,
-            data: payload,
-          );
-    }
-    final json = const JsonEncoder.withIndent('  ').convert(payload);
-    await Clipboard.setData(ClipboardData(text: json));
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(strings.t('Report copied to clipboard'))),
-      );
-    }
-  }
-
   Widget _reportTile(BuildContext context, FirestoreDoc doc) {
     final strings = AppStrings.of(context);
     final createdAt = doc.timestamp;
@@ -221,6 +265,50 @@ class _PatientReportView extends ConsumerWidget {
             : Text('$createdLabel | $summary'),
       ),
     );
+  }
+
+  Future<void> _generateAndSavePdf(
+    BuildContext context,
+    WidgetRef ref,
+    AppUser? user,
+    List<FoodEntry> entries,
+    _EntryTotals summary,
+    _Targets targets,
+  ) async {
+    if (user == null) return;
+
+    setState(() => _generatingPdf = true);
+
+    try {
+      final pdfBytes = await ReportPdfService.generateReportPdf(
+        ReportPdfData(
+          patientName: user.displayName ?? 'User',
+          reportDate: DateFormat('d MMM yyyy').format(DateTime.now()),
+          avgCalories: summary.calories,
+          calorieTarget: targets.calories,
+          avgProtein: summary.protein,
+          proteinTarget: targets.protein,
+          recentEntries: entries.where((e) {
+            return DateTime.now().difference(e.date).inDays <= 7;
+          }).toList(),
+        ),
+      );
+
+      if (mounted) {
+        setState(() => _pdfBytes = pdfBytes);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('PDF generated successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error generating PDF: $e')),
+        );
+      }
+    } finally {
+      setState(() => _generatingPdf = false);
+    }
   }
 }
 
