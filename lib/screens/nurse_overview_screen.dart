@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../models/app_user.dart';
-import '../providers/app_providers.dart';
-import '../services/service_providers.dart';
-import '../widgets/empty_state.dart';
-import '../widgets/require_sign_in.dart';
-import '../widgets/screen_header.dart';
+import 'package:smartbunda/models/app_user.dart';
+import 'package:smartbunda/providers/app_providers.dart';
+import 'package:smartbunda/services/service_providers.dart';
+import 'package:smartbunda/widgets/empty_state.dart';
+import 'package:smartbunda/widgets/require_sign_in.dart';
+import 'package:smartbunda/widgets/screen_header.dart';
 
 class NurseOverviewScreen extends ConsumerStatefulWidget {
   const NurseOverviewScreen({super.key, this.showAppBar = false});

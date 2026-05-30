@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../firestore_paths.dart';
-import '../models/firestore_doc.dart';
+import 'package:smartbunda/firestore_paths.dart';
+import 'package:smartbunda/models/firestore_doc.dart';
 
 class FirestoreContentRepository {
   FirestoreContentRepository({FirebaseFirestore? firestore})

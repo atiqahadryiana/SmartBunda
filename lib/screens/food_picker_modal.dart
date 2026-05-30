@@ -10,8 +10,8 @@ library smartbunda.food_picker_modal;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../theme/app_theme.dart';
-import '../utils/food_nutrition_lookup.dart';
+import 'package:smartbunda/theme/app_theme.dart';
+import 'package:smartbunda/utils/food_nutrition_lookup.dart';
 
 // ── Food Picker Result ────────────────────────────────────────────────────────
 

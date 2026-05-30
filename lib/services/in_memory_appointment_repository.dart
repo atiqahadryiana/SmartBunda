@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import '../models/appointment.dart';
-import 'appointment_repository.dart';
+import 'package:smartbunda/models/appointment.dart';
+import 'package:smartbunda/services/appointment_repository.dart';
 
 class InMemoryAppointmentRepository implements AppointmentRepository {
   final Map<String, Appointment> _appointmentsById = {};

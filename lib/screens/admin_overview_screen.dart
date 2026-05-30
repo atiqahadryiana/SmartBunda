@@ -9,16 +9,16 @@ library smartbunda.admin_overview_screen;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../models/app_user.dart';
-import '../providers/app_providers.dart';
-import '../providers/theme_provider.dart';
-import '../services/service_providers.dart';
-import '../theme/app_theme.dart';
-import 'admin/admin_nav.dart';
-import 'admin/admin_sections.dart';
-import 'admin/admin_ui_kit.dart';
-import 'login_screen.dart';
-import 'system_admin_screen.dart';
+import 'package:smartbunda/models/app_user.dart';
+import 'package:smartbunda/providers/app_providers.dart';
+import 'package:smartbunda/providers/theme_provider.dart';
+import 'package:smartbunda/services/service_providers.dart';
+import 'package:smartbunda/theme/app_theme.dart';
+import 'package:smartbunda/screens/admin/admin_nav.dart';
+import 'package:smartbunda/screens/admin/admin_sections.dart';
+import 'package:smartbunda/screens/admin/admin_ui_kit.dart';
+import 'package:smartbunda/screens/login_screen.dart';
+import 'package:smartbunda/screens/system_admin_screen.dart';
 
 class AdminOverviewScreen extends ConsumerStatefulWidget {
   const AdminOverviewScreen({super.key, this.showAppBar = false});

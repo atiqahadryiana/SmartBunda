@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../firestore_paths.dart';
-import '../models/appointment.dart';
-import 'appointment_repository.dart';
+import 'package:smartbunda/firestore_paths.dart';
+import 'package:smartbunda/models/appointment.dart';
+import 'package:smartbunda/services/appointment_repository.dart';
 
 class FirestoreAppointmentRepository implements AppointmentRepository {
   FirestoreAppointmentRepository({FirebaseFirestore? firestore})

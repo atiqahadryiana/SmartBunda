@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../localization/app_strings.dart';
-import '../models/app_user.dart';
-import '../services/service_providers.dart';
-import '../utils/auth_error_messages.dart';
-import '../utils/password_policy.dart';
-import '../widgets/auth_shell.dart';
+import 'package:smartbunda/localization/app_strings.dart';
+import 'package:smartbunda/models/app_user.dart';
+import 'package:smartbunda/services/service_providers.dart';
+import 'package:smartbunda/utils/auth_error_messages.dart';
+import 'package:smartbunda/utils/password_policy.dart';
+import 'package:smartbunda/widgets/auth_shell.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});

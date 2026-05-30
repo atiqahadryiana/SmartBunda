@@ -6,7 +6,7 @@
 /// what the clinical engine has already determined.
 library smartbunda.clinical_explanation_service;
 
-import '../utils/clinical_rules.dart';
+import 'package:smartbunda/utils/clinical_rules.dart';
 
 /// Generates a narrative health summary from a clinical assessment.
 ///

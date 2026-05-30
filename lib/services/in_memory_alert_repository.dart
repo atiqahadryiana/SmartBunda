@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import '../models/alert_item.dart';
-import 'alert_repository.dart';
+import 'package:smartbunda/models/alert_item.dart';
+import 'package:smartbunda/services/alert_repository.dart';
 
 class InMemoryAlertRepository implements AlertRepository {
   final Map<String, AlertItem> _alertsById = {};

@@ -1,4 +1,4 @@
-import '../models/alert_item.dart';
+import 'package:smartbunda/models/alert_item.dart';
 
 abstract class AlertRepository {
   Stream<List<AlertItem>> watchAlerts(String userId);

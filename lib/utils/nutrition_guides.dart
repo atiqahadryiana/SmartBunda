@@ -1,5 +1,5 @@
-import '../models/pregnancy.dart';
-import '../models/profile.dart';
+import 'package:smartbunda/models/pregnancy.dart';
+import 'package:smartbunda/models/profile.dart';
 
 class RecommendedTargets {
   RecommendedTargets({

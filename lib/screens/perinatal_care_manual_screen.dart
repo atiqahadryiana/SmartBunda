@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../localization/app_strings.dart';
-import '../widgets/screen_header.dart';
+import 'package:smartbunda/localization/app_strings.dart';
+import 'package:smartbunda/widgets/screen_header.dart';
 
 class PerinatalCareManualScreen extends StatelessWidget {
   const PerinatalCareManualScreen({super.key});

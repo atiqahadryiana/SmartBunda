@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../models/app_user.dart';
-import '../models/appointment.dart';
-import '../models/food_entry.dart';
-import '../models/firestore_doc.dart';
-import '../models/pregnancy.dart';
-import '../models/profile.dart';
-import '../providers/app_providers.dart';
-import '../services/appointment_filter_service.dart';
-import '../services/service_providers.dart';
+import 'package:smartbunda/models/app_user.dart';
+import 'package:smartbunda/models/appointment.dart';
+import 'package:smartbunda/models/food_entry.dart';
+import 'package:smartbunda/models/firestore_doc.dart';
+import 'package:smartbunda/models/pregnancy.dart';
+import 'package:smartbunda/models/profile.dart';
+import 'package:smartbunda/providers/app_providers.dart';
+import 'package:smartbunda/services/appointment_filter_service.dart';
+import 'package:smartbunda/services/service_providers.dart';
 
 class StaffDashboardScreen extends ConsumerWidget {
   const StaffDashboardScreen({

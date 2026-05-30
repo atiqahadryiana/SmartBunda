@@ -7,9 +7,9 @@ library smartbunda.change_password_screen;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../localization/app_strings.dart';
-import '../services/service_providers.dart';
-import '../utils/password_policy.dart';
+import 'package:smartbunda/localization/app_strings.dart';
+import 'package:smartbunda/services/service_providers.dart';
+import 'package:smartbunda/utils/password_policy.dart';
 
 class ChangePasswordScreen extends ConsumerStatefulWidget {
   const ChangePasswordScreen({super.key});

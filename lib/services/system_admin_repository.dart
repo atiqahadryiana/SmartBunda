@@ -2,15 +2,15 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../firestore_paths.dart';
-import '../models/backup_snapshot.dart';
-import '../models/system_settings.dart';
-import 'alert_repository.dart';
-import 'appointment_repository.dart';
-import 'auth_repository.dart';
-import 'data_store.dart';
-import 'food_catalog_repository.dart';
-import 'nutrition_plan_repository.dart';
+import 'package:smartbunda/firestore_paths.dart';
+import 'package:smartbunda/models/backup_snapshot.dart';
+import 'package:smartbunda/models/system_settings.dart';
+import 'package:smartbunda/services/alert_repository.dart';
+import 'package:smartbunda/services/appointment_repository.dart';
+import 'package:smartbunda/services/auth_repository.dart';
+import 'package:smartbunda/services/data_store.dart';
+import 'package:smartbunda/services/food_catalog_repository.dart';
+import 'package:smartbunda/services/nutrition_plan_repository.dart';
 
 class SystemAdminRepository {
   SystemAdminRepository({

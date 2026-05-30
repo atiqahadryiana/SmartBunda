@@ -1,4 +1,4 @@
-import '../models/appointment.dart';
+import 'package:smartbunda/models/appointment.dart';
 
 abstract class AppointmentRepository {
   Stream<List<Appointment>> watchAppointmentsForUser(String userId);

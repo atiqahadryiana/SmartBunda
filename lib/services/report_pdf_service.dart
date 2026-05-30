@@ -8,7 +8,7 @@ library smartbunda.report_pdf_service;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
-import '../models/food_entry.dart';
+import 'package:smartbunda/models/food_entry.dart';
 
 /// Data needed to generate a nutrition report PDF.
 class ReportPdfData {

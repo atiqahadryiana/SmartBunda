@@ -2,13 +2,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../firestore_paths.dart';
-import '../models/firestore_doc.dart';
-import '../providers/app_providers.dart';
-import '../services/service_providers.dart';
-import '../widgets/empty_state.dart';
-import '../widgets/require_sign_in.dart';
-import '../widgets/screen_header.dart';
+import 'package:smartbunda/firestore_paths.dart';
+import 'package:smartbunda/models/firestore_doc.dart';
+import 'package:smartbunda/providers/app_providers.dart';
+import 'package:smartbunda/services/service_providers.dart';
+import 'package:smartbunda/widgets/empty_state.dart';
+import 'package:smartbunda/widgets/require_sign_in.dart';
+import 'package:smartbunda/widgets/screen_header.dart';
 
 class ContentManagementScreen extends ConsumerWidget {
   const ContentManagementScreen({super.key});

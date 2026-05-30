@@ -1,22 +1,22 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../models/app_user.dart';
-import 'alert_repository.dart';
-import 'appointment_repository.dart';
-import 'auth_repository.dart';
-import 'data_store.dart';
-import 'firebase_auth_repository.dart';
-import 'firestore_alert_repository.dart';
-import 'firestore_appointment_repository.dart';
-import 'firestore_content_repository.dart';
-import 'firestore_data_store.dart';
-import 'firestore_nutrition_plan_repository.dart';
-import 'food_catalog_repository.dart';
-import 'food_database.dart';
-import 'food_image_classifier.dart';
-import 'nutrition_plan_repository.dart';
-import 'system_admin_repository.dart';
+import 'package:smartbunda/models/app_user.dart';
+import 'package:smartbunda/services/alert_repository.dart';
+import 'package:smartbunda/services/appointment_repository.dart';
+import 'package:smartbunda/services/auth_repository.dart';
+import 'package:smartbunda/services/data_store.dart';
+import 'package:smartbunda/services/firebase_auth_repository.dart';
+import 'package:smartbunda/services/firestore_alert_repository.dart';
+import 'package:smartbunda/services/firestore_appointment_repository.dart';
+import 'package:smartbunda/services/firestore_content_repository.dart';
+import 'package:smartbunda/services/firestore_data_store.dart';
+import 'package:smartbunda/services/firestore_nutrition_plan_repository.dart';
+import 'package:smartbunda/services/food_catalog_repository.dart';
+import 'package:smartbunda/services/food_database.dart';
+import 'package:smartbunda/services/food_image_classifier.dart';
+import 'package:smartbunda/services/nutrition_plan_repository.dart';
+import 'package:smartbunda/services/system_admin_repository.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return FirebaseAuthRepository();

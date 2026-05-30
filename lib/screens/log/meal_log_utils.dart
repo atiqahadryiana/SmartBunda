@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../localization/app_strings.dart';
-import '../../models/food_entry.dart';
-import '../../models/food_item.dart';
+import 'package:smartbunda/localization/app_strings.dart';
+import 'package:smartbunda/models/food_entry.dart';
+import 'package:smartbunda/models/food_item.dart';
 
 class MealOption {
   const MealOption({

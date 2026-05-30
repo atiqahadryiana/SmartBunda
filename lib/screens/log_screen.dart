@@ -1,1 +1,1 @@
-export 'log/log_screen.dart';
+export 'package:smartbunda/screens/log/log_screen.dart';

@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../firestore_paths.dart';
-import '../models/food_catalog_entry.dart';
-import '../models/food_item.dart';
+import 'package:smartbunda/firestore_paths.dart';
+import 'package:smartbunda/models/food_catalog_entry.dart';
+import 'package:smartbunda/models/food_item.dart';
 
 class FoodDatabase {
   FoodDatabase({FirebaseFirestore? firestore})

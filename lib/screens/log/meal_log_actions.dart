@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../localization/app_strings.dart';
-import '../../models/food_entry.dart';
-import '../../providers/app_providers.dart';
-import '../../services/food_image_classifier.dart';
-import '../../services/service_providers.dart';
-import '../food_analysis_result_screen.dart';
-import 'meal_log_utils.dart';
+import 'package:smartbunda/localization/app_strings.dart';
+import 'package:smartbunda/models/food_entry.dart';
+import 'package:smartbunda/providers/app_providers.dart';
+import 'package:smartbunda/services/food_image_classifier.dart';
+import 'package:smartbunda/services/service_providers.dart';
+import 'package:smartbunda/screens/food_analysis_result_screen.dart';
+import 'package:smartbunda/screens/log/meal_log_utils.dart';
 
 class MealLogActions {
   const MealLogActions._();

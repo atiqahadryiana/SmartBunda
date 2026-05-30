@@ -4,19 +4,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../theme/app_theme.dart';
+import 'package:smartbunda/theme/app_theme.dart';
 
-import '../models/app_user.dart';
-import '../models/appointment.dart';
-import 'appointments_screen.dart';
-import 'hydration_screen.dart';
-import 'log/log_screen.dart';
-import '../models/food_entry.dart';
-import '../models/hydration_entry.dart';
-import '../models/pregnancy.dart';
-import '../models/profile.dart';
-import '../providers/app_providers.dart';
-import '../utils/nutrition_guides.dart';
+import 'package:smartbunda/models/app_user.dart';
+import 'package:smartbunda/models/appointment.dart';
+import 'package:smartbunda/screens/appointments_screen.dart';
+import 'package:smartbunda/screens/hydration_screen.dart';
+import 'package:smartbunda/screens/log/log_screen.dart';
+import 'package:smartbunda/models/food_entry.dart';
+import 'package:smartbunda/models/hydration_entry.dart';
+import 'package:smartbunda/models/pregnancy.dart';
+import 'package:smartbunda/models/profile.dart';
+import 'package:smartbunda/providers/app_providers.dart';
+import 'package:smartbunda/utils/nutrition_guides.dart';
 
 class PatientDashboardScreen extends ConsumerWidget {
   const PatientDashboardScreen({

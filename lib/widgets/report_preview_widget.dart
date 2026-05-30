@@ -6,7 +6,7 @@
 library smartbunda.report_preview_widget;
 
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
+import 'package:smartbunda/theme/app_theme.dart';
 
 // ── Report Title Section ──────────────────────────────────────────────────────
 

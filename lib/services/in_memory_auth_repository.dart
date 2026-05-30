@@ -5,10 +5,10 @@ import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 
-import '../models/activity_log.dart';
-import '../models/app_user.dart';
-import 'auth_repository.dart';
-import '../utils/password_policy.dart';
+import 'package:smartbunda/models/activity_log.dart';
+import 'package:smartbunda/models/app_user.dart';
+import 'package:smartbunda/services/auth_repository.dart';
+import 'package:smartbunda/utils/password_policy.dart';
 
 class _AuthRecord {
   _AuthRecord({

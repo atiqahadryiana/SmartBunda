@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../firestore_paths.dart';
-import '../models/feedback_entry.dart';
-import '../models/food_entry.dart';
-import '../models/hydration_entry.dart';
-import '../models/pregnancy.dart';
-import '../models/profile.dart';
-import 'data_store.dart';
+import 'package:smartbunda/firestore_paths.dart';
+import 'package:smartbunda/models/feedback_entry.dart';
+import 'package:smartbunda/models/food_entry.dart';
+import 'package:smartbunda/models/hydration_entry.dart';
+import 'package:smartbunda/models/pregnancy.dart';
+import 'package:smartbunda/models/profile.dart';
+import 'package:smartbunda/services/data_store.dart';
 
 class FirestoreDataStore implements DataStore {
   FirestoreDataStore({FirebaseFirestore? firestore})

@@ -6,7 +6,7 @@
 /// case-insensitive so persisted values such as `SCHEDULED` match.
 library smartbunda.appointment_filter_service;
 
-import '../models/appointment.dart';
+import 'package:smartbunda/models/appointment.dart';
 
 // ── Legacy simple filter (patient appointments screen) ────────────────────────
 

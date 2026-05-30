@@ -5,11 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../models/app_user.dart';
-import '../services/service_providers.dart';
-import 'get_started_screen.dart';
-import 'home_screen.dart';
-import 'login_screen.dart';
+import 'package:smartbunda/models/app_user.dart';
+import 'package:smartbunda/services/service_providers.dart';
+import 'package:smartbunda/screens/get_started_screen.dart';
+import 'package:smartbunda/screens/home_screen.dart';
+import 'package:smartbunda/screens/login_screen.dart';
 
 class SplashGate extends ConsumerStatefulWidget {
   const SplashGate({super.key});

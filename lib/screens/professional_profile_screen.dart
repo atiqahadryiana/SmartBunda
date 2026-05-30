@@ -9,15 +9,15 @@ library smartbunda.professional_profile_screen;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../localization/app_strings.dart';
-import '../models/app_user.dart';
-import '../providers/app_providers.dart';
-import '../services/service_providers.dart';
-import '../theme/app_theme.dart';
-import '../widgets/require_sign_in.dart';
-import 'change_password_screen.dart';
-import 'professional_availability_screen.dart';
-import 'settings_screen.dart';
+import 'package:smartbunda/localization/app_strings.dart';
+import 'package:smartbunda/models/app_user.dart';
+import 'package:smartbunda/providers/app_providers.dart';
+import 'package:smartbunda/services/service_providers.dart';
+import 'package:smartbunda/theme/app_theme.dart';
+import 'package:smartbunda/widgets/require_sign_in.dart';
+import 'package:smartbunda/screens/change_password_screen.dart';
+import 'package:smartbunda/screens/professional_availability_screen.dart';
+import 'package:smartbunda/screens/settings_screen.dart';
 
 class ProfessionalProfileScreen extends ConsumerWidget {
   const ProfessionalProfileScreen({super.key, this.showAppBar = false});

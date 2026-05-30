@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../models/app_user.dart';
+import 'package:smartbunda/models/app_user.dart';
 
 class RoleGate extends StatelessWidget {
   const RoleGate({

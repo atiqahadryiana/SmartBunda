@@ -9,13 +9,13 @@ library smartbunda.settings_screen;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../localization/app_strings.dart';
-import '../providers/app_providers.dart';
-import '../providers/locale_provider.dart';
-import '../providers/theme_provider.dart';
-import '../services/service_providers.dart';
-import '../theme/app_theme.dart';
-import 'legal/info_page_screen.dart';
+import 'package:smartbunda/localization/app_strings.dart';
+import 'package:smartbunda/providers/app_providers.dart';
+import 'package:smartbunda/providers/locale_provider.dart';
+import 'package:smartbunda/providers/theme_provider.dart';
+import 'package:smartbunda/services/service_providers.dart';
+import 'package:smartbunda/theme/app_theme.dart';
+import 'package:smartbunda/screens/legal/info_page_screen.dart';
 
 /// App version label shown on the About page. Keep in sync with pubspec.yaml.
 const String kAppVersion = '0.1.0';

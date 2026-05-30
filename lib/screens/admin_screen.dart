@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../models/app_user.dart';
-import '../models/food_entry.dart';
-import '../models/profile.dart';
-import '../providers/app_providers.dart';
-import '../services/auth_repository.dart';
-import '../services/service_providers.dart';
-import '../utils/password_policy.dart';
-import '../widgets/require_sign_in.dart';
+import 'package:smartbunda/models/app_user.dart';
+import 'package:smartbunda/models/food_entry.dart';
+import 'package:smartbunda/models/profile.dart';
+import 'package:smartbunda/providers/app_providers.dart';
+import 'package:smartbunda/services/auth_repository.dart';
+import 'package:smartbunda/services/service_providers.dart';
+import 'package:smartbunda/utils/password_policy.dart';
+import 'package:smartbunda/widgets/require_sign_in.dart';
 
 class AdminScreen extends ConsumerStatefulWidget {
   const AdminScreen({super.key, this.showAppBar = false});

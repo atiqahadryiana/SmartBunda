@@ -2,12 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:firebase_core/firebase_core.dart';
 
-import '../firestore_paths.dart';
-import '../models/activity_log.dart';
-import '../models/app_user.dart';
-import '../models/system_settings.dart';
-import 'auth_repository.dart';
-import '../utils/password_policy.dart';
+import 'package:smartbunda/firestore_paths.dart';
+import 'package:smartbunda/models/activity_log.dart';
+import 'package:smartbunda/models/app_user.dart';
+import 'package:smartbunda/models/system_settings.dart';
+import 'package:smartbunda/services/auth_repository.dart';
+import 'package:smartbunda/utils/password_policy.dart';
 
 class FirebaseAuthRepository implements AuthRepository {
   FirebaseAuthRepository({

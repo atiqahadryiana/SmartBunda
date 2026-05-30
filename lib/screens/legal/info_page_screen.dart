@@ -6,8 +6,8 @@ library smartbunda.info_page_screen;
 
 import 'package:flutter/material.dart';
 
-import '../../localization/app_strings.dart';
-import '../../theme/app_theme.dart';
+import 'package:smartbunda/localization/app_strings.dart';
+import 'package:smartbunda/theme/app_theme.dart';
 
 /// A titled block of body text within an [InfoPageScreen].
 class InfoSection {

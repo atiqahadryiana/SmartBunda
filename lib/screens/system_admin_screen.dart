@@ -1,14 +1,14 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../models/system_settings.dart';
-import '../providers/app_providers.dart';
-import '../services/service_providers.dart';
-import '../widgets/require_sign_in.dart';
-import '../widgets/screen_header.dart';
-import 'activity_log_screen.dart';
-import 'content_management_screen.dart';
-import 'food_catalog_screen.dart';
+import 'package:smartbunda/models/system_settings.dart';
+import 'package:smartbunda/providers/app_providers.dart';
+import 'package:smartbunda/services/service_providers.dart';
+import 'package:smartbunda/widgets/require_sign_in.dart';
+import 'package:smartbunda/widgets/screen_header.dart';
+import 'package:smartbunda/screens/activity_log_screen.dart';
+import 'package:smartbunda/screens/content_management_screen.dart';
+import 'package:smartbunda/screens/food_catalog_screen.dart';
 
 class SystemAdminScreen extends ConsumerWidget {
   const SystemAdminScreen({

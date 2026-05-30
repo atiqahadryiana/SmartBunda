@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../models/app_user.dart';
-import '../providers/app_providers.dart';
-import 'admin_screen.dart';
-import 'appointments_screen.dart';
-import 'education_screen.dart';
-import 'food_catalog_screen.dart';
-import 'hydration_screen.dart';
-import 'log_screen.dart';
-import 'module_overview_screen.dart';
-import 'monitoring_screen.dart';
-import 'nutrition_plan_management_screen.dart';
-import 'nutritionist_screen.dart';
-import 'patient_profiles_screen.dart';
-import 'profile_screen.dart';
-import 'reports_screen.dart';
-import 'summary_screen.dart';
-import 'system_admin_screen.dart';
+import 'package:smartbunda/models/app_user.dart';
+import 'package:smartbunda/providers/app_providers.dart';
+import 'package:smartbunda/screens/admin_screen.dart';
+import 'package:smartbunda/screens/appointments_screen.dart';
+import 'package:smartbunda/screens/education_screen.dart';
+import 'package:smartbunda/screens/food_catalog_screen.dart';
+import 'package:smartbunda/screens/hydration_screen.dart';
+import 'package:smartbunda/screens/log_screen.dart';
+import 'package:smartbunda/screens/module_overview_screen.dart';
+import 'package:smartbunda/screens/monitoring_screen.dart';
+import 'package:smartbunda/screens/nutrition_plan_management_screen.dart';
+import 'package:smartbunda/screens/nutritionist_screen.dart';
+import 'package:smartbunda/screens/patient_profiles_screen.dart';
+import 'package:smartbunda/screens/profile_screen.dart';
+import 'package:smartbunda/screens/reports_screen.dart';
+import 'package:smartbunda/screens/summary_screen.dart';
+import 'package:smartbunda/screens/system_admin_screen.dart';
 
 class RoleModulesScreen extends ConsumerWidget {
   const RoleModulesScreen({

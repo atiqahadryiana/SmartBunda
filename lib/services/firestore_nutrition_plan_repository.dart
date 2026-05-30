@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../firestore_paths.dart';
-import '../models/nutrition_plan.dart';
-import 'nutrition_plan_repository.dart';
+import 'package:smartbunda/firestore_paths.dart';
+import 'package:smartbunda/models/nutrition_plan.dart';
+import 'package:smartbunda/services/nutrition_plan_repository.dart';
 
 class FirestoreNutritionPlanRepository implements NutritionPlanRepository {
   FirestoreNutritionPlanRepository({FirebaseFirestore? firestore})

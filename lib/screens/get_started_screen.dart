@@ -3,8 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../theme/app_theme.dart';
-import 'login_screen.dart';
+import 'package:smartbunda/theme/app_theme.dart';
+import 'package:smartbunda/screens/login_screen.dart';
 
 class GetStartedScreen extends StatefulWidget {
   const GetStartedScreen({super.key});

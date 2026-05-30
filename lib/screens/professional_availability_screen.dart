@@ -8,10 +8,10 @@ library smartbunda.professional_availability_screen;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../localization/app_strings.dart';
-import '../providers/app_providers.dart';
-import '../services/service_providers.dart';
-import '../theme/app_theme.dart';
+import 'package:smartbunda/localization/app_strings.dart';
+import 'package:smartbunda/providers/app_providers.dart';
+import 'package:smartbunda/services/service_providers.dart';
+import 'package:smartbunda/theme/app_theme.dart';
 
 const _weekdays = [
   'Monday',

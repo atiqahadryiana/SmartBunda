@@ -7,9 +7,9 @@ library smartbunda.appointment_calendar_screen;
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 
-import '../models/appointment.dart';
-import '../services/appointment_filter_service.dart';
-import '../theme/app_theme.dart';
+import 'package:smartbunda/models/appointment.dart';
+import 'package:smartbunda/services/appointment_filter_service.dart';
+import 'package:smartbunda/theme/app_theme.dart';
 
 class AppointmentCalendarScreen extends StatefulWidget {
   const AppointmentCalendarScreen({

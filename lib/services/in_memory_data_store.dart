@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:math';
 
-import '../models/feedback_entry.dart';
-import '../models/food_entry.dart';
-import '../models/hydration_entry.dart';
-import '../models/pregnancy.dart';
-import '../models/profile.dart';
-import 'data_store.dart';
+import 'package:smartbunda/models/feedback_entry.dart';
+import 'package:smartbunda/models/food_entry.dart';
+import 'package:smartbunda/models/hydration_entry.dart';
+import 'package:smartbunda/models/pregnancy.dart';
+import 'package:smartbunda/models/profile.dart';
+import 'package:smartbunda/services/data_store.dart';
 
 class InMemoryDataStore implements DataStore {
   final Map<String, Profile> _profiles = {};

@@ -1,5 +1,5 @@
-import '../models/activity_log.dart';
-import '../models/app_user.dart';
+import 'package:smartbunda/models/activity_log.dart';
+import 'package:smartbunda/models/app_user.dart';
 
 class PendingApproval {
   const PendingApproval({

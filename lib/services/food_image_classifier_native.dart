@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
 import 'package:tflite_flutter/tflite_flutter.dart';
 
-import 'food_image_classifier_api.dart';
+import 'package:smartbunda/services/food_image_classifier_api.dart';
 
 class FoodImageClassifier {
   static const modelAsset = 'assets/ml/food_cnn.tflite';

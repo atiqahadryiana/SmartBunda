@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'food_image_classifier_api.dart';
+import 'package:smartbunda/services/food_image_classifier_api.dart';
 
 class FoodImageClassifier {
   Future<List<FoodImagePrediction>> classifyBytes(

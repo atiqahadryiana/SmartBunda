@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../screens/login_screen.dart';
+import 'package:smartbunda/screens/login_screen.dart';
 
 class NutritionSlider extends StatefulWidget {
   const NutritionSlider({super.key});

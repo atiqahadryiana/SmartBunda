@@ -1,4 +1,4 @@
-import 'food_item.dart';
+import 'package:smartbunda/models/food_item.dart';
 
 enum FoodCatalogSource { system, custom }
 

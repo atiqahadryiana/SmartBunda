@@ -15,12 +15,12 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../models/food_entry.dart';
-import '../providers/app_providers.dart';
-import '../services/service_providers.dart';
-import '../services/food_image_classifier_api.dart';
-import '../theme/app_theme.dart';
-import '../utils/food_nutrition_lookup.dart';
+import 'package:smartbunda/models/food_entry.dart';
+import 'package:smartbunda/providers/app_providers.dart';
+import 'package:smartbunda/services/service_providers.dart';
+import 'package:smartbunda/services/food_image_classifier_api.dart';
+import 'package:smartbunda/theme/app_theme.dart';
+import 'package:smartbunda/utils/food_nutrition_lookup.dart';
 
 // ── Meal type enum ────────────────────────────────────────────────────────────
 

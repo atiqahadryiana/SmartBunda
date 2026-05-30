@@ -8,7 +8,7 @@ library smartbunda.admin_charts;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
-import '../../theme/app_theme.dart';
+import 'package:smartbunda/theme/app_theme.dart';
 
 /// A single named series of integer data points.
 class ChartSeries {

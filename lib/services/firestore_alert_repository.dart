@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../firestore_paths.dart';
-import '../models/alert_item.dart';
-import 'alert_repository.dart';
+import 'package:smartbunda/firestore_paths.dart';
+import 'package:smartbunda/models/alert_item.dart';
+import 'package:smartbunda/services/alert_repository.dart';
 
 class FirestoreAlertRepository implements AlertRepository {
   FirestoreAlertRepository({FirebaseFirestore? firestore})

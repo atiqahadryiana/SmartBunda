@@ -5,7 +5,7 @@
 /// the clinical rule engine.
 library smartbunda.assessment_input;
 
-import '../utils/clinical_rules.dart';
+import 'package:smartbunda/utils/clinical_rules.dart';
 
 class AssessmentInput {
   AssessmentInput({

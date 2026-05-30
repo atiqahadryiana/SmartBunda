@@ -8,7 +8,7 @@ library smartbunda.admin_ui_kit;
 
 import 'package:flutter/material.dart';
 
-import '../../theme/app_theme.dart';
+import 'package:smartbunda/theme/app_theme.dart';
 
 /// Soft border color used for cards/tables (resolves per brightness).
 Color adminBorder(BuildContext context) {

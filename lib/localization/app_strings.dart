@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../models/app_user.dart';
-import '../models/pregnancy.dart';
+import 'package:smartbunda/models/app_user.dart';
+import 'package:smartbunda/models/pregnancy.dart';
 
 class AppStrings {
   AppStrings(this.locale);

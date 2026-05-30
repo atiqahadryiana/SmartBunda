@@ -1,4 +1,4 @@
-import '../models/nutrition_plan.dart';
+import 'package:smartbunda/models/nutrition_plan.dart';
 
 abstract class NutritionPlanRepository {
   Stream<List<NutritionPlan>> watchPlans(String patientId);

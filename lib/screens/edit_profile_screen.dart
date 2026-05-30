@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../localization/app_strings.dart';
-import '../models/app_user.dart';
-import '../models/pregnancy.dart';
-import '../models/profile.dart';
-import '../providers/app_providers.dart';
-import '../services/service_providers.dart';
-import '../widgets/require_sign_in.dart';
-import '../widgets/screen_header.dart';
+import 'package:smartbunda/localization/app_strings.dart';
+import 'package:smartbunda/models/app_user.dart';
+import 'package:smartbunda/models/pregnancy.dart';
+import 'package:smartbunda/models/profile.dart';
+import 'package:smartbunda/providers/app_providers.dart';
+import 'package:smartbunda/services/service_providers.dart';
+import 'package:smartbunda/widgets/require_sign_in.dart';
+import 'package:smartbunda/widgets/screen_header.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key, this.showAppBar = false});

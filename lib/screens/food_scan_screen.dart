@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../localization/app_strings.dart';
-import '../theme/app_theme.dart';
-import 'log/meal_log_actions.dart';
+import 'package:smartbunda/localization/app_strings.dart';
+import 'package:smartbunda/theme/app_theme.dart';
+import 'package:smartbunda/screens/log/meal_log_actions.dart';
 
 class FoodScanScreen extends ConsumerWidget {
   const FoodScanScreen({super.key});

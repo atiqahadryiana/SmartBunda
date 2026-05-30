@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../localization/app_strings.dart';
-import '../models/app_user.dart';
-import '../models/pregnancy.dart';
-import '../models/profile.dart';
-import '../providers/app_providers.dart';
-import '../theme/app_theme.dart';
-import '../widgets/empty_state.dart';
-import '../widgets/require_sign_in.dart';
-import '../widgets/screen_header.dart';
-import 'edit_profile_screen.dart';
-import 'professional_profile_screen.dart';
-import 'settings_screen.dart';
+import 'package:smartbunda/localization/app_strings.dart';
+import 'package:smartbunda/models/app_user.dart';
+import 'package:smartbunda/models/pregnancy.dart';
+import 'package:smartbunda/models/profile.dart';
+import 'package:smartbunda/providers/app_providers.dart';
+import 'package:smartbunda/theme/app_theme.dart';
+import 'package:smartbunda/widgets/empty_state.dart';
+import 'package:smartbunda/widgets/require_sign_in.dart';
+import 'package:smartbunda/widgets/screen_header.dart';
+import 'package:smartbunda/screens/edit_profile_screen.dart';
+import 'package:smartbunda/screens/professional_profile_screen.dart';
+import 'package:smartbunda/screens/settings_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key, this.showAppBar = false});

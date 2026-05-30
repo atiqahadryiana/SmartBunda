@@ -2,17 +2,17 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../localization/app_strings.dart';
-import '../models/alert_item.dart';
-import '../models/appointment.dart';
-import '../models/app_user.dart';
-import '../providers/app_providers.dart';
-import '../screens/appointment_calendar_screen.dart';
-import '../services/appointment_filter_service.dart';
-import '../services/service_providers.dart';
-import '../theme/app_theme.dart';
-import '../widgets/empty_state.dart';
-import '../widgets/screen_header.dart';
+import 'package:smartbunda/localization/app_strings.dart';
+import 'package:smartbunda/models/alert_item.dart';
+import 'package:smartbunda/models/appointment.dart';
+import 'package:smartbunda/models/app_user.dart';
+import 'package:smartbunda/providers/app_providers.dart';
+import 'package:smartbunda/screens/appointment_calendar_screen.dart';
+import 'package:smartbunda/services/appointment_filter_service.dart';
+import 'package:smartbunda/services/service_providers.dart';
+import 'package:smartbunda/theme/app_theme.dart';
+import 'package:smartbunda/widgets/empty_state.dart';
+import 'package:smartbunda/widgets/screen_header.dart';
 
 class AppointmentsScreen extends ConsumerStatefulWidget {
   const AppointmentsScreen({

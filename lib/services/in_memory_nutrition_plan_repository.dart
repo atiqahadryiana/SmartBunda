@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import '../models/nutrition_plan.dart';
-import 'nutrition_plan_repository.dart';
+import 'package:smartbunda/models/nutrition_plan.dart';
+import 'package:smartbunda/services/nutrition_plan_repository.dart';
 
 class InMemoryNutritionPlanRepository implements NutritionPlanRepository {
   final Map<String, NutritionPlan> _plansById = {};

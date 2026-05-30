@@ -2,14 +2,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../localization/app_strings.dart';
-import '../models/firestore_doc.dart';
-import '../providers/app_providers.dart';
-import '../widgets/require_sign_in.dart';
-import '../widgets/screen_header.dart';
-import 'module_overview_screen.dart';
-import 'nutrition_facts_screen.dart';
-import 'perinatal_care_manual_screen.dart';
+import 'package:smartbunda/localization/app_strings.dart';
+import 'package:smartbunda/models/firestore_doc.dart';
+import 'package:smartbunda/providers/app_providers.dart';
+import 'package:smartbunda/widgets/require_sign_in.dart';
+import 'package:smartbunda/widgets/screen_header.dart';
+import 'package:smartbunda/screens/module_overview_screen.dart';
+import 'package:smartbunda/screens/nutrition_facts_screen.dart';
+import 'package:smartbunda/screens/perinatal_care_manual_screen.dart';
 
 class EducationScreen extends ConsumerWidget {
   const EducationScreen({super.key});

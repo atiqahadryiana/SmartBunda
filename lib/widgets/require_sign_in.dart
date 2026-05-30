@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../providers/app_providers.dart';
+import 'package:smartbunda/providers/app_providers.dart';
 
 class RequireSignIn extends ConsumerWidget {
   const RequireSignIn({

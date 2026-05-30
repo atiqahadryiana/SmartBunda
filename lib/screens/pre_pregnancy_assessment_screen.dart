@@ -3,12 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../models/assessment_input.dart';
-import '../providers/app_providers.dart';
-import '../services/clinical_explanation_service.dart';
-import '../services/service_providers.dart';
-import '../theme/app_theme.dart';
-import '../utils/clinical_rules.dart';
+import 'package:smartbunda/models/assessment_input.dart';
+import 'package:smartbunda/providers/app_providers.dart';
+import 'package:smartbunda/services/clinical_explanation_service.dart';
+import 'package:smartbunda/services/service_providers.dart';
+import 'package:smartbunda/theme/app_theme.dart';
+import 'package:smartbunda/utils/clinical_rules.dart';
 
 /// SmartBunda — Digital First Assessment
 ///

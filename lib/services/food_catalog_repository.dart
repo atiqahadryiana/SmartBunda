@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import '../models/food_catalog_entry.dart';
-import '../models/food_item.dart';
-import 'food_database.dart';
+import 'package:smartbunda/models/food_catalog_entry.dart';
+import 'package:smartbunda/models/food_item.dart';
+import 'package:smartbunda/services/food_database.dart';
 
 class FoodCatalogRepository {
   FoodCatalogRepository(this._database) {
