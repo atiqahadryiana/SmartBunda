@@ -10,7 +10,7 @@ import 'package:smartbunda/services/service_providers.dart';
 import 'package:smartbunda/utils/auth_error_messages.dart';
 import 'package:smartbunda/widgets/auth_shell.dart';
 import 'package:smartbunda/screens/home_screen.dart';
-import 'package:smartbunda/screens/register_screen.dart';
+import 'package:smartbunda/screens/auth/register_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});

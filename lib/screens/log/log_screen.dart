@@ -5,7 +5,7 @@ import 'package:smartbunda/localization/app_strings.dart';
 import 'package:smartbunda/providers/app_providers.dart';
 import 'package:smartbunda/widgets/empty_state.dart';
 import 'package:smartbunda/widgets/screen_header.dart';
-import 'package:smartbunda/screens/food_scan_screen.dart';
+import 'package:smartbunda/screens/food/food_scan_screen.dart';
 import 'package:smartbunda/screens/log/meal_log_actions.dart';
 import 'package:smartbunda/screens/log/meal_log_utils.dart';
 

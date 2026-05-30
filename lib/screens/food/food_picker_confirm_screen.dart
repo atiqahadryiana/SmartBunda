@@ -9,7 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:smartbunda/models/food_entry.dart';
 import 'package:smartbunda/providers/app_providers.dart';
-import 'package:smartbunda/screens/food_picker_modal.dart';
+import 'package:smartbunda/screens/food/food_picker_modal.dart';
 import 'package:smartbunda/services/service_providers.dart';
 import 'package:smartbunda/theme/app_theme.dart';
 

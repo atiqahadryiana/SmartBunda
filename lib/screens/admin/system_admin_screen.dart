@@ -6,9 +6,9 @@ import 'package:smartbunda/providers/app_providers.dart';
 import 'package:smartbunda/services/service_providers.dart';
 import 'package:smartbunda/widgets/require_sign_in.dart';
 import 'package:smartbunda/widgets/screen_header.dart';
-import 'package:smartbunda/screens/activity_log_screen.dart';
-import 'package:smartbunda/screens/content_management_screen.dart';
-import 'package:smartbunda/screens/food_catalog_screen.dart';
+import 'package:smartbunda/screens/admin/activity_log_screen.dart';
+import 'package:smartbunda/screens/admin/content_management_screen.dart';
+import 'package:smartbunda/screens/food/food_catalog_screen.dart';
 
 class SystemAdminScreen extends ConsumerWidget {
   const SystemAdminScreen({

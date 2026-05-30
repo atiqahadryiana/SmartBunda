@@ -10,9 +10,9 @@ import 'package:smartbunda/theme/app_theme.dart';
 import 'package:smartbunda/widgets/empty_state.dart';
 import 'package:smartbunda/widgets/require_sign_in.dart';
 import 'package:smartbunda/widgets/screen_header.dart';
-import 'package:smartbunda/screens/edit_profile_screen.dart';
-import 'package:smartbunda/screens/professional_profile_screen.dart';
-import 'package:smartbunda/screens/settings_screen.dart';
+import 'package:smartbunda/screens/patient/edit_profile_screen.dart';
+import 'package:smartbunda/screens/staff/professional_profile_screen.dart';
+import 'package:smartbunda/screens/shared/settings_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key, this.showAppBar = false});

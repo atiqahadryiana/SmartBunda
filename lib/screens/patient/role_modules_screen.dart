@@ -3,21 +3,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:smartbunda/models/app_user.dart';
 import 'package:smartbunda/providers/app_providers.dart';
-import 'package:smartbunda/screens/admin_screen.dart';
-import 'package:smartbunda/screens/appointments_screen.dart';
-import 'package:smartbunda/screens/education_screen.dart';
-import 'package:smartbunda/screens/food_catalog_screen.dart';
-import 'package:smartbunda/screens/hydration_screen.dart';
-import 'package:smartbunda/screens/log_screen.dart';
-import 'package:smartbunda/screens/module_overview_screen.dart';
-import 'package:smartbunda/screens/monitoring_screen.dart';
-import 'package:smartbunda/screens/nutrition_plan_management_screen.dart';
-import 'package:smartbunda/screens/nutritionist_screen.dart';
-import 'package:smartbunda/screens/patient_profiles_screen.dart';
-import 'package:smartbunda/screens/profile_screen.dart';
-import 'package:smartbunda/screens/reports_screen.dart';
-import 'package:smartbunda/screens/summary_screen.dart';
-import 'package:smartbunda/screens/system_admin_screen.dart';
+import 'package:smartbunda/screens/admin/admin_screen.dart';
+import 'package:smartbunda/screens/appointments/appointments_screen.dart';
+import 'package:smartbunda/screens/shared/education_screen.dart';
+import 'package:smartbunda/screens/food/food_catalog_screen.dart';
+import 'package:smartbunda/screens/food/hydration_screen.dart';
+import 'package:smartbunda/screens/food/log_screen.dart';
+import 'package:smartbunda/screens/patient/module_overview_screen.dart';
+import 'package:smartbunda/screens/staff/monitoring_screen.dart';
+import 'package:smartbunda/screens/staff/nutrition_plan_management_screen.dart';
+import 'package:smartbunda/screens/staff/nutritionist_screen.dart';
+import 'package:smartbunda/screens/staff/patient_profiles_screen.dart';
+import 'package:smartbunda/screens/patient/profile_screen.dart';
+import 'package:smartbunda/screens/reports/reports_screen.dart';
+import 'package:smartbunda/screens/patient/summary_screen.dart';
+import 'package:smartbunda/screens/admin/system_admin_screen.dart';
 
 class RoleModulesScreen extends ConsumerWidget {
   const RoleModulesScreen({

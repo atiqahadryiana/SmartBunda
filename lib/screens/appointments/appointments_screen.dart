@@ -7,7 +7,7 @@ import 'package:smartbunda/models/alert_item.dart';
 import 'package:smartbunda/models/appointment.dart';
 import 'package:smartbunda/models/app_user.dart';
 import 'package:smartbunda/providers/app_providers.dart';
-import 'package:smartbunda/screens/appointment_calendar_screen.dart';
+import 'package:smartbunda/screens/appointments/appointment_calendar_screen.dart';
 import 'package:smartbunda/services/appointment_filter_service.dart';
 import 'package:smartbunda/services/service_providers.dart';
 import 'package:smartbunda/theme/app_theme.dart';

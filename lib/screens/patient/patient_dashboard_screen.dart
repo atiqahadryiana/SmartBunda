@@ -8,8 +8,8 @@ import 'package:smartbunda/theme/app_theme.dart';
 
 import 'package:smartbunda/models/app_user.dart';
 import 'package:smartbunda/models/appointment.dart';
-import 'package:smartbunda/screens/appointments_screen.dart';
-import 'package:smartbunda/screens/hydration_screen.dart';
+import 'package:smartbunda/screens/appointments/appointments_screen.dart';
+import 'package:smartbunda/screens/food/hydration_screen.dart';
 import 'package:smartbunda/screens/log/log_screen.dart';
 import 'package:smartbunda/models/food_entry.dart';
 import 'package:smartbunda/models/hydration_entry.dart';

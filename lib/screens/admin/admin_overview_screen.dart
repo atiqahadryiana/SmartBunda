@@ -17,8 +17,8 @@ import 'package:smartbunda/theme/app_theme.dart';
 import 'package:smartbunda/screens/admin/admin_nav.dart';
 import 'package:smartbunda/screens/admin/admin_sections.dart';
 import 'package:smartbunda/screens/admin/admin_ui_kit.dart';
-import 'package:smartbunda/screens/login_screen.dart';
-import 'package:smartbunda/screens/system_admin_screen.dart';
+import 'package:smartbunda/screens/auth/login_screen.dart';
+import 'package:smartbunda/screens/admin/system_admin_screen.dart';
 
 class AdminOverviewScreen extends ConsumerStatefulWidget {
   const AdminOverviewScreen({super.key, this.showAppBar = false});

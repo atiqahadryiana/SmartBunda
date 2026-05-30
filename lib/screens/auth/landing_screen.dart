@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'package:smartbunda/localization/app_strings.dart';
 import 'package:smartbunda/theme/app_theme.dart';
-import 'package:smartbunda/screens/login_screen.dart';
-import 'package:smartbunda/screens/register_screen.dart';
+import 'package:smartbunda/screens/auth/login_screen.dart';
+import 'package:smartbunda/screens/auth/register_screen.dart';
 
 // Breakpoints
 bool _isMobile(BuildContext context) =>

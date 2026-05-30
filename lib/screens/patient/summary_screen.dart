@@ -11,7 +11,7 @@ import 'package:smartbunda/providers/app_providers.dart';
 import 'package:smartbunda/utils/nutrition_guides.dart';
 import 'package:smartbunda/widgets/require_sign_in.dart';
 import 'package:smartbunda/widgets/screen_header.dart';
-import 'package:smartbunda/screens/edit_profile_screen.dart';
+import 'package:smartbunda/screens/patient/edit_profile_screen.dart';
 
 class SummaryScreen extends ConsumerStatefulWidget {
   const SummaryScreen({super.key, this.showAppBar = false});

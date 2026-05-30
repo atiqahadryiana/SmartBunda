@@ -15,9 +15,9 @@ import 'package:smartbunda/providers/app_providers.dart';
 import 'package:smartbunda/services/service_providers.dart';
 import 'package:smartbunda/theme/app_theme.dart';
 import 'package:smartbunda/widgets/require_sign_in.dart';
-import 'package:smartbunda/screens/change_password_screen.dart';
-import 'package:smartbunda/screens/professional_availability_screen.dart';
-import 'package:smartbunda/screens/settings_screen.dart';
+import 'package:smartbunda/screens/auth/change_password_screen.dart';
+import 'package:smartbunda/screens/staff/professional_availability_screen.dart';
+import 'package:smartbunda/screens/shared/settings_screen.dart';
 
 class ProfessionalProfileScreen extends ConsumerWidget {
   const ProfessionalProfileScreen({super.key, this.showAppBar = false});

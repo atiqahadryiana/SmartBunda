@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:smartbunda/localization/app_strings.dart';
-import 'package:smartbunda/screens/food_picker_modal.dart';
-import 'package:smartbunda/screens/food_picker_confirm_screen.dart';
+import 'package:smartbunda/screens/food/food_picker_modal.dart';
+import 'package:smartbunda/screens/food/food_picker_confirm_screen.dart';
 import 'package:smartbunda/theme/app_theme.dart';
-import 'package:smartbunda/screens/food_scan_screen.dart';
-import 'package:smartbunda/screens/hydration_screen.dart';
-import 'package:smartbunda/screens/log_screen.dart';
+import 'package:smartbunda/screens/food/food_scan_screen.dart';
+import 'package:smartbunda/screens/food/hydration_screen.dart';
+import 'package:smartbunda/screens/food/log_screen.dart';
 
 class FoodLoggingHubScreen extends StatelessWidget {
   const FoodLoggingHubScreen({super.key, this.showAppBar = false});

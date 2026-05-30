@@ -11,7 +11,7 @@ import 'package:smartbunda/services/service_providers.dart';
 import 'package:smartbunda/widgets/empty_state.dart';
 import 'package:smartbunda/widgets/require_sign_in.dart';
 import 'package:smartbunda/widgets/screen_header.dart';
-import 'package:smartbunda/screens/nutritionist_client_screen.dart';
+import 'package:smartbunda/screens/staff/nutritionist_client_screen.dart';
 
 class PatientProfilesScreen extends ConsumerWidget {
   const PatientProfilesScreen({super.key, this.showAppBar = true});

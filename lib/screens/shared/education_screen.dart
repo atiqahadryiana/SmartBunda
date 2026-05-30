@@ -7,9 +7,9 @@ import 'package:smartbunda/models/firestore_doc.dart';
 import 'package:smartbunda/providers/app_providers.dart';
 import 'package:smartbunda/widgets/require_sign_in.dart';
 import 'package:smartbunda/widgets/screen_header.dart';
-import 'package:smartbunda/screens/module_overview_screen.dart';
-import 'package:smartbunda/screens/nutrition_facts_screen.dart';
-import 'package:smartbunda/screens/perinatal_care_manual_screen.dart';
+import 'package:smartbunda/screens/patient/module_overview_screen.dart';
+import 'package:smartbunda/screens/patient/nutrition_facts_screen.dart';
+import 'package:smartbunda/screens/patient/perinatal_care_manual_screen.dart';
 
 class EducationScreen extends ConsumerWidget {
   const EducationScreen({super.key});

@@ -7,7 +7,7 @@ import 'package:smartbunda/models/food_entry.dart';
 import 'package:smartbunda/providers/app_providers.dart';
 import 'package:smartbunda/services/food_image_classifier.dart';
 import 'package:smartbunda/services/service_providers.dart';
-import 'package:smartbunda/screens/food_analysis_result_screen.dart';
+import 'package:smartbunda/screens/food/food_analysis_result_screen.dart';
 import 'package:smartbunda/screens/log/meal_log_utils.dart';
 
 class MealLogActions {
