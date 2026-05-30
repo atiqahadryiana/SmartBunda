@@ -39,6 +39,10 @@ service cloud.firestore {
       ]);
     }
 
+    function isAdmin() {
+      return signedIn() && (userRole() in ['admin', 'ADMIN']);
+    }
+
     function planOwner(planId) {
       return get(/databases/$(database)/documents/NutritionPlans/$(planId)).data.patientId;
     }
@@ -49,8 +53,18 @@ service cloud.firestore {
 
     match /Users/{userId} {
       allow read: if signedIn();
-      allow create: if isOwner(userId) || isStaff();
-      allow update, delete: if isOwner(userId) || isStaff();
+      // Self-registration is patient-only; staff/admin accounts are created by
+      // an administrator. An owner may update their own profile fields but not
+      // escalate their role, permissions, or status.
+      allow create: if isStaff()
+        || (isOwner(userId)
+            && request.resource.data.role in ['patient', 'PATIENT']);
+      allow update: if isStaff()
+        || (isOwner(userId)
+            && request.resource.data.role == resource.data.role
+            && request.resource.data.permissions == resource.data.permissions
+            && request.resource.data.status == resource.data.status);
+      allow delete: if isOwner(userId) || isStaff();
     }
 
     match /Foods/{foodId} {
@@ -197,6 +211,34 @@ service cloud.firestore {
     match /SystemSettings/{docId} {
       allow read: if signedIn();
       allow write: if isStaff();
+    }
+
+    // Forward-compatible: consultations linked to an appointment. Readable by
+    // the patient, the assigned professional, and staff; written by staff or
+    // the assigned professional.
+    match /Consultations/{id} {
+      allow read: if signedIn() &&
+        (isStaff() ||
+         request.auth.uid == resource.data.patientId ||
+         request.auth.uid == resource.data.professionalId);
+      allow create: if signedIn() &&
+        (isStaff() ||
+         request.auth.uid == request.resource.data.professionalId);
+      allow update, delete: if isStaff() ||
+        (signedIn() && request.auth.uid == resource.data.professionalId);
+    }
+
+    // Forward-compatible: 1:1 messages. Readable by sender, receiver, and
+    // staff; created only by the sender.
+    match /ChatMessages/{id} {
+      allow read: if signedIn() &&
+        (isStaff() ||
+         request.auth.uid == resource.data.senderId ||
+         request.auth.uid == resource.data.receiverId);
+      allow create: if signedIn() &&
+        request.auth.uid == request.resource.data.senderId;
+      allow update, delete: if isStaff() ||
+        (signedIn() && request.auth.uid == resource.data.senderId);
     }
   }
 }
