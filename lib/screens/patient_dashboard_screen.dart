@@ -4,7 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../theme/app_theme.dart';
+
+import '../models/app_user.dart';
 import '../models/appointment.dart';
+import 'appointments_screen.dart';
+import 'hydration_screen.dart';
+import 'log/log_screen.dart';
 import '../models/food_entry.dart';
 import '../models/hydration_entry.dart';
 import '../models/pregnancy.dart';
@@ -16,11 +22,13 @@ class PatientDashboardScreen extends ConsumerWidget {
   const PatientDashboardScreen({
     super.key,
     required this.onOpenTab,
+    required this.onOpenRiskAssessment,
     required this.onOpenEducation,
     required this.onLogout,
   });
 
   final ValueChanged<int> onOpenTab;
+  final VoidCallback onOpenRiskAssessment;
   final VoidCallback onOpenEducation;
   final VoidCallback onLogout;
 
@@ -41,7 +49,7 @@ class PatientDashboardScreen extends ConsumerWidget {
         .where((entry) => _isToday(entry.date))
         .fold<int>(0, (sum, entry) => sum + entry.amountMl);
     final totals = _DailyTotals.fromEntries(todayEntries);
-    final targets = recommendedFor(pregnancy);
+    final targets = recommendedFor(pregnancy, profile: profile);
     final waterTarget = targets.waterMl;
     final upcoming = appointments
         .where((item) =>
@@ -75,7 +83,7 @@ class PatientDashboardScreen extends ConsumerWidget {
                         value: '${totals.calories}',
                         unit: 'kcal',
                         progress: _ratio(totals.calories, targets.calories),
-                        color: const Color(0xFFE86D9B),
+                        color: AppTheme.darkPink,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -86,17 +94,32 @@ class PatientDashboardScreen extends ConsumerWidget {
                         value: '${(todayWater / 1000).toStringAsFixed(1)}L',
                         unit: '/ ${(waterTarget / 1000).toStringAsFixed(1)}L',
                         progress: _ratio(todayWater, waterTarget),
-                        color: const Color(0xFF23A6A6),
+                        color: AppTheme.healthcareTeal,
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
+                _QuickActionsBar(onOpenTab: onOpenTab),
+                const SizedBox(height: 16),
+                _ReadinessCard(
+                  profile: profile,
+                  pregnancy: pregnancy,
+                  onOpen: onOpenRiskAssessment,
+                ),
+                const SizedBox(height: 16),
+                _ClinicalAlertsCard(profile: profile, pregnancy: pregnancy),
+                const SizedBox(height: 16),
                 _NutritionCard(totals: totals, targets: targets),
                 const SizedBox(height: 16),
                 _AppointmentCard(
                   appointment: upcoming.isEmpty ? null : upcoming.first,
-                  onView: () => onOpenTab(3),
+                  onView: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          const AppointmentsScreen(role: UserRole.patient),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 _ActivityCard(entries: todayEntries, waterMl: todayWater),
@@ -143,11 +166,7 @@ class _HeroHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 22),
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFFFE3EE), Color(0xFFE7F6FF), Color(0xFFF1E8FF)],
-        ),
+        gradient: AppTheme.heroGradient,
       ),
       child: SafeArea(
         bottom: false,
@@ -165,7 +184,7 @@ class _HeroHeader extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFFE86D9B).withValues(alpha: 20),
+                        color: AppTheme.darkPink.withValues(alpha: 25),
                         blurRadius: 14,
                         offset: const Offset(0, 8),
                       ),
@@ -173,7 +192,7 @@ class _HeroHeader extends StatelessWidget {
                   ),
                   child: const Icon(
                     Icons.favorite,
-                    color: Color(0xFFC24879),
+                    color: AppTheme.darkPink,
                     size: 22,
                   ),
                 ),
@@ -228,19 +247,19 @@ class _HeroHeader extends StatelessWidget {
                   label: profile == null
                       ? 'Profile pending'
                       : '${profile!.currentWeightKg.toStringAsFixed(1)} kg',
-                  color: const Color(0xFFE86D9B),
+                  color: AppTheme.primaryPink,
                 ),
                 _StatusPill(
                   icon: Icons.pregnant_woman_outlined,
                   label: pregnancy == null
                       ? 'Pregnancy not set'
                       : 'Week ${pregnancy!.gestationalWeek}',
-                  color: const Color(0xFF8A7CF6),
+                  color: AppTheme.info,
                 ),
                 _StatusPill(
                   icon: Icons.verified_outlined,
                   label: pregnancy?.riskLevel ?? 'Stable',
-                  color: const Color(0xFF23A6A6),
+                  color: AppTheme.healthcareTeal,
                 ),
               ],
             ),
@@ -348,8 +367,8 @@ class _NutritionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final proteinTarget = targets.protein;
-    final carbsTarget = (targets.calories * 0.5 / 4).round();
-    final fatTarget = (targets.calories * 0.3 / 9).round();
+    final carbsTarget = (targets.calories * targets.carbPct / 4).round();
+    final fatTarget = (targets.calories * targets.fatPct / 9).round();
 
     return _SoftCard(
       child: Column(
@@ -402,19 +421,19 @@ class _NutritionCard extends StatelessWidget {
                       label: 'Protein',
                       value: totals.protein,
                       target: proteinTarget,
-                      color: const Color(0xFF23A6A6),
+                      color: AppTheme.healthcareTeal,
                     ),
                     _MacroLegendRow(
                       label: 'Carbs',
                       value: totals.carbs,
                       target: carbsTarget,
-                      color: const Color(0xFF8A7CF6),
+                      color: AppTheme.info,
                     ),
                     _MacroLegendRow(
                       label: 'Fats',
                       value: totals.fat,
                       target: fatTarget,
-                      color: const Color(0xFFE86D9B),
+                      color: AppTheme.darkPink,
                     ),
                   ],
                 ),
@@ -491,7 +510,7 @@ class _MacroPiePainter extends CustomPainter {
     final radius = (size.shortestSide - strokeWidth) / 2;
     final rect = Rect.fromCircle(center: center, radius: radius);
     final basePaint = Paint()
-      ..color = const Color(0xFFF0E8EE)
+      ..color = const Color(0xFFFCE4EC)
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeWidth = strokeWidth;
@@ -506,9 +525,9 @@ class _MacroPiePainter extends CustomPainter {
     if (total <= 0) return;
 
     final colors = [
-      const Color(0xFF23A6A6),
-      const Color(0xFF8A7CF6),
-      const Color(0xFFE86D9B),
+      AppTheme.healthcareTeal,
+      AppTheme.info,
+      AppTheme.darkPink,
     ];
     var start = -math.pi / 2;
     for (var i = 0; i < values.length; i++) {
@@ -613,15 +632,14 @@ class _TipCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFE3EE), Color(0xFFE8FAF8)],
-        ),
+        gradient: AppTheme.blushGradient,
         borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppTheme.primaryPink.withValues(alpha: 60)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.lightbulb_outline, color: Color(0xFFC24879)),
+          const Icon(Icons.lightbulb_outline, color: AppTheme.darkPink),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -630,6 +648,148 @@ class _TipCard extends StatelessWidget {
                   .textTheme
                   .bodyMedium
                   ?.copyWith(height: 1.45),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReadinessCard extends StatelessWidget {
+  const _ReadinessCard({
+    required this.profile,
+    required this.pregnancy,
+    required this.onOpen,
+  });
+
+  final Profile? profile;
+  final Pregnancy? pregnancy;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final bmi = profile?.bmi;
+    final riskLabel = pregnancy?.riskLevel.trim().isNotEmpty == true
+        ? pregnancy!.riskLevel
+        : _bmiRiskLabel(bmi);
+    final riskColor = riskLabel.toLowerCase().contains('high')
+        ? AppTheme.errorColor
+        : riskLabel.toLowerCase().contains('review') ||
+                riskLabel.toLowerCase().contains('moderate')
+            ? AppTheme.warning
+            : AppTheme.healthcareTeal;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onOpen,
+        borderRadius: BorderRadius.circular(22),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppTheme.cardBackground,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: const Color(0xFFF8BBD0)),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.primaryPink.withValues(alpha: 20),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: riskColor.withValues(alpha: 24),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Icon(Icons.health_and_safety_outlined, color: riskColor),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Pre-pregnancy readiness',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w900,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Assess risks, pregnancy intention, referrals, and follow-up before conception.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: const Color(0xFF59677D),
+                            height: 1.35,
+                          ),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _MiniChip(
+                          icon: Icons.monitor_weight_outlined,
+                          label: bmi == null
+                              ? 'BMI pending'
+                              : 'BMI ${bmi.toStringAsFixed(1)}',
+                        ),
+                        _MiniChip(
+                          icon: Icons.flag_outlined,
+                          label: riskLabel,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.chevron_right),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static String _bmiRiskLabel(double? bmi) {
+    if (bmi == null) return 'Assessment needed';
+    if (bmi >= 30) return 'Risk review';
+    if (bmi < 18.5) return 'Nutrition review';
+    return 'Stable';
+  }
+}
+
+class _MiniChip extends StatelessWidget {
+  const _MiniChip({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceBase,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppTheme.primaryPink.withValues(alpha: 60)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: AppTheme.darkPink),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ],
@@ -719,19 +879,273 @@ class _SoftCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.cardBackground,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        border: Border.all(color: const Color(0xFFF8BBD0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 8),
+            color: AppTheme.primaryPink.withValues(alpha: 15),
             blurRadius: 18,
-            offset: const Offset(0, 10),
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: child,
     );
+  }
+}
+
+// ── Quick Actions bar ─────────────────────────────────────────────────────────
+
+class _QuickActionsBar extends StatelessWidget {
+  const _QuickActionsBar({required this.onOpenTab});
+
+  final ValueChanged<int> onOpenTab;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          flex: 3,
+          child: _QuickAction(
+            icon: Icons.center_focus_strong,
+            label: 'Scan Food',
+            isPrimary: true,
+            onTap: () => onOpenTab(1), // tab 1 = Scan
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          flex: 2,
+          child: _QuickAction(
+            icon: Icons.restaurant_outlined,
+            label: 'Log Meal',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const LogScreen()),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          flex: 2,
+          child: _QuickAction(
+            icon: Icons.water_drop_outlined,
+            label: 'Log Water',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const HydrationScreen()),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickAction extends StatelessWidget {
+  const _QuickAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.isPrimary = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool isPrimary;
+
+  @override
+  Widget build(BuildContext context) {
+    if (isPrimary) {
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Ink(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              gradient: AppTheme.primaryGradient,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.darkPink.withValues(alpha: 60),
+                  blurRadius: 12,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: Colors.white, size: 20),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Material(
+      color: AppTheme.cardBackground,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFF8BBD0)),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: AppTheme.darkPink, size: 20),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppTheme.darkPink,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ClinicalAlert {
+  const _ClinicalAlert({
+    required this.icon,
+    required this.title,
+    required this.body,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String title;
+  final String body;
+  final Color color;
+}
+
+class _AlertTile extends StatelessWidget {
+  const _AlertTile({required this.alert});
+
+  final _ClinicalAlert alert;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: alert.color.withValues(alpha: 20),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: alert.color.withValues(alpha: 70)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(alert.icon, color: alert.color, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  alert.title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: alert.color,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(alert.body, style: const TextStyle(fontSize: 13)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ClinicalAlertsCard extends StatelessWidget {
+  const _ClinicalAlertsCard({required this.profile, required this.pregnancy});
+
+  final Profile? profile;
+  final Pregnancy? pregnancy;
+
+  @override
+  Widget build(BuildContext context) {
+    final alerts = _buildAlerts();
+    if (alerts.isEmpty) return const SizedBox.shrink();
+    return _SoftCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _SectionTitle(
+            icon: Icons.notifications_active_outlined,
+            title: 'Clinical alerts',
+          ),
+          const SizedBox(height: 10),
+          ...alerts.map((alert) => _AlertTile(alert: alert)),
+        ],
+      ),
+    );
+  }
+
+  List<_ClinicalAlert> _buildAlerts() {
+    final alerts = <_ClinicalAlert>[];
+    final hb = profile?.hemoglobinGdl;
+
+    // IDA: Hb < 11.0 g/dL → 120 mg elemental iron
+    if (hb != null && hb < 11.0) {
+      alerts.add(const _ClinicalAlert(
+        icon: Icons.bloodtype_outlined,
+        title: 'Iron Deficiency Anaemia',
+        body:
+            'Hb < 11.0 g/dL detected. Increase daily oral iron to 120 mg of elemental iron. Follow up with your doctor.',
+        color: AppTheme.darkPink,
+      ));
+    }
+
+    // Gestational diabetes → specific macro distribution
+    if (profile?.medicalConditions
+            .contains(MedicalCondition.gestationalDiabetes) ??
+        false) {
+      alerts.add(const _ClinicalAlert(
+        icon: Icons.monitor_heart_outlined,
+        title: 'Gestational Diabetes',
+        body:
+            'Recommended macros: 45–60% carbohydrates · 15–20% protein · 25–35% fat.',
+        color: AppTheme.warning,
+      ));
+    }
+
+    // General pregnancy supplement reminder
+    if (pregnancy != null) {
+      alerts.add(const _ClinicalAlert(
+        icon: Icons.medication_outlined,
+        title: 'Pregnancy Supplements',
+        body: 'Take 30–60 mg iron · 200 μg iodine · 1000 mg calcium daily.',
+        color: AppTheme.healthcareTeal,
+      ));
+    }
+
+    return alerts;
   }
 }
 

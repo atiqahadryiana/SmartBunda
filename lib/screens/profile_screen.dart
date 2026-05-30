@@ -6,11 +6,13 @@ import '../models/app_user.dart';
 import '../models/pregnancy.dart';
 import '../models/profile.dart';
 import '../providers/app_providers.dart';
-import '../providers/locale_provider.dart';
+import '../theme/app_theme.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/require_sign_in.dart';
 import '../widgets/screen_header.dart';
 import 'edit_profile_screen.dart';
+import 'professional_profile_screen.dart';
+import 'settings_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key, this.showAppBar = false});
@@ -24,34 +26,7 @@ class ProfileScreen extends ConsumerWidget {
     final child = user == null
         ? const SizedBox.shrink()
         : user.role != UserRole.patient
-            ? Scaffold(
-                appBar: showAppBar
-                    ? AppBar(title: Text(strings.accountTitle))
-                    : null,
-                body: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: ListView(
-                    children: [
-                      ScreenHeader(
-                        title: strings.accountTitle,
-                        subtitle: strings.accountReviewSubtitle,
-                        icon: Icons.person_outline,
-                      ),
-                      const SizedBox(height: 16),
-                      Card(
-                        child: ListTile(
-                          leading: const Icon(Icons.person_outline),
-                          title: Text(user.displayName ?? user.email),
-                          subtitle: Text(user.email),
-                          trailing: Text(strings.roleLabel(user.role)),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      const _LanguageCard(),
-                    ],
-                  ),
-                ),
-              )
+            ? ProfessionalProfileScreen(showAppBar: showAppBar)
             : _profileView(context, ref);
 
     return RequireSignIn(
@@ -79,10 +54,20 @@ class ProfileScreen extends ConsumerWidget {
                   title: strings.profileTitle,
                   subtitle: strings.profileSubtitle,
                   icon: Icons.person_outline,
-                  action: FilledButton.icon(
-                    onPressed: () => _openEdit(context),
-                    icon: const Icon(Icons.edit_outlined),
-                    label: Text(strings.edit),
+                  action: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        tooltip: strings.t('Settings'),
+                        onPressed: () => _openSettings(context),
+                        icon: const Icon(Icons.settings_outlined),
+                      ),
+                      FilledButton.icon(
+                        onPressed: () => _openEdit(context),
+                        icon: const Icon(Icons.edit_outlined),
+                        label: Text(strings.edit),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -98,7 +83,7 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const _LanguageCard(),
+                  _SettingsTile(onTap: () => _openSettings(context)),
                 ] else ...[
                   _OutcomesCard(profile: profile, pregnancy: pregnancy),
                   const SizedBox(height: 12),
@@ -111,7 +96,7 @@ class ProfileScreen extends ConsumerWidget {
                     isLoading: pregnancyAsync.isLoading,
                   ),
                   const SizedBox(height: 12),
-                  const _LanguageCard(),
+                  _SettingsTile(onTap: () => _openSettings(context)),
                 ],
               ],
             );
@@ -127,6 +112,36 @@ class ProfileScreen extends ConsumerWidget {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => const EditProfileScreen(showAppBar: true),
+      ),
+    );
+  }
+
+  void _openSettings(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+    );
+  }
+}
+
+/// Card-style entry point into the [SettingsScreen].
+class _SettingsTile extends StatelessWidget {
+  const _SettingsTile({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+    return Card(
+      margin: EdgeInsets.zero,
+      child: ListTile(
+        leading: const Icon(Icons.settings_outlined, color: AppTheme.darkPink),
+        title: Text(strings.t('Settings')),
+        subtitle: Text(
+          strings.t('Language, appearance, notifications, and more.'),
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: onTap,
       ),
     );
   }
@@ -334,43 +349,6 @@ class _PregnancyCard extends StatelessWidget {
 String _trimesterLabel(AppStrings strings, Pregnancy pregnancy) {
   final label = strings.trimesterLabel(pregnancy.trimesterEnum);
   return strings.isMalay ? 'Trimester $label' : '$label trimester';
-}
-
-class _LanguageCard extends ConsumerWidget {
-  const _LanguageCard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final strings = AppStrings.of(context);
-    final locale = ref.watch(appLocaleProvider);
-    final code = locale.languageCode == 'ms' ? 'ms' : 'en';
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(strings.languageTitle,
-                style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              initialValue: code,
-              decoration: InputDecoration(labelText: strings.languageLabel),
-              items: [
-                DropdownMenuItem(
-                    value: 'en', child: Text(strings.englishLabel)),
-                DropdownMenuItem(value: 'ms', child: Text(strings.malayLabel)),
-              ],
-              onChanged: (value) {
-                if (value == null) return;
-                ref.read(appLocaleProvider.notifier).setLocale(Locale(value));
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class _InfoRow extends StatelessWidget {

@@ -9,6 +9,7 @@ import '../models/firestore_doc.dart';
 import '../models/pregnancy.dart';
 import '../models/profile.dart';
 import '../providers/app_providers.dart';
+import '../services/appointment_filter_service.dart';
 import '../services/service_providers.dart';
 
 class StaffDashboardScreen extends ConsumerWidget {
@@ -116,9 +117,9 @@ class StaffTodayPatientsScreen extends ConsumerStatefulWidget {
 class _StaffTodayPatientsScreenState
     extends ConsumerState<StaffTodayPatientsScreen> {
   final _searchCtrl = TextEditingController();
-  String _timeFilter = 'All';
-  String _statusFilter = 'All';
-  String _roleFilter = 'All';
+  AppointmentStatusFilter _statusFilter = AppointmentStatusFilter.all;
+  SessionSlotFilter _slotFilter = SessionSlotFilter.all;
+  AppointmentTypeFilter _typeFilter = AppointmentTypeFilter.all;
 
   @override
   void dispose() {
@@ -132,24 +133,22 @@ class _StaffTodayPatientsScreenState
     final users = ref.watch(usersProvider).valueOrNull ?? const <AppUser>[];
     final allAppointments =
         ref.watch(allAppointmentsProvider).valueOrNull ?? const <Appointment>[];
-    final appointments =
-        _todayAppointmentsFor(widget.role, user, allAppointments);
-    final filtered = appointments.where((appointment) {
+    final today = _todayAppointmentsFor(widget.role, user, allAppointments);
+
+    // Apply status/slot/type filters, then the free-text search.
+    final query = _searchCtrl.text.trim().toLowerCase();
+    final filtered = AppointmentFilterService.applyFilters(
+      today,
+      status: _statusFilter,
+      slot: _slotFilter,
+      type: _typeFilter,
+    ).where((appointment) {
+      if (query.isEmpty) return true;
       final patient = _userFor(users, appointment.patientId);
-      final provider = _userFor(users, appointment.providerId);
-      final query = _searchCtrl.text.trim().toLowerCase();
-      final matchesQuery = query.isEmpty ||
-          (patient?.displayName ?? patient?.email ?? '')
+      return (patient?.displayName ?? patient?.email ?? '')
               .toLowerCase()
               .contains(query) ||
           appointment.type.toLowerCase().contains(query);
-      final matchesTime = _timeFilter == 'All' ||
-          _timeBucket(appointment.dateTime) == _timeFilter;
-      final matchesStatus = _statusFilter == 'All' ||
-          appointment.status.toLowerCase() == _statusFilter.toLowerCase();
-      final matchesRole =
-          _roleFilter == 'All' || provider?.role.label == _roleFilter;
-      return matchesQuery && matchesTime && matchesStatus && matchesRole;
     }).toList()
       ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
 
@@ -163,12 +162,18 @@ class _StaffTodayPatientsScreenState
           role: widget.role,
         ),
         const SizedBox(height: 16),
+        _AppointmentCountHeader(
+          total: allAppointments.length,
+          today: today.length,
+          filtered: filtered.length,
+        ),
+        const SizedBox(height: 12),
         TextField(
           controller: _searchCtrl,
           onChanged: (_) => setState(() {}),
           decoration: InputDecoration(
             prefixIcon: const Icon(Icons.search),
-            hintText: 'Search patient, appointment, or staff',
+            hintText: 'Search patient or appointment',
             filled: true,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(18),
@@ -177,22 +182,28 @@ class _StaffTodayPatientsScreenState
           ),
         ),
         const SizedBox(height: 12),
-        _StaffFilterStrip(
-          values: const ['All', 'Morning', 'Afternoon', 'Evening'],
-          selected: _timeFilter,
-          onSelected: (value) => setState(() => _timeFilter = value),
-        ),
-        const SizedBox(height: 8),
-        _StaffFilterStrip(
-          values: const ['All', 'Scheduled', 'Completed', 'Cancelled'],
+        _TypedFilterStrip<AppointmentStatusFilter>(
+          label: 'Status',
+          values: AppointmentStatusFilter.values,
           selected: _statusFilter,
+          labelOf: (value) => value.label,
           onSelected: (value) => setState(() => _statusFilter = value),
         ),
         const SizedBox(height: 8),
-        _StaffFilterStrip(
-          values: const ['All', 'Doctor', 'Dietitian', 'Nurse'],
-          selected: _roleFilter,
-          onSelected: (value) => setState(() => _roleFilter = value),
+        _TypedFilterStrip<SessionSlotFilter>(
+          label: 'Session',
+          values: SessionSlotFilter.values,
+          selected: _slotFilter,
+          labelOf: (value) => value.label,
+          onSelected: (value) => setState(() => _slotFilter = value),
+        ),
+        const SizedBox(height: 8),
+        _TypedFilterStrip<AppointmentTypeFilter>(
+          label: 'Type',
+          values: AppointmentTypeFilter.values,
+          selected: _typeFilter,
+          labelOf: (value) => value.label,
+          onSelected: (value) => setState(() => _typeFilter = value),
         ),
         const SizedBox(height: 16),
         if (filtered.isEmpty)
@@ -987,31 +998,104 @@ class _StaffSectionHeader extends StatelessWidget {
   }
 }
 
-class _StaffFilterStrip extends StatelessWidget {
-  const _StaffFilterStrip(
-      {required this.values, required this.selected, required this.onSelected});
+/// Horizontal strip of [FilterChip]s bound to an enum value.
+class _TypedFilterStrip<T> extends StatelessWidget {
+  const _TypedFilterStrip({
+    required this.label,
+    required this.values,
+    required this.selected,
+    required this.labelOf,
+    required this.onSelected,
+  });
 
-  final List<String> values;
-  final String selected;
-  final ValueChanged<String> onSelected;
+  final String label;
+  final List<T> values;
+  final T selected;
+  final String Function(T) labelOf;
+  final ValueChanged<T> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          for (final value in values) ...[
-            FilterChip(
-              label: Text(value),
-              selected: selected == value,
-              onSelected: (_) => onSelected(value),
-              showCheckmark: false,
-            ),
-            const SizedBox(width: 8),
-          ],
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 4),
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (final value in values) ...[
+                FilterChip(
+                  label: Text(labelOf(value)),
+                  selected: selected == value,
+                  onSelected: (_) => onSelected(value),
+                  showCheckmark: false,
+                ),
+                const SizedBox(width: 8),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Summary header showing total, today's, and filtered appointment counts.
+class _AppointmentCountHeader extends StatelessWidget {
+  const _AppointmentCountHeader({
+    required this.total,
+    required this.today,
+    required this.filtered,
+  });
+
+  final int total;
+  final int today;
+  final int filtered;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _StaffMetricCard(
+            icon: Icons.event_note_outlined,
+            label: 'Total',
+            value: '$total',
+            detail: 'appointments',
+            color: const Color(0xFF4F8DF7),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _StaffMetricCard(
+            icon: Icons.today_outlined,
+            label: 'Today',
+            value: '$today',
+            detail: 'scheduled',
+            color: const Color(0xFFC24879),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _StaffMetricCard(
+            icon: Icons.filter_alt_outlined,
+            label: 'Filtered',
+            value: '$filtered',
+            detail: 'shown',
+            color: const Color(0xFF23A6A6),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1136,12 +1220,6 @@ String _initials(String name) {
   if (parts.length == 1) return parts.first.characters.first.toUpperCase();
   return '${parts.first.characters.first}${parts.last.characters.first}'
       .toUpperCase();
-}
-
-String _timeBucket(DateTime date) {
-  if (date.hour < 12) return 'Morning';
-  if (date.hour < 17) return 'Afternoon';
-  return 'Evening';
 }
 
 String _roleText(UserRole role, String doctorText, String fallback) {

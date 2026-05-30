@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../theme/app_theme.dart';
 import 'login_screen.dart';
 
 class GetStartedScreen extends StatefulWidget {
@@ -24,24 +25,24 @@ class _GetStartedScreenState extends State<GetStartedScreen>
   static const _slides = [
     _OnboardingSlide(
       icon: Icons.favorite,
-      title: 'Welcome to SMARTBUNDA',
+      title: 'Welcome to SmartBunda',
       body:
           'A warm space for pregnancy nutrition, health tracking, and connected family care.',
-      accent: Color(0xFFE86D9B),
+      accent: AppTheme.darkPink,
     ),
     _OnboardingSlide(
-      icon: Icons.restaurant_menu_outlined,
-      title: 'Track Smarter Nutrition',
+      icon: Icons.center_focus_strong_outlined,
+      title: 'AI Food Recognition',
       body:
-          'Log meals, hydration, and nutrition goals with a calm mobile-first experience.',
-      accent: Color(0xFF23A6A6),
+          'Snap a photo of your meal — our AI identifies Malaysian dishes and logs nutrition instantly.',
+      accent: AppTheme.accentPink,
     ),
     _OnboardingSlide(
-      icon: Icons.auto_awesome_outlined,
-      title: 'Supported by Smart Care',
+      icon: Icons.monitor_heart_outlined,
+      title: 'Your Health, Tracked',
       body:
-          'Use AI-assisted food recognition and care-team visibility to stay informed every day.',
-      accent: Color(0xFF8A7CF6),
+          'Monitor daily nutrition goals, hydration, and pregnancy milestones all in one place.',
+      accent: AppTheme.healthcareTeal,
     ),
   ];
 
@@ -113,18 +114,28 @@ class _GetStartedScreenState extends State<GetStartedScreen>
               const SizedBox(height: 24),
               Padding(
                 padding: const EdgeInsets.fromLTRB(28, 0, 28, 30),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: _next,
-                    icon: Icon(
-                      _page == _slides.length - 1
-                          ? Icons.check
-                          : Icons.arrow_forward,
-                    ),
-                    label: Text(
-                      _page == _slides.length - 1 ? 'Get started' : 'Next',
-                    ),
+                child: GradientButton(
+                  onPressed: _next,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        _page == _slides.length - 1 ? 'Get started' : 'Next',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(
+                        _page == _slides.length - 1
+                            ? Icons.check_circle_outline
+                            : Icons.arrow_forward,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ],
                   ),
                 ),
               ),

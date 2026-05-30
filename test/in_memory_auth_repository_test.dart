@@ -7,13 +7,13 @@ void main() {
     final auth = InMemoryAuthRepository();
 
     final created = await auth.register(
-      email: 'patient@example.com',
+      email: 'patient_new@example.com',
       password: 'Password1!',
       role: UserRole.patient,
       displayName: 'Patient',
     );
 
-    expect(created.email, 'patient@example.com');
+    expect(created.email, 'patient_new@example.com');
     expect(created.role, UserRole.patient);
     expect(auth.currentUser, isNotNull);
 
@@ -21,36 +21,49 @@ void main() {
     expect(auth.currentUser, isNull);
 
     final loggedIn =
-        await auth.signIn(email: 'patient@example.com', password: 'Password1!');
+        await auth.signIn(email: 'patient_new@example.com', password: 'Password1!');
     expect(loggedIn.id, created.id);
     expect(auth.currentUser, isNotNull);
   });
 
-  test('staff approval uses submitted password', () async {
+  test('healthcare professionals cannot self-register', () async {
     final auth = InMemoryAuthRepository();
-    // submit as dietitian (goes to pending)
-    expect(
-      () => auth.register(
-        email: 'dietitian_new@example.com',
-        password: 'TheirSecret1!',
-        role: UserRole.dietitian,
-        displayName: 'Dietitian',
-      ),
-      throwsA(isA<Exception>()),
-    );
+    // Staff roles must be created by an administrator, not self-registered.
+    for (final role in const [
+      UserRole.doctor,
+      UserRole.nurse,
+      UserRole.dietitian,
+    ]) {
+      await expectLater(
+        auth.register(
+          email: '${role.name}_new@example.com',
+          password: 'TheirSecret1!',
+          role: role,
+          displayName: 'Staff',
+        ),
+        throwsA(isA<Exception>()),
+      );
+    }
 
+    // No pending approvals are created for self-registration attempts.
     final pending = await auth.pendingApprovals();
-    expect(
-      pending.any(
-        (p) => p.email == 'dietitian_new@example.com' && p.role == UserRole.dietitian,
-      ),
-      isTrue,
-    );
+    expect(pending, isEmpty);
+  });
 
-    await auth.approveUser(email: 'dietitian_new@example.com');
-    // They can now sign in with their own password.
-    final user =
-        await auth.signIn(email: 'dietitian_new@example.com', password: 'TheirSecret1!');
+  test('admin can create a healthcare professional account', () async {
+    final auth = InMemoryAuthRepository();
+    final created = await auth.createUser(
+      email: 'dietitian_admin@example.com',
+      password: 'AdminMade1!',
+      role: UserRole.dietitian,
+      displayName: 'Dietitian',
+    );
+    expect(created.role, UserRole.dietitian);
+
+    final user = await auth.signIn(
+      email: 'dietitian_admin@example.com',
+      password: 'AdminMade1!',
+    );
     expect(user.role, UserRole.dietitian);
   });
 }

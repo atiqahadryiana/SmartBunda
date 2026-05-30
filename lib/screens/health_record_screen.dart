@@ -234,60 +234,44 @@ class _ReportsTabState extends State<_ReportsTab> {
     final reports = _reportsFromDocs(widget.reports);
     final grouped = _groupReports(reports);
 
-    return Stack(
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       children: [
-        ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 158),
-          children: [
-            const _RecordHero(
-              title: 'Medical Reports',
-              subtitle:
-                  'View, download, and manage your medical documents securely.',
-              icon: Icons.picture_as_pdf_outlined,
-            ),
-            const SizedBox(height: 16),
-            if (reports.isEmpty)
-              const _ReportsEmptyState()
-            else
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 220),
-                child: Column(
-                  key: ValueKey(reports.length),
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (final entry in grouped.entries) ...[
-                      _DateSectionHeader(title: entry.key),
-                      const SizedBox(height: 10),
-                      for (final report in entry.value) ...[
-                        _ReportCard(
-                          report: report,
-                          onView: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  _ReportDetailScreen(report: report),
-                            ),
-                          ),
+        const _RecordHero(
+          title: 'Medical Reports',
+          subtitle:
+              'View, download, and share reports prepared by your care team.',
+          icon: Icons.picture_as_pdf_outlined,
+        ),
+        const SizedBox(height: 16),
+        if (reports.isEmpty)
+          const _ReportsEmptyState()
+        else
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            child: Column(
+              key: ValueKey(reports.length),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final entry in grouped.entries) ...[
+                  _DateSectionHeader(title: entry.key),
+                  const SizedBox(height: 10),
+                  for (final report in entry.value) ...[
+                    _ReportCard(
+                      report: report,
+                      onView: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => _ReportDetailScreen(report: report),
                         ),
-                        const SizedBox(height: 12),
-                      ],
-                      const SizedBox(height: 6),
-                    ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                   ],
-                ),
-              ),
-          ],
-        ),
-        Positioned(
-          right: 16,
-          bottom: 96,
-          child: FloatingActionButton.extended(
-            onPressed: () => _showSnack(
-              'Upload report flow is ready for storage integration.',
+                  const SizedBox(height: 6),
+                ],
+              ],
             ),
-            icon: const Icon(Icons.upload_file_outlined),
-            label: const Text('Upload New Report'),
           ),
-        ),
       ],
     );
   }
@@ -304,11 +288,6 @@ class _ReportsTabState extends State<_ReportsTab> {
       for (final key in order)
         if (groups[key] != null) key: groups[key]!,
     };
-  }
-
-  void _showSnack(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
@@ -537,7 +516,7 @@ class _ReportsEmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Try another filter or upload a new medical report.',
+            'Reports prepared by your care team will appear here.',
             textAlign: TextAlign.center,
             style: TextStyle(color: scheme.onSurfaceVariant),
           ),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../theme/app_theme.dart';
+
 class AuthShell extends StatelessWidget {
   const AuthShell({
     super.key,
@@ -22,9 +24,7 @@ class AuthShell extends StatelessWidget {
     final base = Theme.of(context);
     final scheme = base.colorScheme;
     final accent = scheme.primary;
-    final accentAlt = scheme.secondary;
     final deep = scheme.onSurface;
-    final surface = scheme.surface;
 
     final textTheme = GoogleFonts.poppinsTextTheme(base.textTheme);
     final titleStyle = GoogleFonts.poppins(
@@ -108,31 +108,26 @@ class AuthShell extends StatelessWidget {
       child: Scaffold(
         body: Stack(
           children: [
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    surface,
-                    Color.alphaBlend(accentAlt.withValues(alpha: 20), surface),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
+            // Hero blush gradient background
+            const DecoratedBox(
+              decoration: BoxDecoration(gradient: AppTheme.heroGradient),
+              child: SizedBox.expand(),
             ),
-            Positioned(
+            // Pink top accent stripe
+            const Positioned(
               top: 0,
               left: 0,
               right: 0,
-              child: Container(
-                height: 8,
-                color: accent,
+              child: DecoratedBox(
+                decoration: BoxDecoration(gradient: AppTheme.primaryGradient),
+                child: SizedBox(height: 5),
               ),
             ),
             SafeArea(
               child: Center(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20, vertical: 32),
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 460),
                     child: Column(
@@ -148,19 +143,20 @@ class AuthShell extends StatelessWidget {
                           accent: accent,
                           deep: deep,
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 24),
                         Container(
-                          padding: const EdgeInsets.all(20),
+                          padding: const EdgeInsets.all(22),
                           decoration: BoxDecoration(
-                            color: surface.withValues(alpha: 245),
-                            borderRadius: BorderRadius.circular(8),
+                            color: AppTheme.cardBackground,
+                            borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                                color: Colors.white.withValues(alpha: 220)),
+                                color: const Color(0xFFF8BBD0)),
                             boxShadow: [
                               BoxShadow(
-                                color: accentAlt.withValues(alpha: 18),
+                                color: AppTheme.primaryPink
+                                    .withValues(alpha: 30),
                                 blurRadius: 28,
-                                offset: const Offset(0, 14),
+                                offset: const Offset(0, 10),
                               ),
                             ],
                           ),
@@ -206,23 +202,20 @@ class _BrandHeader extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(14),
+            width: 64,
+            height: 64,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              gradient: LinearGradient(
-                colors: [accent, accent.withValues(alpha: 210)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              gradient: AppTheme.primaryGradient,
+              borderRadius: BorderRadius.circular(18),
               boxShadow: [
                 BoxShadow(
-                  color: accent.withValues(alpha: 60),
-                  blurRadius: 16,
+                  color: AppTheme.darkPink.withValues(alpha: 70),
+                  blurRadius: 18,
                   offset: const Offset(0, 8),
                 ),
               ],
             ),
-            child: const Icon(Icons.favorite, color: Colors.white, size: 28),
+            child: const Icon(Icons.favorite, color: Colors.white, size: 30),
           ),
           const SizedBox(height: 12),
           Text(title, style: titleStyle, textAlign: TextAlign.center),

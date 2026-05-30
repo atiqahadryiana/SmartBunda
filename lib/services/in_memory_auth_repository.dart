@@ -221,34 +221,16 @@ class InMemoryAuthRepository implements AuthRepository {
     String? mmcNumber,
     String? jlmNumber,
   }) async {
-    if (role == UserRole.admin) {
+    if (role != UserRole.patient) {
       throw Exception(
-          'Admin accounts must be created by a system administrator.');
+          'Only patient accounts can be self-registered. Healthcare '
+          'professional and admin accounts are created by an administrator.');
     }
     final normalized = _normalizeEmail(email);
     if (_idByEmail.containsKey(normalized)) {
       throw Exception('Email already in use');
     }
     _validatePassword(password);
-    if (_needsApproval(role)) {
-      final salt = _newSalt();
-      _pendingApprovals[normalized] = _PendingApproval(
-        email: normalized,
-        passwordHash: _hashPassword(password, salt),
-        salt: salt,
-        role: role,
-        displayName: displayName,
-        mmcNumber: mmcNumber,
-        jlmNumber: jlmNumber,
-        requestedAt: DateTime.now(),
-      );
-      _log(
-        ActivityType.approvalRequested,
-        'Approval requested for $normalized',
-        actorId: _currentUser?.id,
-      );
-      throw Exception('Registration submitted. Awaiting admin approval.');
-    }
     final user = AppUser(
       id: _id(),
       email: normalized,
@@ -379,6 +361,73 @@ class InMemoryAuthRepository implements AuthRepository {
     required Set<AccessPermission> permissions,
   }) async {
     await updateUser(userId: userId, permissions: permissions);
+  }
+
+  @override
+  Future<void> updateProfessionalProfile({
+    required String userId,
+    String? displayName,
+    String? mmcNumber,
+    String? specialization,
+    String? phone,
+  }) async {
+    final record = _recordsById[userId];
+    if (record == null) {
+      throw Exception('User not found');
+    }
+    final updated = record.user.copyWith(
+      displayName: displayName?.trim(),
+      mmcNumber: mmcNumber?.trim(),
+      specialization: specialization?.trim(),
+      phone: phone?.trim(),
+    );
+    record.user = updated;
+    _emitUsers();
+    if (_currentUser?.id == userId) {
+      _currentUser = updated;
+      _authController.add(_currentUser);
+    }
+    _log(
+      ActivityType.userUpdated,
+      'Professional profile updated',
+      actorId: _currentUser?.id,
+      subjectId: userId,
+    );
+  }
+
+  @override
+  Future<void> saveUserSettings({
+    required String userId,
+    required Map<String, dynamic> settings,
+  }) async {
+    // Settings are persisted client-side (SharedPreferences) in the in-memory
+    // repository; this is a no-op kept for interface parity.
+  }
+
+  @override
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    _validatePassword(newPassword);
+    final user = _currentUser;
+    if (user == null) {
+      throw Exception('You must be signed in to change your password.');
+    }
+    final record = _recordsById[user.id];
+    if (record == null) {
+      throw Exception('User not found');
+    }
+    if (!_verifyPassword(record, currentPassword)) {
+      throw Exception('Current password is incorrect.');
+    }
+    _setPassword(record, newPassword);
+    _log(
+      ActivityType.passwordResetCompleted,
+      'Password changed',
+      actorId: user.id,
+      subjectId: user.id,
+    );
   }
 
   @override
@@ -672,12 +721,6 @@ class InMemoryAuthRepository implements AuthRepository {
   String _resetCode() => (_rand.nextInt(900000) + 100000).toString();
 
   String _id() => (_rand.nextInt(900000) + 100000).toString();
-
-  bool _needsApproval(UserRole role) {
-    return role == UserRole.doctor ||
-        role == UserRole.nurse ||
-        role == UserRole.dietitian;
-  }
 
   UserRole _roleFromString(String? value) {
     final normalized = value?.trim().toLowerCase();

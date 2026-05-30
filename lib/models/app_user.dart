@@ -71,6 +71,9 @@ class AppUser {
     this.displayName,
     this.isActive = true,
     this.permissions,
+    this.mmcNumber,
+    this.specialization,
+    this.phone,
   });
 
   final String id;
@@ -80,11 +83,28 @@ class AppUser {
   final bool isActive;
   final Set<AccessPermission>? permissions;
 
+  /// Malaysian Medical Council registration number (healthcare professionals).
+  final String? mmcNumber;
+
+  /// Clinical specialization (healthcare professionals).
+  final String? specialization;
+
+  /// Contact phone number.
+  final String? phone;
+
   Set<AccessPermission> get effectivePermissions =>
       permissions ?? defaultPermissionsFor(role);
 
   bool hasPermission(AccessPermission permission) {
     return effectivePermissions.contains(permission);
+  }
+
+  /// Specialization to display — falls back to a role-based default when the
+  /// user has not set an explicit value.
+  String get effectiveSpecialization {
+    final value = specialization?.trim();
+    if (value != null && value.isNotEmpty) return value;
+    return defaultSpecializationFor(role);
   }
 
   AppUser copyWith({
@@ -95,6 +115,9 @@ class AppUser {
     bool? isActive,
     Set<AccessPermission>? permissions,
     bool permissionsExplicit = false,
+    String? mmcNumber,
+    String? specialization,
+    String? phone,
   }) {
     final resolvedPermissions =
         permissionsExplicit ? permissions : this.permissions;
@@ -105,7 +128,27 @@ class AppUser {
       displayName: displayName ?? this.displayName,
       isActive: isActive ?? this.isActive,
       permissions: resolvedPermissions,
+      mmcNumber: mmcNumber ?? this.mmcNumber,
+      specialization: specialization ?? this.specialization,
+      phone: phone ?? this.phone,
     );
+  }
+}
+
+/// Default clinical specialization label derived from the user's role.
+/// Mirrors the role-based mapping previously hard-coded in the admin overview.
+String defaultSpecializationFor(UserRole role) {
+  switch (role) {
+    case UserRole.doctor:
+      return 'Maternal Health';
+    case UserRole.dietitian:
+      return 'Pregnancy Nutrition';
+    case UserRole.nurse:
+      return 'Vital Signs Monitoring';
+    case UserRole.admin:
+      return 'Administration';
+    case UserRole.patient:
+      return 'Patient';
   }
 }
 

@@ -69,6 +69,30 @@ abstract class AuthRepository {
     required Set<AccessPermission> permissions,
   });
 
+  /// Update a healthcare professional's profile details (display name, MMC
+  /// number, specialization, phone). Null fields are left unchanged.
+  Future<void> updateProfessionalProfile({
+    required String userId,
+    String? displayName,
+    String? mmcNumber,
+    String? specialization,
+    String? phone,
+  });
+
+  /// Persist per-user settings (theme/locale/notifications + arbitrary keys)
+  /// under the user document's `settings` map.
+  Future<void> saveUserSettings({
+    required String userId,
+    required Map<String, dynamic> settings,
+  });
+
+  /// Change the signed-in user's password, re-authenticating with the current
+  /// password first.
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  });
+
   Future<void> adminResetPassword({
     required String email,
     required String newPassword,

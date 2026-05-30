@@ -131,9 +131,10 @@ class FirebaseAuthRepository implements AuthRepository {
     String? jlmNumber,
   }) async {
     _validatePassword(password);
-    if (role == UserRole.admin) {
+    if (role != UserRole.patient) {
       throw Exception(
-          'Admin accounts must be created by a system administrator.');
+          'Only patient accounts can be self-registered. Healthcare '
+          'professional and admin accounts are created by an administrator.');
     }
     await _loadSettings();
     final cred = await _auth.createUserWithEmailAndPassword(
@@ -279,6 +280,67 @@ class FirebaseAuthRepository implements AuthRepository {
     required Set<AccessPermission> permissions,
   }) async {
     await updateUser(userId: userId, permissions: permissions);
+  }
+
+  @override
+  Future<void> updateProfessionalProfile({
+    required String userId,
+    String? displayName,
+    String? mmcNumber,
+    String? specialization,
+    String? phone,
+  }) async {
+    final updates = <String, dynamic>{};
+    if (displayName != null) updates['fullName'] = displayName.trim();
+    if (mmcNumber != null) updates['mmcNumber'] = mmcNumber.trim();
+    if (specialization != null) {
+      updates['specialization'] = specialization.trim();
+    }
+    if (phone != null) updates['phone'] = phone.trim();
+    if (updates.isEmpty) return;
+    await _userDoc(userId).set(updates, SetOptions(merge: true));
+    await _log(
+      ActivityType.userUpdated,
+      'Professional profile updated',
+      actorId: _currentUser?.id,
+      subjectId: userId,
+    );
+  }
+
+  @override
+  Future<void> saveUserSettings({
+    required String userId,
+    required Map<String, dynamic> settings,
+  }) async {
+    if (settings.isEmpty) return;
+    await _userDoc(userId).set(
+      {'settings': settings},
+      SetOptions(merge: true),
+    );
+  }
+
+  @override
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    _validatePassword(newPassword);
+    final user = _auth.currentUser;
+    if (user == null || user.email == null) {
+      throw Exception('You must be signed in to change your password.');
+    }
+    final credential = fb.EmailAuthProvider.credential(
+      email: user.email!,
+      password: currentPassword,
+    );
+    await user.reauthenticateWithCredential(credential);
+    await user.updatePassword(newPassword);
+    await _log(
+      ActivityType.passwordResetCompleted,
+      'Password changed',
+      actorId: user.uid,
+      subjectId: user.uid,
+    );
   }
 
   @override
@@ -527,6 +589,9 @@ class FirebaseAuthRepository implements AuthRepository {
       displayName: displayName,
       isActive: isActive,
       permissions: permissions,
+      mmcNumber: (data?['mmcNumber'] as String?)?.trim(),
+      specialization: (data?['specialization'] as String?)?.trim(),
+      phone: (data?['phone'] as String?)?.trim(),
     );
   }
 

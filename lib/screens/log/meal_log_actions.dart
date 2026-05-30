@@ -4,10 +4,10 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../localization/app_strings.dart';
 import '../../models/food_entry.dart';
-import '../../models/food_item.dart';
 import '../../providers/app_providers.dart';
 import '../../services/food_image_classifier.dart';
 import '../../services/service_providers.dart';
+import '../food_analysis_result_screen.dart';
 import 'meal_log_utils.dart';
 
 class MealLogActions {
@@ -450,204 +450,38 @@ class MealLogActions {
     } catch (error) {
       if (rootContext.mounted) {
         ScaffoldMessenger.of(rootContext).hideCurrentSnackBar();
+        final msg = error is FoodImageClassifierException
+            ? error.userMessage
+            : 'Image analysis failed: $error';
         ScaffoldMessenger.of(rootContext).showSnackBar(
-          SnackBar(content: Text(strings.t('$error'))),
-        );
-      }
-      return;
-    }
-
-    final foods = await ref.read(foodDatabaseProvider).loadFoods();
-    if (foods.isEmpty) {
-      if (rootContext.mounted) {
-        ScaffoldMessenger.of(rootContext).hideCurrentSnackBar();
-        ScaffoldMessenger.of(rootContext).showSnackBar(
-          SnackBar(content: Text(strings.t('Food database is empty.'))),
-        );
-      }
-      return;
-    }
-    if (!rootContext.mounted) return;
-    final candidates = _predictionCandidates(predictions, foods);
-    if (candidates.isEmpty) return;
-    ScaffoldMessenger.of(rootContext).hideCurrentSnackBar();
-    final suggestion = await _selectPredictedFood(
-      rootContext,
-      strings,
-      candidates,
-    );
-    if (suggestion == null) return;
-    if (!suggestion.hasNutrition) {
-      if (!rootContext.mounted) return;
-      await showAddEntrySheet(
-        rootContext,
-        ref,
-        initialMeal: suggestion.food.name,
-      );
-      return;
-    }
-    if (!rootContext.mounted) return;
-    final mealType = await selectMealType(rootContext);
-    if (mealType == null) return;
-    if (!rootContext.mounted) return;
-    final quantity =
-        await promptQuantity(rootContext, strings, suggestion.food);
-    if (quantity == null) return;
-    final entry = entryFromFood(
-      user.id,
-      suggestion.food,
-      mealType: mealType,
-      quantity: quantity,
-    );
-    try {
-      await ref.read(dataStoreProvider).addEntry(entry);
-      ref.invalidate(entriesProvider);
-      if (rootContext.mounted) {
-        ScaffoldMessenger.of(rootContext).showSnackBar(
-          SnackBar(content: Text(strings.t('Meal saved from image scan.'))),
-        );
-      }
-    } catch (error) {
-      if (rootContext.mounted) {
-        ScaffoldMessenger.of(rootContext).showSnackBar(
-          SnackBar(content: Text(strings.saveFailed('$error'))),
-        );
-      }
-    }
-  }
-
-  static List<_FoodPredictionCandidate> _predictionCandidates(
-    List<FoodImagePrediction> predictions,
-    List<FoodItem> foods,
-  ) {
-    final matches = <_FoodPredictionCandidate>[];
-    final matchedIds = <String>{};
-    final matchedLabels = <String>{};
-    for (final prediction in predictions) {
-      final normalizedLabel = _normalizeFoodLabel(prediction.label);
-      if (matchedLabels.contains(normalizedLabel)) continue;
-      matchedLabels.add(normalizedLabel);
-      final food = _findFoodByLabel(foods, prediction.label);
-      if (food != null && !matchedIds.contains(food.id)) {
-        matchedIds.add(food.id);
-        matches.add(
-          _FoodPredictionCandidate(
-            food: food,
-            prediction: prediction,
-            hasNutrition: true,
+          SnackBar(
+            content: Text(msg),
+            duration: const Duration(seconds: 5),
           ),
         );
-        continue;
       }
-      matches.add(
-        _FoodPredictionCandidate(
-          food: _detectedFoodItem(prediction.label),
-          prediction: prediction,
-          hasNutrition: false,
-        ),
-      );
+      return;
     }
-    return matches;
-  }
 
-  static FoodItem _detectedFoodItem(String label) {
-    final name = _normalizeFoodLabel(label)
-        .split(' ')
-        .where((part) => part.isNotEmpty)
-        .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
-        .join(' ');
-    return FoodItem(
-      id: 'detected-${_normalizeFoodLabel(label).replaceAll(' ', '-')}',
-      name: name.isEmpty ? label : name,
-      servingSize: '1 serving',
-      caloriesPerServing: 0,
-      proteinG: 0,
-      carbG: 0,
-      fatG: 0,
-      ironMg: 0,
-      folateMcg: 0,
-    );
-  }
+    if (!rootContext.mounted) return;
+    ScaffoldMessenger.of(rootContext).hideCurrentSnackBar();
 
-  static FoodItem? _findFoodByLabel(List<FoodItem> foods, String label) {
-    final normalizedLabel = _normalizeFoodLabel(label);
-    for (final food in foods) {
-      if (_normalizeFoodLabel(food.name) == normalizedLabel) return food;
-    }
-    for (final food in foods) {
-      final normalizedName = _normalizeFoodLabel(food.name);
-      if (normalizedName.contains(normalizedLabel) ||
-          normalizedLabel.contains(normalizedName)) {
-        return food;
-      }
-    }
-    return null;
-  }
-
-  static String _normalizeFoodLabel(String value) {
-    return value
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]+'), ' ')
-        .trim()
-        .replaceAll(RegExp(r'\s+'), ' ');
-  }
-
-  static Future<_FoodPredictionCandidate?> _selectPredictedFood(
-    BuildContext context,
-    AppStrings strings,
-    List<_FoodPredictionCandidate> candidates,
-  ) {
-    return showModalBottomSheet<_FoodPredictionCandidate>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Text(
-                strings.t('Choose detected food'),
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Text(
-                strings.t(
-                    'Pick the closest match before saving to your meal log.'),
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ),
-            ...candidates.map(
-              (candidate) => ListTile(
-                leading: const Icon(Icons.restaurant_menu_outlined),
-                title: Text(candidate.food.name),
-                subtitle: Text(
-                  candidate.hasNutrition
-                      ? '${strings.t('Confidence')}: ${candidate.prediction.confidenceLabel}'
-                      : '${strings.t('Confidence')}: ${candidate.prediction.confidenceLabel} | ${strings.t('Nutrition details needed')}',
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.of(context).maybePop(candidate),
-              ),
-            ),
-            const SizedBox(height: 8),
-          ],
+    // Navigate to FoodAnalysisResultScreen for AI-powered nutrition lookup & save
+    // The screen integrates:
+    //   • Top-K prediction confidence display
+    //   • MyFCD local nutrition database lookup
+    //   • Portion size slider (10–1000g)
+    //   • Meal type selector (breakfast/lunch/dinner/snack)
+    //   • Complete nutrition facts card
+    //   • Direct Firebase save via dataStore.addEntry()
+    await Navigator.of(rootContext).push<bool>(
+      MaterialPageRoute(
+        builder: (context) => FoodAnalysisResultScreen(
+          imageBytes: bytes,
+          predictions: predictions,
         ),
       ),
     );
+    ref.invalidate(entriesProvider);
   }
-}
-
-class _FoodPredictionCandidate {
-  const _FoodPredictionCandidate({
-    required this.food,
-    required this.prediction,
-    required this.hasNutrition,
-  });
-
-  final FoodItem food;
-  final FoodImagePrediction prediction;
-  final bool hasNutrition;
 }

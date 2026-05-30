@@ -5,734 +5,478 @@
   },
   {
     "index": 1,
-    "label": "air mata kucing"
-  },
-  {
-    "index": 2,
     "label": "ais kacang"
   },
   {
-    "index": 3,
+    "index": 2,
     "label": "ais krim malaysia"
   },
   {
-    "index": 4,
+    "index": 3,
     "label": "apam balik"
   },
   {
-    "index": 5,
+    "index": 4,
     "label": "appam"
   },
   {
-    "index": 6,
-    "label": "ayam buttermilk"
-  },
-  {
-    "index": 7,
+    "index": 5,
     "label": "ayam goreng berempah"
   },
   {
-    "index": 8,
+    "index": 6,
     "label": "ayam goreng kunyit"
   },
   {
-    "index": 9,
+    "index": 7,
     "label": "ayam masak kicap"
   },
   {
-    "index": 10,
-    "label": "ayam masak lemak cili api"
-  },
-  {
-    "index": 11,
+    "index": 8,
     "label": "ayam masak merah"
   },
   {
-    "index": 12,
-    "label": "ayam paprik"
-  },
-  {
-    "index": 13,
+    "index": 9,
     "label": "ayam penyet"
   },
   {
-    "index": 14,
-    "label": "ayam percik"
-  },
-  {
-    "index": 15,
-    "label": "ayam sambal"
-  },
-  {
-    "index": 16,
-    "label": "barley drink"
-  },
-  {
-    "index": 17,
+    "index": 10,
     "label": "bihun goreng"
   },
   {
-    "index": 18,
+    "index": 11,
     "label": "bihun sup"
   },
   {
-    "index": 19,
+    "index": 12,
     "label": "bihun tomyam"
   },
   {
-    "index": 20,
-    "label": "bubur cha cha"
-  },
-  {
-    "index": 21,
+    "index": 13,
     "label": "bubur pulut hitam"
   },
   {
-    "index": 22,
+    "index": 14,
     "label": "burger ramly"
   },
   {
-    "index": 23,
+    "index": 15,
     "label": "capati"
   },
   {
-    "index": 24,
+    "index": 16,
     "label": "cempedak goreng"
   },
   {
-    "index": 25,
+    "index": 17,
     "label": "cendol"
   },
   {
-    "index": 26,
-    "label": "char kuey teow"
-  },
-  {
-    "index": 27,
+    "index": 18,
     "label": "cheese naan"
   },
   {
-    "index": 28,
+    "index": 19,
     "label": "claypot chicken rice"
   },
   {
-    "index": 29,
-    "label": "cucur udang"
-  },
-  {
-    "index": 30,
-    "label": "curry mee"
-  },
-  {
-    "index": 31,
+    "index": 20,
     "label": "curry puff"
   },
   {
-    "index": 32,
-    "label": "daging masak hitam"
-  },
-  {
-    "index": 33,
+    "index": 21,
     "label": "daging paprik"
   },
   {
-    "index": 34,
+    "index": 22,
     "label": "daging salai masak lemak"
   },
   {
-    "index": 35,
-    "label": "garlic naan"
-  },
-  {
-    "index": 36,
+    "index": 23,
     "label": "gulai ayam"
   },
   {
-    "index": 37,
+    "index": 24,
     "label": "gulai daging"
   },
   {
-    "index": 38,
+    "index": 25,
     "label": "gulai ikan"
   },
   {
-    "index": 39,
-    "label": "hainanese chicken rice"
-  },
-  {
-    "index": 40,
-    "label": "hokkien mee"
-  },
-  {
-    "index": 41,
+    "index": 26,
     "label": "ikan asam pedas"
   },
   {
-    "index": 42,
+    "index": 27,
     "label": "ikan bakar"
   },
   {
-    "index": 43,
+    "index": 28,
     "label": "ikan goreng kunyit"
   },
   {
-    "index": 44,
+    "index": 29,
     "label": "ikan masak lemak"
   },
   {
-    "index": 45,
+    "index": 30,
     "label": "ikan percik"
   },
   {
-    "index": 46,
-    "label": "ikan sambal"
-  },
-  {
-    "index": 47,
+    "index": 31,
     "label": "kari ayam"
   },
   {
-    "index": 48,
-    "label": "kari ikan"
-  },
-  {
-    "index": 49,
-    "label": "kari kambing"
-  },
-  {
-    "index": 50,
-    "label": "kari kepala ikan"
-  },
-  {
-    "index": 51,
-    "label": "keropok keping"
-  },
-  {
-    "index": 52,
-    "label": "keropok lekor"
-  },
-  {
-    "index": 53,
+    "index": 32,
     "label": "ketupat"
   },
   {
-    "index": 54,
+    "index": 33,
     "label": "kopi ais"
   },
   {
-    "index": 55,
-    "label": "kopi o ais"
-  },
-  {
-    "index": 56,
+    "index": 34,
     "label": "kuey teow goreng"
   },
   {
-    "index": 57,
+    "index": 35,
     "label": "kuey teow sup"
   },
   {
-    "index": 58,
+    "index": 36,
     "label": "kuey teow theng"
   },
   {
-    "index": 59,
+    "index": 37,
     "label": "kuih badak berendam"
   },
   {
-    "index": 60,
+    "index": 38,
     "label": "kuih bahulu"
   },
   {
-    "index": 61,
+    "index": 39,
     "label": "kuih bakar pandan"
   },
   {
-    "index": 62,
+    "index": 40,
     "label": "kuih bangkit"
   },
   {
-    "index": 63,
+    "index": 41,
     "label": "kuih bingka labu"
   },
   {
-    "index": 64,
+    "index": 42,
     "label": "kuih bingka ubi"
   },
   {
-    "index": 65,
+    "index": 43,
     "label": "kuih cara"
   },
   {
-    "index": 66,
-    "label": "kuih kapit"
-  },
-  {
-    "index": 67,
-    "label": "kuih kaswi"
-  },
-  {
-    "index": 68,
-    "label": "kuih keria"
-  },
-  {
-    "index": 69,
+    "index": 44,
     "label": "kuih ketayap"
   },
   {
-    "index": 70,
-    "label": "kuih koci"
-  },
-  {
-    "index": 71,
+    "index": 45,
     "label": "kuih lapis"
   },
   {
-    "index": 72,
+    "index": 46,
     "label": "kuih lopes"
   },
   {
-    "index": 73,
+    "index": 47,
     "label": "kuih nagasari"
   },
   {
-    "index": 74,
+    "index": 48,
     "label": "kuih onde onde"
   },
   {
-    "index": 75,
+    "index": 49,
     "label": "kuih puteri ayu"
   },
   {
-    "index": 76,
-    "label": "kuih seri muka"
-  },
-  {
-    "index": 77,
+    "index": 50,
     "label": "kuih talam"
   },
   {
-    "index": 78,
+    "index": 51,
     "label": "kuih tepung pelita"
   },
   {
-    "index": 79,
+    "index": 52,
     "label": "laksa johor"
   },
   {
-    "index": 80,
-    "label": "laksa kedah"
-  },
-  {
-    "index": 81,
+    "index": 53,
     "label": "laksa kelantan"
   },
   {
-    "index": 82,
+    "index": 54,
     "label": "laksa penang"
   },
   {
-    "index": 83,
-    "label": "laksa perlis"
-  },
-  {
-    "index": 84,
+    "index": 55,
     "label": "laksa sarawak"
   },
   {
-    "index": 85,
+    "index": 56,
     "label": "lemang"
   },
   {
-    "index": 86,
+    "index": 57,
     "label": "limau ais"
   },
   {
-    "index": 87,
+    "index": 58,
     "label": "loh mee"
   },
   {
-    "index": 88,
-    "label": "lok lok"
-  },
-  {
-    "index": 89,
+    "index": 59,
     "label": "maggi goreng mamak"
   },
   {
-    "index": 90,
-    "label": "maggi kari"
-  },
-  {
-    "index": 91,
-    "label": "masala dosa"
-  },
-  {
-    "index": 92,
-    "label": "mee bandung"
-  },
-  {
-    "index": 93,
+    "index": 60,
     "label": "mee goreng mamak"
   },
   {
-    "index": 94,
+    "index": 61,
     "label": "mee hailam"
   },
   {
-    "index": 95,
+    "index": 62,
     "label": "mee jawa"
   },
   {
-    "index": 96,
+    "index": 63,
     "label": "mee kari"
   },
   {
-    "index": 97,
-    "label": "mee kolok"
-  },
-  {
-    "index": 98,
-    "label": "mee rebus"
-  },
-  {
-    "index": 99,
+    "index": 64,
     "label": "mee siam"
   },
   {
-    "index": 100,
+    "index": 65,
     "label": "mee soto"
   },
   {
-    "index": 101,
-    "label": "mee sup"
-  },
-  {
-    "index": 102,
-    "label": "mee udang"
-  },
-  {
-    "index": 103,
+    "index": 66,
     "label": "mee wantan"
   },
   {
-    "index": 104,
-    "label": "milo ais"
-  },
-  {
-    "index": 105,
+    "index": 67,
     "label": "milo dinosaur"
   },
   {
-    "index": 106,
+    "index": 68,
     "label": "murtabak ayam"
   },
   {
-    "index": 107,
+    "index": 69,
     "label": "murtabak daging"
   },
   {
-    "index": 108,
+    "index": 70,
     "label": "nasi ambeng"
   },
   {
-    "index": 109,
-    "label": "nasi arab"
-  },
-  {
-    "index": 110,
+    "index": 71,
     "label": "nasi ayam"
   },
   {
-    "index": 111,
+    "index": 72,
     "label": "nasi briyani"
   },
   {
-    "index": 112,
+    "index": 73,
     "label": "nasi dagang"
   },
   {
-    "index": 113,
+    "index": 74,
     "label": "nasi goreng ayam"
   },
   {
-    "index": 114,
+    "index": 75,
     "label": "nasi goreng cili padi"
   },
   {
-    "index": 115,
+    "index": 76,
     "label": "nasi goreng ikan masin"
   },
   {
-    "index": 116,
-    "label": "nasi goreng kampung"
-  },
-  {
-    "index": 117,
-    "label": "nasi goreng paprik"
-  },
-  {
-    "index": 118,
-    "label": "nasi goreng pattaya"
-  },
-  {
-    "index": 119,
+    "index": 77,
     "label": "nasi goreng seafood"
   },
   {
-    "index": 120,
+    "index": 78,
     "label": "nasi goreng usa"
   },
   {
-    "index": 121,
+    "index": 79,
     "label": "nasi kebuli"
   },
   {
-    "index": 122,
+    "index": 80,
     "label": "nasi kerabu"
   },
   {
-    "index": 123,
+    "index": 81,
     "label": "nasi kukus"
   },
   {
-    "index": 124,
+    "index": 82,
     "label": "nasi lemak"
   },
   {
-    "index": 125,
-    "label": "nasi mandy"
-  },
-  {
-    "index": 126,
+    "index": 83,
     "label": "nasi minyak"
   },
   {
-    "index": 127,
+    "index": 84,
     "label": "nasi tomato"
   },
   {
-    "index": 128,
+    "index": 85,
     "label": "nasi tumpang"
   },
   {
-    "index": 129,
+    "index": 86,
     "label": "nasi ulam"
   },
   {
-    "index": 130,
+    "index": 87,
     "label": "oblong burger"
   },
   {
-    "index": 131,
-    "label": "otak otak"
-  },
-  {
-    "index": 132,
-    "label": "pan mee"
-  },
-  {
-    "index": 133,
-    "label": "pengat pisang"
-  },
-  {
-    "index": 134,
-    "label": "pengat ubi"
-  },
-  {
-    "index": 135,
-    "label": "pisang goreng"
-  },
-  {
-    "index": 136,
-    "label": "popiah basah"
-  },
-  {
-    "index": 137,
+    "index": 88,
     "label": "popiah goreng"
   },
   {
-    "index": 138,
+    "index": 89,
     "label": "pulut kuning"
   },
   {
-    "index": 139,
+    "index": 90,
     "label": "pulut mangga"
   },
   {
-    "index": 140,
+    "index": 91,
     "label": "putu mayam"
   },
   {
-    "index": 141,
+    "index": 92,
     "label": "rendang ayam"
   },
   {
-    "index": 142,
+    "index": 93,
     "label": "rendang daging"
   },
   {
-    "index": 143,
+    "index": 94,
     "label": "rendang kerang"
   },
   {
-    "index": 144,
-    "label": "rendang paru"
-  },
-  {
-    "index": 145,
+    "index": 95,
     "label": "roti bawang"
   },
   {
-    "index": 146,
+    "index": 96,
     "label": "roti bom"
   },
   {
-    "index": 147,
-    "label": "roti canai"
-  },
-  {
-    "index": 148,
-    "label": "roti coklat"
-  },
-  {
-    "index": 149,
+    "index": 97,
     "label": "roti john"
   },
   {
-    "index": 150,
-    "label": "roti milo"
-  },
-  {
-    "index": 151,
+    "index": 98,
     "label": "roti naan"
   },
   {
-    "index": 152,
-    "label": "roti pisang"
-  },
-  {
-    "index": 153,
-    "label": "roti planta"
-  },
-  {
-    "index": 154,
+    "index": 99,
     "label": "roti sardin"
   },
   {
-    "index": 155,
+    "index": 100,
     "label": "roti telur"
   },
   {
-    "index": 156,
+    "index": 101,
     "label": "roti tisu"
   },
   {
-    "index": 157,
+    "index": 102,
     "label": "sago gula melaka"
   },
   {
-    "index": 158,
+    "index": 103,
     "label": "sambal kerang"
   },
   {
-    "index": 159,
+    "index": 104,
     "label": "sambal sotong"
   },
   {
-    "index": 160,
+    "index": 105,
     "label": "sambal udang"
   },
   {
-    "index": 161,
+    "index": 106,
     "label": "satay ayam"
   },
   {
-    "index": 162,
+    "index": 107,
     "label": "satay daging"
   },
   {
-    "index": 163,
+    "index": 108,
     "label": "satay hati"
   },
   {
-    "index": 164,
+    "index": 109,
     "label": "satay perut"
   },
   {
-    "index": 165,
+    "index": 110,
     "label": "sirap ais"
   },
   {
-    "index": 166,
-    "label": "sirap bandung"
-  },
-  {
-    "index": 167,
+    "index": 111,
     "label": "sup ayam"
   },
   {
-    "index": 168,
+    "index": 112,
     "label": "sup daging"
   },
   {
-    "index": 169,
-    "label": "sup ekor"
-  },
-  {
-    "index": 170,
-    "label": "sup kambing"
-  },
-  {
-    "index": 171,
+    "index": 113,
     "label": "sup tulang"
   },
   {
-    "index": 172,
+    "index": 114,
     "label": "tauhu bergedil"
   },
   {
-    "index": 173,
+    "index": 115,
     "label": "tauhu sumbat"
   },
   {
-    "index": 174,
+    "index": 116,
     "label": "teh ais"
   },
   {
-    "index": 175,
-    "label": "teh o ais"
-  },
-  {
-    "index": 176,
+    "index": 117,
     "label": "teh o ais limau"
   },
   {
-    "index": 177,
+    "index": 118,
     "label": "teh tarik"
   },
   {
-    "index": 178,
-    "label": "tom yam ayam"
-  },
-  {
-    "index": 179,
+    "index": 119,
     "label": "tom yam campur"
-  },
-  {
-    "index": 180,
-    "label": "tom yam seafood"
-  },
-  {
-    "index": 181,
-    "label": "tosai"
-  },
-  {
-    "index": 182,
-    "label": "vadai"
-  },
-  {
-    "index": 183,
-    "label": "yong tau foo"
   }
 ]

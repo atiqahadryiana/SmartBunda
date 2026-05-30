@@ -12,7 +12,7 @@ import 'admin_screen.dart';
 import 'admin_overview_screen.dart';
 import 'appointments_screen.dart';
 import 'education_screen.dart';
-import 'food_logging_hub_screen.dart';
+import 'food_scan_screen.dart';
 import 'health_record_screen.dart';
 import 'login_screen.dart';
 import 'nurse_monitoring_screen.dart';
@@ -20,6 +20,7 @@ import 'nurse_overview_screen.dart';
 import 'nutritionist_screen.dart';
 import 'nutrition_plan_management_screen.dart';
 import 'patient_dashboard_screen.dart';
+import 'pre_pregnancy_assessment_screen.dart';
 import 'patient_profiles_screen.dart';
 import 'profile_screen.dart';
 import 'reports_screen.dart';
@@ -47,6 +48,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
     final strings = AppStrings.of(context);
     final role = resolvedUser.role;
+    if (role == UserRole.admin) {
+      return const AdminOverviewScreen();
+    }
     final navItems = _navItemsForUser(resolvedUser, strings);
     final pages = navItems.map((item) => item.page).toList();
     final tabs = navItems.map((item) => item.destination).toList();
@@ -132,10 +136,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   List<_NavItem> _navItemsForUser(AppUser user, AppStrings strings) {
     final permissions = user.effectivePermissions;
     if (user.role == UserRole.patient) {
+      // 4-tab structure: Home → Scan → History → Profile
+      // Scanner is top-level navigation (not buried inside Food & Water Log).
       final patientItems = <_NavItem>[
         _NavItem(
           page: PatientDashboardScreen(
             onOpenTab: (value) => setState(() => _index = value),
+            onOpenRiskAssessment: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const PrePregnancyAssessmentScreen(),
+              ),
+            ),
             onOpenEducation: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const EducationScreen()),
             ),
@@ -149,31 +160,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           permission: AccessPermission.reporting,
         ),
         const _NavItem(
-          page: HealthRecordScreen(),
+          page: FoodScanScreen(),
           destination: NavigationDestination(
-            icon: Icon(Icons.folder_copy_outlined),
-            selectedIcon: Icon(Icons.folder_copy),
-            label: 'Health Record',
-          ),
-          permission: AccessPermission.patientProfiles,
-        ),
-        const _NavItem(
-          page: FoodLoggingHubScreen(),
-          destination: NavigationDestination(
-            icon: Icon(Icons.restaurant_menu_outlined),
-            selectedIcon: Icon(Icons.restaurant_menu),
-            label: 'Food & Water Log',
+            icon: Icon(Icons.center_focus_strong_outlined),
+            selectedIcon: Icon(Icons.center_focus_strong),
+            label: 'Scan',
           ),
           permission: AccessPermission.foodLogging,
         ),
         const _NavItem(
-          page: AppointmentsScreen(role: UserRole.patient),
+          page: HealthRecordScreen(),
           destination: NavigationDestination(
-            icon: Icon(Icons.event_available_outlined),
-            selectedIcon: Icon(Icons.event_available),
-            label: 'Appointment',
+            icon: Icon(Icons.history_outlined),
+            selectedIcon: Icon(Icons.history),
+            label: 'History',
           ),
-          permission: AccessPermission.appointments,
+          permission: AccessPermission.patientProfiles,
         ),
         const _NavItem(
           page: ProfileScreen(),
@@ -255,15 +257,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           .toList();
     }
 
-    final items = <_NavItem>[
-      _NavItem(
-        page: RoleModulesScreen(role: user.role),
-        destination: NavigationDestination(
-          icon: const Icon(Icons.grid_view_outlined),
-          label: strings.navModules,
-        ),
-      ),
-    ];
+    final items = user.role == UserRole.admin
+        ? <_NavItem>[]
+        : <_NavItem>[
+            _NavItem(
+              page: RoleModulesScreen(role: user.role),
+              destination: NavigationDestination(
+                icon: const Icon(Icons.grid_view_outlined),
+                label: strings.navModules,
+              ),
+            ),
+          ];
     switch (user.role) {
       case UserRole.patient:
         break;
@@ -462,53 +466,57 @@ class _FloatingBottomNavigationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surface = Color.alphaBlend(
-      scheme.primary.withValues(alpha: isDark ? 18 : 10),
-      scheme.surface.withValues(alpha: isDark ? 220 : 225),
-    );
+    // Glassmorphism surface: blush-tinted frosted glass
+    final surface = isDark
+        ? const Color(0xFF18242E).withValues(alpha: 200)
+        : Colors.white.withValues(alpha: 195);
 
     return SafeArea(
-      minimum: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+      minimum: const EdgeInsets.fromLTRB(16, 0, 16, 14),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(32),
           boxShadow: [
+            // base shadow
             BoxShadow(
-              color: scheme.shadow.withValues(alpha: isDark ? 55 : 28),
-              blurRadius: 26,
-              offset: const Offset(0, 14),
+              color: Colors.black.withValues(alpha: isDark ? 60 : 22),
+              blurRadius: 32,
+              offset: const Offset(0, 16),
             ),
+            // pink glow
             BoxShadow(
-              color: scheme.primary.withValues(alpha: isDark ? 28 : 18),
-              blurRadius: 18,
-              offset: const Offset(0, 4),
+              color: const Color(0xFFEC407A).withValues(alpha: isDark ? 40 : 22),
+              blurRadius: 22,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(32),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
             child: Container(
-              height: 82,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+              height: 80,
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
               decoration: BoxDecoration(
                 color: surface,
-                borderRadius: BorderRadius.circular(28),
+                borderRadius: BorderRadius.circular(32),
                 border: Border.all(
-                  color: scheme.outlineVariant.withValues(alpha: 150),
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 18)
+                      : const Color(0xFFF8BBD0).withValues(alpha: 180),
+                  width: 1.0,
                 ),
               ),
               child: Row(
                 children: [
-                  for (var index = 0; index < destinations.length; index++)
+                  for (var i = 0; i < destinations.length; i++)
                     Expanded(
-                      child: _FloatingNavItem(
-                        destination: destinations[index],
-                        selected: selectedIndex == index,
-                        onTap: () => onDestinationSelected(index),
+                      child: _GlassNavItem(
+                        destination: destinations[i],
+                        selected: selectedIndex == i,
+                        onTap: () => onDestinationSelected(i),
                       ),
                     ),
                 ],
@@ -521,8 +529,8 @@ class _FloatingBottomNavigationBar extends StatelessWidget {
   }
 }
 
-class _FloatingNavItem extends StatelessWidget {
-  const _FloatingNavItem({
+class _GlassNavItem extends StatelessWidget {
+  const _GlassNavItem({
     required this.destination,
     required this.selected,
     required this.onTap,
@@ -534,9 +542,9 @@ class _FloatingNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final isDark    = Theme.of(context).brightness == Brightness.dark;
     final activeIcon = destination.selectedIcon ?? destination.icon;
-    final icon = selected ? activeIcon : destination.icon;
+    final icon       = selected ? activeIcon : destination.icon;
 
     return Tooltip(
       message: destination.label,
@@ -544,40 +552,34 @@ class _FloatingNavItem extends StatelessWidget {
         selected: selected,
         button: true,
         label: destination.label,
-        child: InkWell(
+        child: GestureDetector(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(22),
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 240),
+            duration: const Duration(milliseconds: 260),
             curve: Curves.easeOutCubic,
-            margin: EdgeInsets.symmetric(
-              horizontal: selected ? 2 : 0,
-              vertical: selected ? 0 : 3,
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 8),
+            margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
             decoration: BoxDecoration(
               gradient: selected
-                  ? LinearGradient(
-                      colors: [
-                        scheme.primary.withValues(alpha: 42),
-                        scheme.secondary.withValues(alpha: 32),
-                      ],
+                  ? const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFFF48FB1), Color(0xFFEC407A)],
                     )
                   : null,
-              borderRadius: BorderRadius.circular(22),
+              borderRadius: BorderRadius.circular(26),
               boxShadow: selected
                   ? [
                       BoxShadow(
-                        color: scheme.primary.withValues(alpha: 34),
-                        blurRadius: 16,
-                        offset: const Offset(0, 6),
+                        color: const Color(0xFFEC407A).withValues(alpha: 55),
+                        blurRadius: 14,
+                        offset: const Offset(0, 5),
                       ),
                     ]
                   : null,
             ),
             child: AnimatedScale(
-              scale: selected ? 1.0 : 0.94,
-              duration: const Duration(milliseconds: 180),
+              scale: selected ? 1.0 : 0.92,
+              duration: const Duration(milliseconds: 200),
               curve: Curves.easeOutCubic,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -585,27 +587,32 @@ class _FloatingNavItem extends StatelessWidget {
                 children: [
                   IconTheme.merge(
                     data: IconThemeData(
-                      size: selected ? 23 : 22,
-                      color:
-                          selected ? scheme.primary : scheme.onSurfaceVariant,
+                      size: selected ? 22 : 21,
+                      color: selected
+                          ? Colors.white
+                          : isDark
+                              ? Colors.white.withValues(alpha: 150)
+                              : const Color(0xFF9E9E9E),
                     ),
                     child: icon,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   Text(
                     destination.label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: selected
-                              ? scheme.primary
-                              : scheme.onSurfaceVariant,
-                          fontWeight:
-                              selected ? FontWeight.w900 : FontWeight.w700,
-                          fontSize: 10.5,
-                          height: 1.0,
-                        ),
+                    style: TextStyle(
+                      color: selected
+                          ? Colors.white
+                          : isDark
+                              ? Colors.white.withValues(alpha: 130)
+                              : const Color(0xFF9E9E9E),
+                      fontWeight:
+                          selected ? FontWeight.w800 : FontWeight.w600,
+                      fontSize: 10.0,
+                      height: 1.0,
+                    ),
                   ),
                 ],
               ),

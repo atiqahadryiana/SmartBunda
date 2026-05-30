@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../localization/app_strings.dart';
+import '../theme/app_theme.dart';
 import 'login_screen.dart';
 import 'register_screen.dart';
+
+// Breakpoints
+bool _isMobile(BuildContext context) =>
+    MediaQuery.sizeOf(context).width < 600;
 
 class LandingScreen extends StatelessWidget {
   const LandingScreen({super.key});
@@ -102,7 +107,6 @@ class _TopNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
-    final scheme = Theme.of(context).colorScheme;
 
     return _PageBand(
       child: Padding(
@@ -117,10 +121,17 @@ class _TopNav extends StatelessWidget {
                   width: 42,
                   height: 42,
                   decoration: BoxDecoration(
-                    color: scheme.primary,
-                    borderRadius: BorderRadius.circular(10),
+                    gradient: AppTheme.primaryGradient,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.darkPink.withValues(alpha: 60),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                  child: const Icon(Icons.favorite, color: Colors.white),
+                  child: const Icon(Icons.favorite, color: Colors.white, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Text(
@@ -184,72 +195,122 @@ class _HeroSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final muted = scheme.onSurface.withValues(alpha: 175);
+    final mobile = _isMobile(context);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 34, 0, 34),
+      padding: EdgeInsets.fromLTRB(0, mobile ? 20 : 34, 0, mobile ? 20 : 34),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final wide = constraints.maxWidth >= 960;
+
+          final headlineStyle = mobile
+              ? Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    height: 1.12,
+                    letterSpacing: 0,
+                  )
+              : Theme.of(context).textTheme.displayMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    height: 1.02,
+                    letterSpacing: 0,
+                  );
+
           final intro = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _Eyebrow(
-                text: strings.t('Admin dashboard + mobile app'),
-              ),
-              const SizedBox(height: 18),
+              _Eyebrow(text: strings.t('AI Nutrition Tracker')),
+              const SizedBox(height: 16),
               Text(
-                strings
-                    .t('One nutrition platform for the clinic and the mother.'),
-                style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      height: 1.02,
-                      letterSpacing: 0,
-                    ),
+                strings.t(
+                    'One nutrition platform for the clinic and the mother.'),
+                style: headlineStyle,
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 14),
               Text(
                 strings.t(
                   'Smartbunda connects admin operations, care-team visibility, and daily mobile tracking in one coordinated workflow.',
                 ),
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: muted,
                       height: 1.55,
-                      fontWeight: FontWeight.w500,
                     ),
               ),
-              const SizedBox(height: 26),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  FilledButton.icon(
+              const SizedBox(height: 24),
+              // On mobile — full-width stacked buttons
+              if (mobile) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: GradientButton(
                     onPressed: onSignIn,
-                    icon: const Icon(Icons.dashboard_customize_outlined),
-                    label: Text(strings.t('Open platform')),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.login, color: Colors.white, size: 18),
+                        const SizedBox(width: 8),
+                        Text(
+                          strings.t('Sign in'),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  OutlinedButton.icon(
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
                     onPressed: onCreateAccount,
-                    icon: const Icon(Icons.phone_iphone_outlined),
+                    icon: const Icon(Icons.person_add_outlined),
                     label: Text(strings.t('Create account')),
                   ),
-                ],
-              ),
-              const SizedBox(height: 26),
+                ),
+              ] else ...[
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    FilledButton.icon(
+                      onPressed: onSignIn,
+                      icon: const Icon(Icons.dashboard_customize_outlined),
+                      label: Text(strings.t('Open platform')),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: onCreateAccount,
+                      icon: const Icon(Icons.phone_iphone_outlined),
+                      label: Text(strings.t('Create account')),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 20),
               Wrap(
-                spacing: 12,
-                runSpacing: 12,
+                spacing: 10,
+                runSpacing: 10,
                 children: [
-                  _ProofPill(label: strings.t('Admin approvals and reporting')),
-                  _ProofPill(
-                      label: strings.t('Mobile food and hydration logs')),
-                  _ProofPill(label: strings.t('Shared patient care context')),
+                  _ProofPill(label: strings.t('AI food recognition')),
+                  _ProofPill(label: strings.t('Daily nutrition tracking')),
+                  _ProofPill(label: strings.t('Care-team visibility')),
                 ],
               ),
             ],
           );
 
-          const preview = _HeroPreview();
+          // On mobile — hide the complex overlay preview; show a clean stats row
+          if (mobile) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                intro,
+                const SizedBox(height: 24),
+                const _MobileHeroStats(),
+              ],
+            );
+          }
 
+          const preview = _HeroPreview();
           return wide
               ? Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -268,6 +329,98 @@ class _HeroSection extends StatelessWidget {
                   ],
                 );
         },
+      ),
+    );
+  }
+}
+
+/// Mobile-only stats row shown instead of the complex overlay preview cards.
+class _MobileHeroStats extends StatelessWidget {
+  const _MobileHeroStats();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      children: [
+        Expanded(
+          child: _StatPill(
+            icon: Icons.local_fire_department_outlined,
+            value: '1,860',
+            unit: 'kcal today',
+            color: AppTheme.darkPink,
+          ),
+        ),
+        SizedBox(width: 10),
+        Expanded(
+          child: _StatPill(
+            icon: Icons.water_drop_outlined,
+            value: '1.6 L',
+            unit: 'hydration',
+            color: AppTheme.healthcareTeal,
+          ),
+        ),
+        SizedBox(width: 10),
+        Expanded(
+          child: _StatPill(
+            icon: Icons.center_focus_strong_outlined,
+            value: 'AI',
+            unit: 'food scan',
+            color: AppTheme.info,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatPill extends StatelessWidget {
+  const _StatPill({
+    required this.icon,
+    required this.value,
+    required this.unit,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String value;
+  final String unit;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppTheme.cardBackground,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 60)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 18),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 22),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
+          ),
+          Text(
+            unit,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppTheme.secondaryText,
+                ),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
@@ -560,8 +713,9 @@ class _SurfaceSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final vPad = _isMobile(context) ? 16.0 : 28.0;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 28),
+      padding: EdgeInsets.symmetric(vertical: vPad),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -622,7 +776,7 @@ class _SurfaceCard extends StatelessWidget {
             'Operational filters, sorting, and review queues',
             'Reporting, analytics, and system health',
           ],
-          accent: const Color(0xFFC24879),
+          accent: AppTheme.darkPink,
           preview: const _AdminSurfacePreview(),
         );
 
@@ -637,7 +791,7 @@ class _SurfaceCard extends StatelessWidget {
             'Hydration and appointment tracking',
             'Simple summaries and care-team visibility',
           ],
-          accent: const Color(0xFFE85D75),
+          accent: AppTheme.accentPink,
           preview: const _MobileSurfacePreview(),
         );
 
@@ -790,13 +944,23 @@ class _WorkflowBand extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final mobile = _isMobile(context);
+    final vPad = mobile ? 16.0 : 28.0;
+    final inner = mobile ? 18.0 : 26.0;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 28),
+      padding: EdgeInsets.symmetric(vertical: vPad),
       child: Container(
-        padding: const EdgeInsets.all(26),
+        padding: EdgeInsets.all(inner),
         decoration: BoxDecoration(
-          color: scheme.primary,
+          gradient: AppTheme.primaryGradient,
           borderRadius: BorderRadius.circular(22),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.darkPink.withValues(alpha: 50),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -902,8 +1066,9 @@ class _PlatformSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final vPad = _isMobile(context) ? 16.0 : 28.0;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 28),
+      padding: EdgeInsets.symmetric(vertical: vPad),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

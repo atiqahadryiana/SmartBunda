@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'providers/locale_provider.dart';
+import 'providers/theme_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/food_scan_screen.dart';
 import 'screens/get_started_screen.dart';
@@ -18,11 +19,12 @@ class SmartbundaApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final locale = ref.watch(appLocaleProvider);
+    final themeMode = ref.watch(appThemeModeProvider);
     return MaterialApp(
       title: 'Smartbunda',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.light,
+      themeMode: themeMode.themeMode,
       locale: locale,
       supportedLocales: const [
         Locale('en'),

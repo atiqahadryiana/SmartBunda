@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
 import 'package:tflite_flutter/tflite_flutter.dart';
@@ -23,7 +25,9 @@ class FoodImageClassifier {
     final decoded = img.decodeImage(bytes);
     if (decoded == null) {
       throw const FoodImageClassifierException(
-          'Could not read selected image.');
+        'Could not read the selected image. '
+        'Try a different photo (JPEG or PNG, clear lighting recommended).',
+      );
     }
 
     final oriented = img.bakeOrientation(decoded);
@@ -36,7 +40,10 @@ class FoodImageClassifier {
 
     final interpreter = _interpreter!;
     final outputShape = interpreter.getOutputTensor(0).shape;
-    final outputSize = outputShape.isEmpty ? _labels!.length : outputShape.last;
+    final modelOutputSize =
+        outputShape.isNotEmpty ? outputShape.last : _labels!.length;
+    final labelCount = _labels!.length;
+    final outputSize = modelOutputSize < labelCount ? modelOutputSize : labelCount;
     final output = List.generate(
       1,
       (_) => List<double>.filled(outputSize, 0),
@@ -53,10 +60,31 @@ class FoodImageClassifier {
   Future<void> _load() async {
     try {
       _interpreter = await Interpreter.fromAsset(modelAsset);
+      _interpreter!.allocateTensors();
       _labels = await _loadLabels();
+    } on FoodImageClassifierException {
+      rethrow;
     } catch (error) {
+      final msg = error.toString().toLowerCase();
+      if (msg.contains('unable to open') || msg.contains('not found')) {
+        throw FoodImageClassifierException(
+          'Food image scanner is not ready. '
+          'The model file (food_cnn.tflite) is missing from app assets.',
+          cause: error,
+        );
+      }
+      if (msg.contains('precondition') || msg.contains('failed')) {
+        throw FoodImageClassifierException(
+          'TFLite model initialisation failed (failed precondition). '
+          'This usually means the model was exported with incompatible '
+          'quantisation. Re-export using float16 quantisation and replace '
+          'assets/ml/food_cnn.tflite.',
+          cause: error,
+        );
+      }
       throw FoodImageClassifierException(
-        'Food image scanner is not ready. Train the CNN and copy food_cnn.tflite plus labels.json to assets/ml. Details: $error',
+        'Food image scanner failed to load.',
+        cause: error,
       );
     }
   }
@@ -67,37 +95,35 @@ class FoodImageClassifier {
       throw const FormatException('labels.json must contain a list.');
     }
 
-    final labels = rawLabels.map((item) {
-      if (item is String) return item;
-      if (item is Map && item['label'] is String) {
-        return item['label'] as String;
+    final labels = <String>[];
+    for (final item in rawLabels) {
+      if (item is String) {
+        labels.add(item);
+      } else if (item is Map && item['label'] is String) {
+        labels.add(item['label'] as String);
+      } else {
+        throw FormatException('Unexpected label entry: $item');
       }
-      throw const FormatException('Each label must be a string or label map.');
-    }).toList();
+    }
 
     if (labels.isEmpty) {
-      throw const FormatException('labels.json does not contain labels.');
+      throw const FormatException('labels.json is empty.');
     }
     return labels;
   }
 
-  List<List<List<List<double>>>> _imageToInput(img.Image image) {
-    return [
-      List.generate(
-        _inputSize,
-        (y) => List.generate(
-          _inputSize,
-          (x) {
-            final pixel = image.getPixel(x, y);
-            return [
-              pixel.r.toDouble(),
-              pixel.g.toDouble(),
-              pixel.b.toDouble(),
-            ];
-          },
-        ),
-      ),
-    ];
+  Float32List _imageToInput(img.Image image) {
+    final input = Float32List(_inputSize * _inputSize * 3);
+    var bufferIndex = 0;
+    for (var y = 0; y < _inputSize; y++) {
+      for (var x = 0; x < _inputSize; x++) {
+        final pixel = image.getPixel(x, y);
+        input[bufferIndex++] = pixel.rNormalized * 255.0;
+        input[bufferIndex++] = pixel.gNormalized * 255.0;
+        input[bufferIndex++] = pixel.bNormalized * 255.0;
+      }
+    }
+    return input;
   }
 
   List<FoodImagePrediction> _rankPredictions(
