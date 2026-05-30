@@ -145,32 +145,19 @@ class FirebaseAuthRepository implements AuthRepository {
     if (user == null) {
       throw Exception('Registration failed. Try again.');
     }
-    final needsApproval = _requiresApproval(role);
-    final status = needsApproval ? 'PENDING' : 'ACTIVE';
     await _upsertUserDoc(
       uid: user.uid,
       email: email,
-      role: role,
+      role: UserRole.patient,
       displayName: displayName,
-      status: status,
+      status: 'ACTIVE',
       permissions: null,
-      mmcNumber: mmcNumber,
-      jlmNumber: jlmNumber,
     );
-    if (needsApproval) {
-      await _auth.signOut();
-      await _log(
-        ActivityType.approvalRequested,
-        'Approval requested for ${email.trim().toLowerCase()}',
-        actorId: user.uid,
-      );
-      throw Exception('Registration submitted. Awaiting admin approval.');
-    }
     final appUser = await _loadUser(user.uid);
     _currentUser = appUser;
     await _log(
       ActivityType.register,
-      'User registered',
+      'Patient account registered',
       actorId: user.uid,
       subjectId: user.uid,
     );

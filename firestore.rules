@@ -53,9 +53,11 @@ service cloud.firestore {
 
     match /Users/{userId} {
       allow read: if signedIn();
-      // Self-registration is patient-only; staff/admin accounts are created by
-      // an administrator. An owner may update their own profile fields but not
-      // escalate their role, permissions, or status.
+      // Only patients may create their own account (self-registration).
+      // Doctor, Nurse, Dietitian, Nutritionist, and Administrator accounts are
+      // created exclusively by an administrator via the admin dashboard.
+      // An owner may update their own profile fields but not escalate their
+      // role, permissions, or status.
       allow create: if isStaff()
         || (isOwner(userId)
             && request.resource.data.role in ['patient', 'PATIENT']);

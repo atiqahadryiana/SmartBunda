@@ -152,7 +152,7 @@ class _TopNav extends StatelessWidget {
                 ),
                 FilledButton(
                   onPressed: onCreateAccount,
-                  child: Text(strings.t('Create account')),
+                  child: Text(strings.t('Create patient account')),
                 ),
               ],
             );
@@ -264,7 +264,7 @@ class _HeroSection extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: onCreateAccount,
                     icon: const Icon(Icons.person_add_outlined),
-                    label: Text(strings.t('Create account')),
+                    label: Text(strings.t('Create patient account')),
                   ),
                 ),
               ] else ...[
@@ -280,7 +280,7 @@ class _HeroSection extends StatelessWidget {
                     OutlinedButton.icon(
                       onPressed: onCreateAccount,
                       icon: const Icon(Icons.phone_iphone_outlined),
-                      label: Text(strings.t('Create account')),
+                      label: Text(strings.t('Create patient account')),
                     ),
                   ],
                 ),
@@ -1181,7 +1181,7 @@ class _FinalCta extends StatelessWidget {
                 ),
                 FilledButton(
                   onPressed: onCreateAccount,
-                  child: Text(strings.t('Create account')),
+                  child: Text(strings.t('Create patient account')),
                 ),
               ],
             );

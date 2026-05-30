@@ -63,7 +63,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
     return AuthShell(
-      title: strings.t('Create account'),
+      title: strings.t('Create patient account'),
       subtitle: strings
           .t('Join Smartbunda to personalize nutrition tracking and care.'),
       footer: Wrap(
@@ -195,7 +195,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             width: 18,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : Text(strings.t('Create account')),
+                        : Text(strings.t('Create patient account')),
                   ),
                 ),
               ],

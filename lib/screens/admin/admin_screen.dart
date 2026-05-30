@@ -82,7 +82,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                       _AdminPageHeader(
                         title: 'User Management',
                         subtitle:
-                            'Provision new accounts, review staff access, and keep role permissions under control.',
+                            'Provision healthcare professional accounts, manage access, and keep role permissions under control. Only patients can self-register.',
                         onCreateUser: () => _showCreateUserDialog(context, ref),
                       ),
                       const SizedBox(height: 20),
@@ -157,17 +157,17 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                         builder: (context, constraints) {
                           final compact = constraints.maxWidth < 1040;
                           final left = _PanelCard(
-                            title: 'Pending staff approvals',
+                            title: 'Healthcare professional accounts',
                             subtitle:
-                                'Review clinician and staff registrations before access is granted.',
+                                'Doctor, Nurse, Dietitian, and Nutritionist accounts are created and managed by the administrator. Use "Create user" to provision new staff accounts.',
                             child: pendingApprovalsAsync.when(
                               data: (pending) {
                                 if (pending.isEmpty) {
                                   return const _EmptyPanelState(
                                     icon: Icons.verified_user_outlined,
-                                    title: 'No approvals waiting',
+                                    title: 'No pending activations',
                                     message:
-                                        'New registration requests will appear here when staff sign up.',
+                                        'Healthcare professional accounts are created directly by the administrator. All provisioned accounts are immediately active.',
                                   );
                                 }
                                 return Column(

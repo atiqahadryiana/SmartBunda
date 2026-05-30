@@ -302,7 +302,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   TextButton(
                     onPressed: () => Navigator.of(context)
                         .pushNamed(RegisterScreen.routeName),
-                    child: Text(strings.t('Create account')),
+                    child: Text(strings.t('Create patient account')),
                   ),
                 ],
                 // ),
