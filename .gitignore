@@ -30,6 +30,7 @@ migrate_working_dir/
 .firebase/
 .vscode/
 .venv-ml/
+.flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
