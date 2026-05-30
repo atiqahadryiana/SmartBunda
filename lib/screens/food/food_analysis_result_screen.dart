@@ -15,8 +15,10 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:smartbunda/models/ai_food_analysis_result.dart';
 import 'package:smartbunda/models/food_entry.dart';
 import 'package:smartbunda/providers/app_providers.dart';
+import 'package:smartbunda/services/image_quality_checker.dart';
 import 'package:smartbunda/services/service_providers.dart';
 import 'package:smartbunda/services/food_image_classifier_api.dart';
 import 'package:smartbunda/theme/app_theme.dart';
@@ -53,10 +55,12 @@ class FoodAnalysisResultScreen extends ConsumerStatefulWidget {
     super.key,
     required this.imageBytes,
     required this.predictions,
+    this.imageQuality,
   });
 
   final Uint8List imageBytes;
   final List<FoodImagePrediction> predictions;
+  final ImageQualityResult? imageQuality;
 
   @override
   ConsumerState<FoodAnalysisResultScreen> createState() =>
@@ -71,6 +75,11 @@ class _FoodAnalysisResultScreenState
   bool _saving = false;
   bool _saved = false;
 
+  // Claude AI analysis state
+  AiFoodAnalysisResult? _aiResult;
+  bool _aiLoading = false;
+  bool _useAiResult = false;
+
   static MealType _defaultMealType() {
     final hour = DateTime.now().hour;
     if (hour < 10) return MealType.breakfast;
@@ -79,13 +88,39 @@ class _FoodAnalysisResultScreenState
     return MealType.snack;
   }
 
+  bool get _tfliteLowConfidence =>
+      widget.predictions.isEmpty ||
+      widget.predictions.first.confidence < 0.40;
+
   @override
   void initState() {
     super.initState();
     _selectedPredictionIndex = 0;
-    // Initialise portion to the default for the matched food entry
     final entry = _nutritionForSelected;
     if (entry != null) _portionG = entry.defaultPortionG;
+
+    // Auto-trigger Claude analysis when TFLite confidence is low
+    if (_tfliteLowConfidence) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _runAiAnalysis());
+    }
+  }
+
+  Future<void> _runAiAnalysis() async {
+    final service = ref.read(claudeFoodAnalysisServiceProvider);
+    if (!service.isEnabled || _aiLoading) return;
+    setState(() => _aiLoading = true);
+    try {
+      final result = await service.analyzeImage(widget.imageBytes);
+      if (mounted && result != null) {
+        setState(() {
+          _aiResult = result;
+          // Auto-switch to AI result only when TFLite confidence is low
+          if (_tfliteLowConfidence) _useAiResult = true;
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _aiLoading = false);
+    }
   }
 
   FoodNutritionData? get _nutritionForSelected {
@@ -101,29 +136,56 @@ class _FoodAnalysisResultScreenState
   Future<void> _saveLog() async {
     final user = ref.read(currentUserProvider);
     if (user == null) return;
-    final nutrition = _nutritionScaled;
-    final prediction = widget.predictions[_selectedPredictionIndex];
     setState(() => _saving = true);
 
     try {
       final ts = DateTime.now().microsecondsSinceEpoch.toString();
-      final entry = FoodEntry(
-        id:       ts,
-        userId:   user.id,
-        logId:    '${ts}_log',
-        foodId:   prediction.label,
-        date:     DateTime.now(),
-        meal:     prediction.displayName,
-        quantity: _portionG,
-        unit:     'g',
-        calories: nutrition?.energyKcal ?? 0,
-        protein:  nutrition?.proteinG   ?? 0,
-        carbs:    nutrition?.carbsG      ?? 0,
-        fat:      nutrition?.fatG        ?? 0,
-        ironMg:   nutrition?.ironMg      ?? 0,
-        mealType: _mealType.label,
-        notes:    'AI scan (${prediction.confidenceLabel})',
-      );
+      final FoodEntry entry;
+
+      if (_useAiResult && _aiResult != null) {
+        final ai = _aiResult!;
+        final foodName =
+            ai.foodItems.isNotEmpty ? ai.foodItems.first.name : 'Unknown food';
+        entry = FoodEntry(
+          id:       ts,
+          userId:   user.id,
+          logId:    '${ts}_log',
+          foodId:   'AI_${foodName.toLowerCase().replaceAll(' ', '_')}',
+          date:     DateTime.now(),
+          meal:     foodName,
+          quantity: _portionG,
+          unit:     'g',
+          calories: (ai.nutrition.calories * _portionG / 100).round(),
+          protein:  (ai.nutrition.proteinG * _portionG / 100).round(),
+          carbs:    (ai.nutrition.carbohydratesG * _portionG / 100).round(),
+          fat:      (ai.nutrition.fatG * _portionG / 100).round(),
+          ironMg:   ai.nutrition.ironMg * _portionG / 100,
+          folateMcg: ai.nutrition.folateMcg * _portionG / 100,
+          mealType: _mealType.label,
+          notes:    'Claude AI scan (${ai.confidence}%)',
+        );
+      } else {
+        final nutrition = _nutritionScaled;
+        final prediction = widget.predictions[_selectedPredictionIndex];
+        entry = FoodEntry(
+          id:       ts,
+          userId:   user.id,
+          logId:    '${ts}_log',
+          foodId:   prediction.label,
+          date:     DateTime.now(),
+          meal:     prediction.displayName,
+          quantity: _portionG,
+          unit:     'g',
+          calories: nutrition?.energyKcal ?? 0,
+          protein:  nutrition?.proteinG   ?? 0,
+          carbs:    nutrition?.carbsG      ?? 0,
+          fat:      nutrition?.fatG        ?? 0,
+          ironMg:   nutrition?.ironMg      ?? 0,
+          mealType: _mealType.label,
+          notes:    'AI scan (${widget.predictions[_selectedPredictionIndex].confidenceLabel})',
+        );
+      }
+
       await ref.read(dataStoreProvider).addEntry(entry);
       ref.invalidate(entriesProvider);
       if (mounted) setState(() => _saved = true);
@@ -164,28 +226,62 @@ class _FoodAnalysisResultScreenState
       body: CustomScrollView(
         slivers: [
           // ── Image hero ────────────────────────────────────────────────────
-          SliverToBoxAdapter(child: _ImageHero(bytes: widget.imageBytes, topPred: top)),
+          SliverToBoxAdapter(
+            child: _ImageHero(
+              bytes: widget.imageBytes,
+              topPred: top,
+              imageQuality: widget.imageQuality,
+            ),
+          ),
 
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
             sliver: SliverList.list(
               children: [
-                // ── Confidence predictions ───────────────────────────────
-                const _SectionTitle(icon: Icons.auto_awesome_outlined,
-                    title: 'Detected Foods', color: AppTheme.darkPink),
-                const SizedBox(height: 10),
-                _PredictionList(
-                  predictions: widget.predictions,
-                  selectedIndex: _selectedPredictionIndex,
-                  onSelect: (idx) {
-                    setState(() {
-                      _selectedPredictionIndex = idx;
-                      final e = _nutritionForSelected;
-                      if (e != null) _portionG = e.defaultPortionG;
-                    });
-                  },
-                ),
-                const SizedBox(height: 18),
+                // ── Claude AI analysis section (when active) ─────────────
+                if (_aiLoading)
+                  const _AiAnalysisLoadingCard(),
+                if (_aiResult != null) ...[
+                  _AiAnalysisToggle(
+                    aiResult: _aiResult!,
+                    useAiResult: _useAiResult,
+                    onToggle: (v) => setState(() => _useAiResult = v),
+                    onRetry: _runAiAnalysis,
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (_tfliteLowConfidence && _aiResult == null && !_aiLoading)
+                  _AiAnalysisRetryCard(onAnalyze: _runAiAnalysis),
+
+                // ── Confidence predictions (TFLite) ──────────────────────
+                if (!_useAiResult) ...[
+                  const _SectionTitle(icon: Icons.auto_awesome_outlined,
+                      title: 'Detected Foods', color: AppTheme.darkPink),
+                  const SizedBox(height: 10),
+                  _PredictionList(
+                    predictions: widget.predictions,
+                    selectedIndex: _selectedPredictionIndex,
+                    onSelect: (idx) {
+                      setState(() {
+                        _selectedPredictionIndex = idx;
+                        final e = _nutritionForSelected;
+                        if (e != null) _portionG = e.defaultPortionG;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 18),
+                ],
+
+                // ── AI-detected foods (Claude) ───────────────────────────
+                if (_useAiResult && _aiResult != null) ...[
+                  const _SectionTitle(
+                      icon: Icons.psychology_outlined,
+                      title: 'AI-Identified Foods',
+                      color: AppTheme.darkPink),
+                  const SizedBox(height: 10),
+                  _AiFoodItemsList(items: _aiResult!.foodItems),
+                  const SizedBox(height: 18),
+                ],
 
                 // ── Portion selector ─────────────────────────────────────
                 const _SectionTitle(icon: Icons.straighten_outlined,
@@ -208,14 +304,27 @@ class _FoodAnalysisResultScreenState
                 const SizedBox(height: 18),
 
                 // ── Nutrition facts ──────────────────────────────────────
-                const _SectionTitle(icon: Icons.pie_chart_outline,
-                    title: 'Nutrition Facts (MyFCD)',
-                    color: AppTheme.darkPink),
-                const SizedBox(height: 10),
-                if (nutrition != null)
-                  _NutritionFactsCard(nutrition: nutrition, portionG: _portionG)
-                else
-                  const _NoNutritionCard(),
+                if (_useAiResult && _aiResult != null) ...[
+                  _SectionTitle(
+                      icon: Icons.pie_chart_outline,
+                      title: 'Nutrition Facts (Claude AI, ${_aiResult!.confidence}% confidence)',
+                      color: AppTheme.darkPink),
+                  const SizedBox(height: 10),
+                  _AiNutritionFactsCard(
+                    aiNutrition: _aiResult!.nutrition,
+                    portionG: _portionG,
+                    recommendation: _aiResult!.recommendation,
+                  ),
+                ] else ...[
+                  const _SectionTitle(icon: Icons.pie_chart_outline,
+                      title: 'Nutrition Facts (MyFCD)',
+                      color: AppTheme.darkPink),
+                  const SizedBox(height: 10),
+                  if (nutrition != null)
+                    _NutritionFactsCard(nutrition: nutrition, portionG: _portionG)
+                  else
+                    const _NoNutritionCard(),
+                ],
 
                 // ── Disclaimer ───────────────────────────────────────────
                 const SizedBox(height: 14),
@@ -240,10 +349,15 @@ class _FoodAnalysisResultScreenState
 // ── Image hero ────────────────────────────────────────────────────────────────
 
 class _ImageHero extends StatelessWidget {
-  const _ImageHero({required this.bytes, required this.topPred});
+  const _ImageHero({
+    required this.bytes,
+    required this.topPred,
+    this.imageQuality,
+  });
 
   final Uint8List bytes;
   final FoodImagePrediction? topPred;
+  final ImageQualityResult? imageQuality;
 
   @override
   Widget build(BuildContext context) {
@@ -268,6 +382,12 @@ class _ImageHero extends StatelessWidget {
             ),
           ),
         ),
+        // Image quality badge (top-right)
+        if (imageQuality != null)
+          Positioned(
+            top: 12, right: 12,
+            child: _ImageQualityBadge(quality: imageQuality!),
+          ),
         // Food name overlay
         if (topPred != null)
           Positioned(
@@ -291,6 +411,51 @@ class _ImageHero extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _ImageQualityBadge extends StatelessWidget {
+  const _ImageQualityBadge({required this.quality});
+
+  final ImageQualityResult quality;
+
+  Color get _color {
+    switch (quality.tier) {
+      case ImageQualityTier.good: return AppTheme.success;
+      case ImageQualityTier.fair: return AppTheme.warning;
+      case ImageQualityTier.poor: return AppTheme.errorColor;
+    }
+  }
+
+  IconData get _icon {
+    switch (quality.tier) {
+      case ImageQualityTier.good: return Icons.check_circle_outline;
+      case ImageQualityTier.fair: return Icons.info_outline;
+      case ImageQualityTier.poor: return Icons.warning_amber_rounded;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: _color.withValues(alpha: 220),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(_icon, color: Colors.white, size: 13),
+          const SizedBox(width: 4),
+          Text(
+            quality.tierLabel,
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -822,7 +987,7 @@ class _SaveBar extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
         child: Row(
           children: [
-            // Rescan button
+            // Rescan button (also doubles as retake)
             OutlinedButton.icon(
               onPressed: saving ? null : onRescan,
               icon: const Icon(Icons.refresh, size: 18),
@@ -866,6 +1031,330 @@ class _SaveBar extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── AI analysis loading card ──────────────────────────────────────────────────
+
+class _AiAnalysisLoadingCard extends StatelessWidget {
+  const _AiAnalysisLoadingCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.cardBackground,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.primaryPink.withValues(alpha: 80)),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(
+            width: 20, height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            'Analyzing with Claude AI...',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.secondaryText),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── AI analysis toggle card ───────────────────────────────────────────────────
+
+class _AiAnalysisToggle extends StatelessWidget {
+  const _AiAnalysisToggle({
+    required this.aiResult,
+    required this.useAiResult,
+    required this.onToggle,
+    required this.onRetry,
+  });
+
+  final AiFoodAnalysisResult aiResult;
+  final bool useAiResult;
+  final ValueChanged<bool> onToggle;
+  final VoidCallback onRetry;
+
+  Color get _qualityColor {
+    switch (aiResult.imageQuality.toLowerCase()) {
+      case 'good': return AppTheme.success;
+      case 'fair': return AppTheme.warning;
+      default: return AppTheme.errorColor;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.cardBackground,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.primaryPink.withValues(alpha: 80)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.psychology_outlined,
+                  size: 18, color: AppTheme.darkPink),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Claude AI Analysis',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700),
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: _qualityColor.withValues(alpha: 40),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: _qualityColor.withValues(alpha: 120)),
+                ),
+                child: Text(
+                  '${aiResult.imageQuality} · ${aiResult.confidence}%',
+                  style: TextStyle(
+                      color: _qualityColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  useAiResult
+                      ? 'Using Claude AI nutrition data'
+                      : 'Using local TFLite data',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.secondaryText),
+                ),
+              ),
+              Switch.adaptive(
+                value: useAiResult,
+                onChanged: onToggle,
+                activeColor: AppTheme.darkPink,
+              ),
+            ],
+          ),
+          if (aiResult.requiresUserConfirmation)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                'AI confidence is low — please confirm the food item.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTheme.warning,
+                      fontStyle: FontStyle.italic),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── AI analysis retry card ────────────────────────────────────────────────────
+
+class _AiAnalysisRetryCard extends StatelessWidget {
+  const _AiAnalysisRetryCard({required this.onAnalyze});
+
+  final VoidCallback onAnalyze;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.cardBackground,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.primaryPink.withValues(alpha: 60)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.psychology_outlined,
+              size: 18, color: AppTheme.darkPink),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Recognition confidence is low. Try Claude AI for better results.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.secondaryText),
+            ),
+          ),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: onAnalyze,
+            child: const Text('Analyze'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── AI food items list ────────────────────────────────────────────────────────
+
+class _AiFoodItemsList extends StatelessWidget {
+  const _AiFoodItemsList({required this.items});
+
+  final List<AiFoodItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.cardBackground,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFF8BBD0)),
+      ),
+      child: Column(
+        children: [
+          for (final item in items)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(item.name,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyMedium
+                            ?.copyWith(fontWeight: FontWeight.w600)),
+                  ),
+                  _ConfidenceBadge(confidence: item.confidence / 100),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── AI nutrition facts card ───────────────────────────────────────────────────
+
+class _AiNutritionFactsCard extends StatelessWidget {
+  const _AiNutritionFactsCard({
+    required this.aiNutrition,
+    required this.portionG,
+    required this.recommendation,
+  });
+
+  final AiNutrition aiNutrition;
+  final double portionG;
+  final String recommendation;
+
+  double get _scale => portionG / 100;
+
+  @override
+  Widget build(BuildContext context) {
+    final n = aiNutrition;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.cardBackground,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFF8BBD0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _NutritionRow('Calories', '${(n.calories * _scale).round()} kcal', bold: true),
+          const Divider(height: 12, color: Color(0xFFF8BBD0)),
+          _NutritionRow('Carbohydrates', '${(n.carbohydratesG * _scale).toStringAsFixed(1)} g'),
+          _NutritionRow('Protein', '${(n.proteinG * _scale).toStringAsFixed(1)} g'),
+          _NutritionRow('Fat', '${(n.fatG * _scale).toStringAsFixed(1)} g'),
+          _NutritionRow('Fibre', '${(n.fiberG * _scale).toStringAsFixed(1)} g'),
+          _NutritionRow('Sugar', '${(n.sugarG * _scale).toStringAsFixed(1)} g'),
+          _NutritionRow('Sodium', '${(n.sodiumMg * _scale).toStringAsFixed(0)} mg'),
+          if (n.ironMg > 0)
+            _NutritionRow('Iron', '${(n.ironMg * _scale).toStringAsFixed(1)} mg',
+                highlight: true),
+          if (n.calciumMg > 0)
+            _NutritionRow('Calcium', '${(n.calciumMg * _scale).toStringAsFixed(0)} mg'),
+          if (n.folateMcg > 0)
+            _NutritionRow('Folate', '${(n.folateMcg * _scale).toStringAsFixed(0)} mcg',
+                highlight: true),
+          if (recommendation.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryPink.withValues(alpha: 25),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.pregnant_woman, size: 16,
+                      color: AppTheme.darkPink),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      recommendation,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppTheme.primaryText),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _NutritionRow extends StatelessWidget {
+  const _NutritionRow(this.label, this.value,
+      {this.bold = false, this.highlight = false});
+
+  final String label;
+  final String value;
+  final bool bold;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          if (highlight)
+            const Padding(
+              padding: EdgeInsets.only(right: 4),
+              child: Icon(Icons.star, size: 12, color: AppTheme.darkPink),
+            ),
+          Expanded(
+            child: Text(label,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTheme.secondaryText,
+                      fontWeight: bold ? FontWeight.w700 : null)),
+          ),
+          Text(value,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
+                    color: highlight ? AppTheme.darkPink : null)),
+        ],
       ),
     );
   }

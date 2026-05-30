@@ -6,6 +6,7 @@ import 'package:smartbunda/localization/app_strings.dart';
 import 'package:smartbunda/models/food_entry.dart';
 import 'package:smartbunda/providers/app_providers.dart';
 import 'package:smartbunda/services/food_image_classifier.dart';
+import 'package:smartbunda/services/image_quality_checker.dart';
 import 'package:smartbunda/services/service_providers.dart';
 import 'package:smartbunda/screens/food/food_analysis_result_screen.dart';
 import 'package:smartbunda/screens/log/meal_log_utils.dart';
@@ -436,6 +437,20 @@ class MealLogActions {
       return;
     }
 
+    // ── Step 1: Image quality check ──────────────────────────────────────────
+    final qualityResult =
+        ref.read(imageQualityCheckerProvider).assess(bytes);
+
+    if (qualityResult.tier == ImageQualityTier.poor && rootContext.mounted) {
+      final proceed = await _showQualityWarningDialog(
+        rootContext,
+        strings,
+        qualityResult,
+      );
+      if (!proceed) return;
+    }
+
+    // ── Step 2: TFLite food classification ───────────────────────────────────
     if (rootContext.mounted) {
       ScaffoldMessenger.of(rootContext).showSnackBar(
         SnackBar(content: Text(strings.t('Analyzing image...'))),
@@ -466,22 +481,68 @@ class MealLogActions {
     if (!rootContext.mounted) return;
     ScaffoldMessenger.of(rootContext).hideCurrentSnackBar();
 
-    // Navigate to FoodAnalysisResultScreen for AI-powered nutrition lookup & save
-    // The screen integrates:
-    //   • Top-K prediction confidence display
-    //   • MyFCD local nutrition database lookup
-    //   • Portion size slider (10–1000g)
-    //   • Meal type selector (breakfast/lunch/dinner/snack)
-    //   • Complete nutrition facts card
-    //   • Direct Firebase save via dataStore.addEntry()
     await Navigator.of(rootContext).push<bool>(
       MaterialPageRoute(
         builder: (context) => FoodAnalysisResultScreen(
           imageBytes: bytes,
           predictions: predictions,
+          imageQuality: qualityResult,
         ),
       ),
     );
     ref.invalidate(entriesProvider);
+  }
+
+  // Shows a dialog when image quality is poor.
+  // Returns true if the user wants to proceed anyway, false to cancel.
+  static Future<bool> _showQualityWarningDialog(
+    BuildContext context,
+    AppStrings strings,
+    ImageQualityResult quality,
+  ) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+            const SizedBox(width: 8),
+            Text(strings.t('Poor Image Quality')),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(strings.t(
+                'The image quality may affect food recognition accuracy.')),
+            const SizedBox(height: 10),
+            ...quality.issues.map(
+              (issue) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('• '),
+                    Expanded(child: Text(issue)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(strings.t('Retake Photo')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(strings.t('Proceed Anyway')),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
   }
 }

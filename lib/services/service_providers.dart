@@ -14,7 +14,9 @@ import 'package:smartbunda/services/firestore_data_store.dart';
 import 'package:smartbunda/services/firestore_nutrition_plan_repository.dart';
 import 'package:smartbunda/services/food_catalog_repository.dart';
 import 'package:smartbunda/services/food_database.dart';
+import 'package:smartbunda/services/claude_food_analysis_service.dart';
 import 'package:smartbunda/services/food_image_classifier.dart';
+import 'package:smartbunda/services/image_quality_checker.dart';
 import 'package:smartbunda/services/nutrition_plan_repository.dart';
 import 'package:smartbunda/services/system_admin_repository.dart';
 
@@ -57,6 +59,15 @@ final foodImageClassifierProvider = Provider<FoodImageClassifier>((ref) {
   ref.onDispose(classifier.dispose);
   return classifier;
 });
+
+final imageQualityCheckerProvider = Provider<ImageQualityChecker>(
+  (ref) => ImageQualityChecker(),
+);
+
+final claudeFoodAnalysisServiceProvider =
+    Provider<ClaudeFoodAnalysisService>(
+  (ref) => ClaudeFoodAnalysisService(),
+);
 
 final contentRepositoryProvider = Provider<FirestoreContentRepository>((ref) {
   return FirestoreContentRepository();
