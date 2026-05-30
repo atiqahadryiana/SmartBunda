@@ -2,10 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // ── Primary palette ───────────────────────────────────────────────────────
-  static const Color primaryPink = Color(0xFFF48FB1);
-  static const Color darkPink    = Color(0xFFEC407A);
-  static const Color accentPink  = Color(0xFFFF5C8A);
+  // ── Primary palette (Material Design 3 — SmartBunda pink) ──────────────────
+  // `darkPink` is the MD3 light Primary and is referenced widely as the brand
+  // accent across the app; `primaryPink` is the lighter Secondary tone.
+  static const Color darkPink    = Color(0xFFE91E63); // Primary (light)
+  static const Color primaryPink = Color(0xFFF48FB1); // Secondary
+  static const Color accentPink  = Color(0xFFFF5C8A); // CTA accent
+
+  // MD3 container tokens
+  static const Color primaryContainer    = Color(0xFFFCE4EC);
+  static const Color onPrimaryContainer  = Color(0xFF880E4F);
+  static const Color secondaryContainer  = Color(0xFFF8BBD0);
 
   // Legacy alias kept for backward compat
   static const Color primaryRose    = darkPink;
@@ -18,11 +25,13 @@ class AppTheme {
   static const Color lavender       = Color(0xFFE7DDFB);
 
   // ── Surfaces & backgrounds ────────────────────────────────────────────────
-  static const Color surfaceBase     = Color(0xFFFFF5F8); // secondary bg
-  static const Color cardBackground  = Color(0xFFFDF9FA); // card bg
-  static const Color surfaceElevated = Color(0xFFFFFFFF); // main bg
-  static const Color darkSurface     = Color(0xFF111A22);
-  static const Color darkElevated    = Color(0xFF18242E);
+  static const Color surfaceBase     = Color(0xFFFFF1F5); // surface variant / soft bg
+  static const Color cardBackground  = Color(0xFFFFFFFF); // card surface
+  static const Color surfaceElevated = Color(0xFFFFFFFF); // main background
+  static const Color background      = Color(0xFFFFFDFD); // app background
+  static const Color darkSurface     = Color(0xFF1E1E1E); // dark surface
+  static const Color darkBackground  = Color(0xFF121212); // dark background
+  static const Color darkElevated    = Color(0xFF2C2227); // dark surface variant
 
   // ── Semantic colors ───────────────────────────────────────────────────────
   static const Color success     = Color(0xFF66BB6A);
@@ -33,8 +42,8 @@ class AppTheme {
   static const Color activeState = Color(0xFFE91E63);
 
   // ── Text ──────────────────────────────────────────────────────────────────
-  static const Color primaryText  = Color(0xFF333333);
-  static const Color secondaryText = Color(0xFF757575);
+  static const Color primaryText  = Color(0xFF1C1B1F);
+  static const Color secondaryText = Color(0xFF49454F);
   static const Color disabledText = Color(0xFFBDBDBD);
 
   // ── Gradients ─────────────────────────────────────────────────────────────
@@ -42,54 +51,67 @@ class AppTheme {
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [primaryPink, accentPink],
+    colors: [darkPink, accentPink],
   );
 
-  /// Hero / header section gradient
+  /// Hero / header section gradient (white → soft pink container)
   static const LinearGradient heroGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFFFFF5F8), Color(0xFFFCE4EC)],
+    colors: [Color(0xFFFFFDFD), Color(0xFFFCE4EC)],
   );
 
   /// Card soft-blush gradient for tips / banners
   static const LinearGradient blushGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFFFFF5F8), Color(0xFFFCE4EC)],
+    colors: [Color(0xFFFFF1F5), Color(0xFFFCE4EC)],
   );
 
-  // ── Color scheme ──────────────────────────────────────────────────────────
+  // ── Color scheme (light) ──────────────────────────────────────────────────
   static final ColorScheme _lightScheme = ColorScheme.fromSeed(
-    seedColor: primaryPink,
+    seedColor: darkPink,
     brightness: Brightness.light,
   ).copyWith(
     primary: darkPink,
     onPrimary: Colors.white,
+    primaryContainer: primaryContainer,
+    onPrimaryContainer: onPrimaryContainer,
     secondary: primaryPink,
+    onSecondary: Colors.white,
+    secondaryContainer: secondaryContainer,
+    onSecondaryContainer: onPrimaryContainer,
     tertiary: tertiaryBloom,
-    surface: surfaceBase,
+    surface: surfaceElevated,
     onSurface: primaryText,
+    surfaceContainerHighest: surfaceBase,
     onSurfaceVariant: secondaryText,
-    surfaceContainerHighest: const Color(0xFFF5E2E9),
+    outline: const Color(0xFFD8D8D8),
     outlineVariant: const Color(0xFFF8BBD0),
     error: errorColor,
   );
 
+  // ── Color scheme (dark — neutral near-black with pink accents) ─────────────
   static final ColorScheme _darkScheme = ColorScheme.fromSeed(
-    seedColor: healthcareTeal,
+    seedColor: const Color(0xFFFF80AB),
     brightness: Brightness.dark,
   ).copyWith(
-    primary: const Color(0xFFFF8DB5),
-    onPrimary: const Color(0xFF2A111B),
-    secondary: const Color(0xFF66D7D2),
-    tertiary: const Color(0xFFBCAAF4),
+    primary: const Color(0xFFFF80AB),
+    onPrimary: const Color(0xFF4A001F),
+    primaryContainer: const Color(0xFF880E4F),
+    onPrimaryContainer: const Color(0xFFFFD9E5),
+    secondary: const Color(0xFFF8BBD0),
+    onSecondary: const Color(0xFF4A001F),
+    secondaryContainer: const Color(0xFF5C2A3A),
+    onSecondaryContainer: const Color(0xFFFFD9E5),
+    tertiary: const Color(0xFFF3C3D2),
     surface: darkSurface,
-    onSurface: const Color(0xFFF6F0F4),
-    onSurfaceVariant: const Color(0xFFC4CDD5),
+    onSurface: Colors.white,
     surfaceContainerHighest: darkElevated,
-    outlineVariant: const Color(0xFF344650),
-    error: errorColor,
+    onSurfaceVariant: const Color(0xFFCAC4D0),
+    outline: const Color(0xFF938F99),
+    outlineVariant: const Color(0xFF49454F),
+    error: const Color(0xFFEF5350),
   );
 
   // ── Typography ────────────────────────────────────────────────────────────
@@ -117,18 +139,18 @@ class AppTheme {
   // ── Theme builder ─────────────────────────────────────────────────────────
   static ThemeData _buildTheme(ColorScheme scheme, Brightness brightness) {
     final isDark = brightness == Brightness.dark;
-    final elevated = isDark ? darkElevated : surfaceElevated;
+    final elevated = isDark ? darkSurface : surfaceElevated;
 
     return ThemeData(
       colorScheme: scheme,
       brightness: brightness,
-      scaffoldBackgroundColor: isDark ? darkSurface : surfaceBase,
+      scaffoldBackgroundColor: isDark ? darkBackground : background,
       useMaterial3: true,
       fontFamily: GoogleFonts.poppins().fontFamily,
       textTheme: _textTheme(scheme),
 
       appBarTheme: AppBarTheme(
-        backgroundColor: isDark ? darkElevated : surfaceElevated,
+        backgroundColor: isDark ? darkSurface : surfaceElevated,
         foregroundColor: scheme.onSurface,
         elevation: 0,
         centerTitle: false,
