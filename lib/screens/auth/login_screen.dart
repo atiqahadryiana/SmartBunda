@@ -1,5 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart' as fb;
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -97,13 +97,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: 8),
                     Text(
                       info!,
-                      style: const TextStyle(color: Colors.green),
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary),
                       textAlign: TextAlign.center,
                     ),
                   ],
                   if (error != null) ...[
                     const SizedBox(height: 8),
-                    Text(error!, style: const TextStyle(color: Colors.red)),
+                    Text(
+                      error!,
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.error),
+                    ),
                   ],
                 ],
               ),
@@ -365,18 +370,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
                 if (_error != null) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withValues(alpha: 25),
-                      borderRadius: BorderRadius.circular(8),
-                      border:
-                          Border.all(color: Colors.red.withValues(alpha: 120)),
-                    ),
-                    child: Text(
-                      _error!,
-                      style: TextStyle(color: Colors.red.shade700),
-                    ),
+                  Builder(
+                    builder: (context) {
+                      final scheme = Theme.of(context).colorScheme;
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: scheme.errorContainer,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                              color: scheme.error.withValues(alpha: 90)),
+                        ),
+                        child: Text(
+                          _error!,
+                          style: TextStyle(color: scheme.onErrorContainer),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 12),
                 ],

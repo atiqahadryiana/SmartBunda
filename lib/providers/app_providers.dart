@@ -8,6 +8,7 @@ import 'package:smartbunda/models/backup_snapshot.dart';
 import 'package:smartbunda/models/feedback_entry.dart';
 import 'package:smartbunda/models/food_catalog_entry.dart';
 import 'package:smartbunda/models/food_entry.dart';
+import 'package:smartbunda/models/food_history_entry.dart';
 import 'package:smartbunda/models/firestore_doc.dart';
 import 'package:smartbunda/models/hydration_entry.dart';
 import 'package:smartbunda/models/nutrition_plan.dart';
@@ -50,6 +51,12 @@ final entriesProvider = StreamProvider<List<FoodEntry>>((ref) {
   final user = ref.watch(currentUserProvider);
   if (user == null) return const Stream.empty();
   return ref.watch(dataStoreProvider).watchEntries(user.id);
+});
+
+final foodHistoryProvider = StreamProvider<List<FoodHistoryEntry>>((ref) {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return const Stream.empty();
+  return ref.watch(foodHistoryRepositoryProvider).watchHistory(user.id);
 });
 
 final allEntriesProvider = StreamProvider<Map<String, List<FoodEntry>>>((ref) {

@@ -16,11 +16,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:smartbunda/models/food_entry.dart';
+import 'package:smartbunda/models/food_history_entry.dart';
 import 'package:smartbunda/providers/app_providers.dart';
 import 'package:smartbunda/services/service_providers.dart';
 import 'package:smartbunda/services/food_image_classifier_api.dart';
+import 'package:smartbunda/services/image_quality_service.dart';
 import 'package:smartbunda/theme/app_theme.dart';
 import 'package:smartbunda/utils/food_nutrition_lookup.dart';
+import 'package:smartbunda/utils/nutrition_recommendations.dart';
+
+/// Recognition confidence bands (decision thresholds per spec).
+enum _ConfidenceBand { high, medium, low }
 
 // ── Meal type enum ────────────────────────────────────────────────────────────
 
@@ -53,10 +59,14 @@ class FoodAnalysisResultScreen extends ConsumerStatefulWidget {
     super.key,
     required this.imageBytes,
     required this.predictions,
+    this.quality,
   });
 
   final Uint8List imageBytes;
   final List<FoodImagePrediction> predictions;
+
+  /// Image quality assessment from the capture flow (null if not assessed).
+  final ImageQualityResult? quality;
 
   @override
   ConsumerState<FoodAnalysisResultScreen> createState() =>
@@ -70,6 +80,9 @@ class _FoodAnalysisResultScreenState
   double _portionG = 200.0;
   bool _saving = false;
   bool _saved = false;
+
+  /// Set true once the user confirms a medium-confidence prediction.
+  bool _userConfirmed = false;
 
   static MealType _defaultMealType() {
     final hour = DateTime.now().hour;
@@ -126,6 +139,24 @@ class _FoodAnalysisResultScreenState
       );
       await ref.read(dataStoreProvider).addEntry(entry);
       ref.invalidate(entriesProvider);
+
+      // Record the analysis in the patient's food-analysis history.
+      try {
+        await ref.read(foodHistoryRepositoryProvider).add(
+              FoodHistoryEntry(
+                historyId: ts,
+                patientId: user.id,
+                foodName: prediction.displayName,
+                confidenceScore: (prediction.confidence * 100).round(),
+                qualityScore: widget.quality?.score ?? 0,
+                calories: nutrition?.energyKcal ?? 0,
+                analysisDate: DateTime.now(),
+              ),
+            );
+      } catch (_) {
+        // History is best-effort; don't block the save flow.
+      }
+
       if (mounted) setState(() => _saved = true);
       await Future<void>.delayed(const Duration(milliseconds: 800));
       if (mounted) Navigator.of(context).pop(true);
@@ -140,12 +171,29 @@ class _FoodAnalysisResultScreenState
     }
   }
 
+  /// Confidence band of the currently selected prediction (spec thresholds).
+  _ConfidenceBand get _band {
+    final top = widget.predictions.isNotEmpty
+        ? widget.predictions[_selectedPredictionIndex].confidence
+        : 0.0;
+    if (top >= 0.80) return _ConfidenceBand.high;
+    if (top >= 0.50) return _ConfidenceBand.medium;
+    return _ConfidenceBand.low;
+  }
+
   @override
   Widget build(BuildContext context) {
     final nutrition = _nutritionScaled;
     final top = widget.predictions.isNotEmpty
         ? widget.predictions[_selectedPredictionIndex]
         : null;
+    final band = _band;
+    // Nutrition is shown only when the user can trust/confirm the prediction:
+    // high confidence auto-shows; medium shows after the user confirms a pick;
+    // low confidence hides nutrition and steers to manual/retake.
+    final showNutrition = nutrition != null &&
+        (band == _ConfidenceBand.high ||
+            (band == _ConfidenceBand.medium && _userConfirmed));
 
     return Scaffold(
       backgroundColor: AppTheme.surfaceBase,
@@ -170,6 +218,21 @@ class _FoodAnalysisResultScreenState
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
             sliver: SliverList.list(
               children: [
+                // ── Image quality badge ───────────────────────────────────
+                if (widget.quality != null) ...[
+                  _QualityBadge(quality: widget.quality!),
+                  const SizedBox(height: 16),
+                ],
+
+                // ── Low-confidence guidance ───────────────────────────────
+                if (band == _ConfidenceBand.low) ...[
+                  _LowConfidenceCard(
+                    onManual: () => Navigator.of(context).pop(false),
+                    onRetake: () => Navigator.of(context).pop(false),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 // ── Confidence predictions ───────────────────────────────
                 const _SectionTitle(icon: Icons.auto_awesome_outlined,
                     title: 'Detected Foods', color: AppTheme.darkPink),
@@ -207,15 +270,35 @@ class _FoodAnalysisResultScreenState
                 ),
                 const SizedBox(height: 18),
 
-                // ── Nutrition facts ──────────────────────────────────────
-                const _SectionTitle(icon: Icons.pie_chart_outline,
-                    title: 'Nutrition Facts (MyFCD)',
-                    color: AppTheme.darkPink),
-                const SizedBox(height: 10),
-                if (nutrition != null)
-                  _NutritionFactsCard(nutrition: nutrition, portionG: _portionG)
-                else
+                // ── Medium-confidence confirmation gate ───────────────────
+                if (band == _ConfidenceBand.medium && !_userConfirmed) ...[
+                  _ConfirmCard(
+                    foodName: top?.displayName ?? 'this food',
+                    onConfirm: () => setState(() => _userConfirmed = true),
+                  ),
+                  const SizedBox(height: 18),
+                ],
+
+                // ── Nutrition facts (gated by confidence) ─────────────────
+                if (showNutrition) ...[
+                  const _SectionTitle(icon: Icons.pie_chart_outline,
+                      title: 'Nutrition Facts (MyFCD)',
+                      color: AppTheme.darkPink),
+                  const SizedBox(height: 10),
+                  _NutritionFactsCard(
+                      nutrition: nutrition, portionG: _portionG),
+                  const SizedBox(height: 18),
+
+                  // ── Recommendations ────────────────────────────────────
+                  const _SectionTitle(icon: Icons.lightbulb_outline,
+                      title: 'Recommendations', color: AppTheme.info),
+                  const SizedBox(height: 10),
+                  _RecommendationCard(
+                    tips: NutritionRecommendations.recommend(nutrition),
+                  ),
+                ] else if (band != _ConfidenceBand.low) ...[
                   const _NoNutritionCard(),
+                ],
 
                 // ── Disclaimer ───────────────────────────────────────────
                 const SizedBox(height: 14),
@@ -233,6 +316,254 @@ class _FoodAnalysisResultScreenState
         onSave: _saveLog,
         onRescan: () => Navigator.of(context).pop(false),
       ),
+    );
+  }
+}
+
+// ── Image quality badge ───────────────────────────────────────────────────────
+
+class _QualityBadge extends StatelessWidget {
+  const _QualityBadge({required this.quality});
+
+  final ImageQualityResult quality;
+
+  Color _color() {
+    switch (quality.level) {
+      case ImageQualityLevel.good:
+        return AppTheme.success;
+      case ImageQualityLevel.fair:
+        return AppTheme.warning;
+      case ImageQualityLevel.poor:
+      case ImageQualityLevel.invalid:
+        return AppTheme.errorColor;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _color();
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 22),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 90)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.image_outlined, color: color, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Image quality: ${quality.level.label} (${quality.score}/100)',
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                  ),
+                ),
+                if (quality.reason != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    quality.reason!,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Low-confidence guidance ───────────────────────────────────────────────────
+
+class _LowConfidenceCard extends StatelessWidget {
+  const _LowConfidenceCard({required this.onManual, required this.onRetake});
+
+  final VoidCallback onManual;
+  final VoidCallback onRetake;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.errorColor.withValues(alpha: 18),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.errorColor.withValues(alpha: 80)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.help_outline, color: AppTheme.errorColor),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  "Couldn't identify the food reliably",
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Confidence is low, so nutrition is not estimated. Try a clearer '
+            'photo or search the food manually.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onRetake,
+                  icon: const Icon(Icons.camera_alt_outlined, size: 18),
+                  label: const Text('Retake'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: onManual,
+                  icon: const Icon(Icons.search, size: 18),
+                  label: const Text('Search manually'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Medium-confidence confirmation ────────────────────────────────────────────
+
+class _ConfirmCard extends StatelessWidget {
+  const _ConfirmCard({required this.foodName, required this.onConfirm});
+
+  final String foodName;
+  final VoidCallback onConfirm;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.warning.withValues(alpha: 20),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.warning.withValues(alpha: 90)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Is this "$foodName"?',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Confidence is moderate. Confirm the food (or pick another above) '
+            'to see its nutrition.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: onConfirm,
+              icon: const Icon(Icons.check, size: 18),
+              label: const Text('Yes, show nutrition'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Recommendation tips ───────────────────────────────────────────────────────
+
+class _RecommendationCard extends StatelessWidget {
+  const _RecommendationCard({required this.tips});
+
+  final List<NutritionTip> tips;
+
+  Color _toneColor(TipTone tone) {
+    switch (tone) {
+      case TipTone.positive:
+        return AppTheme.success;
+      case TipTone.caution:
+        return AppTheme.warning;
+      case TipTone.info:
+        return AppTheme.info;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        for (final tip in tips)
+          Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: _toneColor(tip.tone).withValues(alpha: 70),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(tip.icon, color: _toneColor(tip.tone), size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        tip.title,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        tip.message,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color:
+                                  Theme.of(context).colorScheme.onSurfaceVariant,
+                              height: 1.4,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }

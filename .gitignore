@@ -49,6 +49,9 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Secrets — local API keys (never commit). Use lib/config/ai_config.example.dart as the template.
+lib/config/ai_config.dart
+
 # Local ML outputs
 malaysian-food-dataset/artifacts/
 malaysian-food-dataset/.tmp/

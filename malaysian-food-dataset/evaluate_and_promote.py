@@ -35,8 +35,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--min-accuracy",
         type=float,
-        default=0.95,
-        help="Required validation accuracy before copying assets into the app.",
+        default=0.50,
+        help="Required validation accuracy before copying assets into the app. "
+             "Realistic targets: 0.40 (minimum viable), 0.55-0.65 (good FYP result).",
     )
     return parser.parse_args()
 

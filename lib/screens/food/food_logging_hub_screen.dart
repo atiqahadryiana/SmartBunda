@@ -4,6 +4,7 @@ import 'package:smartbunda/screens/food/food_picker_modal.dart';
 import 'package:smartbunda/screens/food/food_picker_confirm_screen.dart';
 import 'package:smartbunda/theme/app_theme.dart';
 import 'package:smartbunda/screens/food/food_scan_screen.dart';
+import 'package:smartbunda/screens/food/food_history_screen.dart';
 import 'package:smartbunda/screens/food/hydration_screen.dart';
 import 'package:smartbunda/screens/food/log_screen.dart';
 
@@ -45,6 +46,14 @@ class FoodLoggingHubScreen extends StatelessWidget {
               'Use your camera or gallery to detect a meal and save it faster.',
             ),
             onTap: () => _open(context, const FoodScanScreen()),
+          ),
+          _ModuleCard(
+            icon: Icons.history,
+            title: strings.t('Food History'),
+            subtitle: strings.t(
+              'Review past scans with confidence and quality scores.',
+            ),
+            onTap: () => _open(context, const FoodHistoryScreen()),
           ),
           _ModuleCard(
             icon: Icons.search_outlined,

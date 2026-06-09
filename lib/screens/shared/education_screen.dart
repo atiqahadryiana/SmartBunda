@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smartbunda/localization/app_strings.dart';
 import 'package:smartbunda/models/firestore_doc.dart';
 import 'package:smartbunda/providers/app_providers.dart';
+import 'package:smartbunda/services/ai_assistant_service.dart';
+import 'package:smartbunda/services/service_providers.dart';
 import 'package:smartbunda/widgets/require_sign_in.dart';
 import 'package:smartbunda/widgets/screen_header.dart';
 import 'package:smartbunda/screens/patient/module_overview_screen.dart';
@@ -211,18 +213,19 @@ class _EducationCard extends StatelessWidget {
   }
 }
 
-class _EducationChatBox extends StatefulWidget {
+class _EducationChatBox extends ConsumerStatefulWidget {
   const _EducationChatBox();
 
   @override
-  State<_EducationChatBox> createState() => _EducationChatBoxState();
+  ConsumerState<_EducationChatBox> createState() => _EducationChatBoxState();
 }
 
-class _EducationChatBoxState extends State<_EducationChatBox> {
+class _EducationChatBoxState extends ConsumerState<_EducationChatBox> {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
   final List<_ChatMessage> _messages = [];
   bool _seeded = false;
+  bool _loading = false;
 
   @override
   void didChangeDependencies() {
@@ -245,21 +248,62 @@ class _EducationChatBoxState extends State<_EducationChatBox> {
     super.dispose();
   }
 
-  void _sendMessage() {
+  Future<void> _sendMessage() async {
     final strings = AppStrings.of(context);
     final text = _controller.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || _loading) return;
+
+    final service = ref.read(aiAssistantProvider);
     setState(() {
       _messages.add(_ChatMessage(isUser: true, text: text));
-      _messages.add(
-        _ChatMessage(
-          isUser: false,
-          text: _generateResponse(text, strings),
-        ),
-      );
     });
     _controller.clear();
     _scrollToBottom();
+
+    // Offline fallback when the assistant isn't configured or on web.
+    if (!service.isAvailable) {
+      setState(() {
+        _messages.add(
+          _ChatMessage(isUser: false, text: _generateResponse(text, strings)),
+        );
+      });
+      _scrollToBottom();
+      return;
+    }
+
+    // Build the running conversation history (exclude the seed greeting).
+    final history = <ChatTurn>[
+      for (final m in _messages.skip(1))
+        ChatTurn(role: m.isUser ? 'user' : 'assistant', content: m.text),
+    ];
+
+    setState(() => _loading = true);
+    _scrollToBottom();
+    try {
+      final reply = await service.ask(history);
+      if (!mounted) return;
+      setState(() => _messages.add(_ChatMessage(isUser: false, text: reply)));
+    } on AiUnavailable {
+      if (!mounted) return;
+      setState(() => _messages.add(
+            _ChatMessage(isUser: false, text: _generateResponse(text, strings)),
+          ));
+    } on AiAssistantException catch (e) {
+      if (!mounted) return;
+      setState(() => _messages.add(_ChatMessage(
+            isUser: false,
+            text: strings.t(e.message),
+          )));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _messages.add(_ChatMessage(
+            isUser: false,
+            text: strings.t('Something went wrong. Please try again.'),
+          )));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+      _scrollToBottom();
+    }
   }
 
   void _scrollToBottom() {
@@ -332,6 +376,21 @@ class _EducationChatBoxState extends State<_EducationChatBox> {
               strings.t('Ask about pregnancy nutrition and the content above.'),
               style: theme.textTheme.bodySmall?.copyWith(color: muted),
             ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(Icons.info_outline, size: 13, color: muted),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    strings.t(
+                      'AI can make mistakes — always confirm with your care team.',
+                    ),
+                    style: theme.textTheme.labelSmall?.copyWith(color: muted),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 12),
             SizedBox(
               height: 220,
@@ -346,6 +405,39 @@ class _EducationChatBoxState extends State<_EducationChatBox> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   itemBuilder: (context, index) {
+                    // Trailing typing indicator while awaiting a reply.
+                    if (_loading && index == _messages.length) {
+                      return Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: assistantFill,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: scheme.primary,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                strings.t('Thinking…'),
+                                style: theme.textTheme.bodySmall
+                                    ?.copyWith(color: muted),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
                     final message = _messages[index];
                     final align = message.isUser
                         ? Alignment.centerRight
@@ -374,7 +466,7 @@ class _EducationChatBoxState extends State<_EducationChatBox> {
                     );
                   },
                   separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemCount: _messages.length,
+                  itemCount: _messages.length + (_loading ? 1 : 0),
                 ),
               ),
             ),
@@ -386,6 +478,7 @@ class _EducationChatBoxState extends State<_EducationChatBox> {
                     controller: _controller,
                     minLines: 1,
                     maxLines: 2,
+                    enabled: !_loading,
                     textInputAction: TextInputAction.send,
                     onSubmitted: (_) => _sendMessage(),
                     decoration: InputDecoration(
@@ -396,7 +489,7 @@ class _EducationChatBoxState extends State<_EducationChatBox> {
                 const SizedBox(width: 8),
                 IconButton(
                   tooltip: strings.t('Send'),
-                  onPressed: _sendMessage,
+                  onPressed: _loading ? null : _sendMessage,
                   icon: const Icon(Icons.send),
                 ),
               ],

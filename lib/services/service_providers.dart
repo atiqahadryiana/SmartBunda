@@ -2,7 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:smartbunda/models/app_user.dart';
+import 'package:smartbunda/services/ai_assistant_service.dart';
 import 'package:smartbunda/services/alert_repository.dart';
+import 'package:smartbunda/services/food_history_repository.dart';
 import 'package:smartbunda/services/appointment_repository.dart';
 import 'package:smartbunda/services/auth_repository.dart';
 import 'package:smartbunda/services/data_store.dart';
@@ -56,6 +58,16 @@ final foodImageClassifierProvider = Provider<FoodImageClassifier>((ref) {
   final classifier = FoodImageClassifier();
   ref.onDispose(classifier.dispose);
   return classifier;
+});
+
+final aiAssistantProvider = Provider<AiAssistantService>((ref) {
+  final service = AiAssistantService();
+  ref.onDispose(service.dispose);
+  return service;
+});
+
+final foodHistoryRepositoryProvider = Provider<FoodHistoryRepository>((ref) {
+  return FoodHistoryRepository();
 });
 
 final contentRepositoryProvider = Provider<FirestoreContentRepository>((ref) {

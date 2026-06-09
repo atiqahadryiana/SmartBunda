@@ -1,18 +1,19 @@
 param(
-    [int]$Epochs = 40,
-    [int]$FrozenEpochs = 8,
+    [int]$Epochs = 60,
+    [int]$FrozenEpochs = 15,
     [int]$BatchSize = 32,
     [double]$LearningRate = 0.001,
-    [double]$FineTuneLearningRate = 0.0001,
+    [double]$FineTuneLearningRate = 0.00001,
     [double]$ValidationSplit = 0.2,
     [int]$Seed = 42,
-    [double]$Dropout = 0.35,
-    [ValidateSet("mobilenet_v3_small", "mobilenet_v2")]
-    [string]$Backbone = "mobilenet_v3_small",
+    [double]$Dropout = 0.3,
+    [ValidateSet("mobilenet_v3_small", "mobilenet_v2", "efficientnet_b0")]
+    [string]$Backbone = "efficientnet_b0",
     [ValidateSet("imagenet", "none")]
     [string]$BackboneWeights = "imagenet",
-    [int]$UnfreezeLayers = 40,
+    [int]$UnfreezeLayers = 20,
     [double]$L2Weight = 0.0001,
+    [int]$MinImagesPerClass = 40,
     [switch]$NoTflite,
     [string]$DatasetDir = "dataset",
     [string]$OutputDir = "artifacts",
@@ -101,6 +102,7 @@ $trainArgs = @(
     "--backbone-weights", $BackboneWeights,
     "--unfreeze-layers", $UnfreezeLayers,
     "--l2-weight", $L2Weight,
+    "--min-images-per-class", $MinImagesPerClass,
     "--app-assets-dir", $AppAssetsDir
 )
 

@@ -58,42 +58,43 @@ class AuthShell extends StatelessWidget {
           ),
         ),
       ),
+      // MD3 filled inputs — fill/borders/labels resolve from the ColorScheme so
+      // they stay readable in both light and dark mode.
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white,
+        fillColor: scheme.surfaceContainerHighest,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: deep.withValues(alpha: 40)),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: scheme.outline),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: deep.withValues(alpha: 40)),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: scheme.outline),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide:
-              BorderSide(color: deep.withValues(alpha: 140), width: 1.3),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: accent, width: 1.6),
         ),
         labelStyle: (textTheme.bodyMedium ?? const TextStyle(fontSize: 14))
-            .copyWith(color: deep.withValues(alpha: 150)),
-        prefixIconColor: deep.withValues(alpha: 160),
+            .copyWith(color: scheme.onSurfaceVariant),
+        prefixIconColor: scheme.onSurfaceVariant,
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: accent,
-          foregroundColor: Colors.white,
+          foregroundColor: scheme.onPrimary,
           padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: deep,
-          side: BorderSide(color: deep.withValues(alpha: 90)),
+          foregroundColor: accent,
+          side: BorderSide(color: scheme.outline),
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -103,17 +104,23 @@ class AuthShell extends StatelessWidget {
       ),
     );
 
+    final isDark = base.brightness == Brightness.dark;
+
     return Theme(
       data: theme,
       child: Scaffold(
+        backgroundColor: scheme.surface,
         body: Stack(
           children: [
-            // Hero blush gradient background
-            const DecoratedBox(
-              decoration: BoxDecoration(gradient: AppTheme.heroGradient),
-              child: SizedBox.expand(),
+            // Soft blush background in light mode; flat surface in dark mode.
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: isDark ? null : AppTheme.heroGradient,
+                color: isDark ? scheme.surface : null,
+              ),
+              child: const SizedBox.expand(),
             ),
-            // Pink top accent stripe
+            // Pink top accent stripe (brand)
             const Positioned(
               top: 0,
               left: 0,
@@ -147,16 +154,18 @@ class AuthShell extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(22),
                           decoration: BoxDecoration(
-                            color: AppTheme.cardBackground,
+                            color: isDark
+                                ? scheme.surfaceContainerHighest
+                                : scheme.surface,
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                                color: const Color(0xFFF8BBD0)),
+                            border: Border.all(color: scheme.outlineVariant),
+                            // Subtle MD3 elevation shadow (no heavy pink glow).
                             boxShadow: [
                               BoxShadow(
-                                color: AppTheme.primaryPink
-                                    .withValues(alpha: 30),
-                                blurRadius: 28,
-                                offset: const Offset(0, 10),
+                                color: scheme.shadow.withValues(
+                                    alpha: isDark ? 60 : 22),
+                                blurRadius: 16,
+                                offset: const Offset(0, 6),
                               ),
                             ],
                           ),
@@ -209,9 +218,9 @@ class _BrandHeader extends StatelessWidget {
               borderRadius: BorderRadius.circular(18),
               boxShadow: [
                 BoxShadow(
-                  color: AppTheme.darkPink.withValues(alpha: 70),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
+                  color: AppTheme.darkPink.withValues(alpha: 38),
+                  blurRadius: 14,
+                  offset: const Offset(0, 6),
                 ),
               ],
             ),

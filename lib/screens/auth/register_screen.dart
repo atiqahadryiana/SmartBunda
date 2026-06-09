@@ -142,9 +142,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         .colorScheme
                         .surfaceContainerHighest
                         .withValues(alpha: 120),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                        color: Colors.black.withValues(alpha: 20)),
+                        color: Theme.of(context).colorScheme.outlineVariant),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -170,18 +170,23 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 const SizedBox(height: 16),
                 if (_error != null) ...[
                   const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withValues(alpha: 25),
-                      borderRadius: BorderRadius.circular(8),
-                      border:
-                          Border.all(color: Colors.red.withValues(alpha: 120)),
-                    ),
-                    child: Text(
-                      _error!,
-                      style: TextStyle(color: Colors.red.shade700),
-                    ),
+                  Builder(
+                    builder: (context) {
+                      final scheme = Theme.of(context).colorScheme;
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: scheme.errorContainer,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                              color: scheme.error.withValues(alpha: 90)),
+                        ),
+                        child: Text(
+                          _error!,
+                          style: TextStyle(color: scheme.onErrorContainer),
+                        ),
+                      );
+                    },
                   ),
                 ],
                 const SizedBox(height: 12),

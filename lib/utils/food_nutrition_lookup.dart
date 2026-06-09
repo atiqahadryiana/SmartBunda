@@ -21,6 +21,10 @@ class FoodNutritionData {
     required this.sodiumMgPer100g,
     required this.calciumMgPer100g,
     required this.ironMgPer100g,
+    this.sugarGPer100g,
+    this.vitaminAUgPer100g,
+    this.vitaminCMgPer100g,
+    this.vitaminDUgPer100g,
     this.defaultPortionG = 200.0,
   });
 
@@ -35,11 +39,20 @@ class FoodNutritionData {
   final double sodiumMgPer100g;
   final double calciumMgPer100g;
   final double ironMgPer100g;
+
+  /// Optional micronutrients — null when not available in the local DB.
+  /// Displayed as "—" in the UI and ignored by the recommendation engine.
+  final double? sugarGPer100g;
+  final double? vitaminAUgPer100g;
+  final double? vitaminCMgPer100g;
+  final double? vitaminDUgPer100g;
+
   final double defaultPortionG;
 
   /// Scale all per-100g values to a given portion size.
   FoodNutritionData scaleToPortionG(double grams) {
     final f = grams / 100.0;
+    double? scale(double? v) => v == null ? null : v * f;
     return FoodNutritionData(
       name: name,
       category: category,
@@ -52,6 +65,10 @@ class FoodNutritionData {
       sodiumMgPer100g:   (sodiumMgPer100g   * f),
       calciumMgPer100g:  (calciumMgPer100g  * f),
       ironMgPer100g:     (ironMgPer100g     * f),
+      sugarGPer100g:     scale(sugarGPer100g),
+      vitaminAUgPer100g: scale(vitaminAUgPer100g),
+      vitaminCMgPer100g: scale(vitaminCMgPer100g),
+      vitaminDUgPer100g: scale(vitaminDUgPer100g),
       defaultPortionG: grams,
     );
   }
@@ -64,6 +81,10 @@ class FoodNutritionData {
   double get sodiumMg       => sodiumMgPer100g;
   double get calciumMg      => calciumMgPer100g;
   double get ironMg         => ironMgPer100g;
+  double? get sugarG        => sugarGPer100g;
+  double? get vitaminAUg    => vitaminAUgPer100g;
+  double? get vitaminCMg    => vitaminCMgPer100g;
+  double? get vitaminDUg    => vitaminDUgPer100g;
 }
 
 // ── Local database ────────────────────────────────────────────────────────────

@@ -17,6 +17,7 @@ class FS {
   static const educationContent = "EducationContent";
   static const auditLogs = "AuditLogs";
   static const systemSettings = "SystemSettings";
+  static const foodHistory = "FoodHistory";
 
   static const globalSettingsDoc = "global";
 }
