@@ -5,8 +5,10 @@ import 'package:smartbunda/localization/app_strings.dart';
 import 'package:smartbunda/models/app_user.dart';
 import 'package:smartbunda/services/service_providers.dart';
 import 'package:smartbunda/utils/auth_error_messages.dart';
+import 'package:smartbunda/utils/email_validator.dart';
 import 'package:smartbunda/utils/password_policy.dart';
 import 'package:smartbunda/widgets/auth_shell.dart';
+import 'package:smartbunda/widgets/google_sign_in_button.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -20,14 +22,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmController = TextEditingController();
   final _nameController = TextEditingController();
   bool _loading = false;
+  bool _obscure = true;
   String? _error;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmController.dispose();
     _nameController.dispose();
     super.dispose();
   }
@@ -48,7 +53,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             displayName: _nameController.text.trim(),
           );
       if (mounted) {
-        await Navigator.of(context).maybePop();
+        await _showVerifyEmailDialog(_emailController.text.trim());
+        if (mounted) await Navigator.of(context).maybePop();
       }
     } catch (e) {
       setState(() => _error = friendlyAuthError(e));
@@ -57,6 +63,65 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         setState(() => _loading = false);
       }
     }
+  }
+
+  Future<void> _showVerifyEmailDialog(String email) async {
+    final strings = AppStrings.of(context);
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        var sending = false;
+        String? info;
+        return StatefulBuilder(
+          builder: (ctx, setState) => AlertDialog(
+            icon: const Icon(Icons.mark_email_unread_outlined),
+            title: Text(strings.t('Verify your email')),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  strings.t(
+                      'We sent a verification link to $email. Please check your inbox and verify your email to secure your account.'),
+                ),
+                if (info != null) ...[
+                  const SizedBox(height: 8),
+                  Text(info!,
+                      style: TextStyle(
+                          color: Theme.of(ctx).colorScheme.primary)),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: sending
+                    ? null
+                    : () async {
+                        setState(() => sending = true);
+                        try {
+                          await ref
+                              .read(authRepositoryProvider)
+                              .sendEmailVerification();
+                          setState(() => info =
+                              strings.t('Verification email resent.'));
+                        } catch (_) {
+                          setState(() => info =
+                              strings.t('Could not resend. Try again later.'));
+                        } finally {
+                          setState(() => sending = false);
+                        }
+                      },
+                child: Text(strings.t('Resend email')),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: Text(strings.t('Done')),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -82,7 +147,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       child: Builder(
         builder: (context) {
           final muted =
-              Theme.of(context).colorScheme.onSurface.withValues(alpha: 150);
+              Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.588);
           return Form(
             key: _formKey,
             child: Column(
@@ -114,25 +179,48 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  autofillHints: const [AutofillHints.email],
                   decoration: InputDecoration(
                     labelText: strings.t('Email'),
                     prefixIcon: const Icon(Icons.email_outlined),
                   ),
-                  validator: (v) => v != null && v.contains('@')
+                  validator: (v) => isValidEmail(v)
                       ? null
                       : strings.t('Enter a valid email'),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _passwordController,
+                  obscureText: _obscure,
                   decoration: InputDecoration(
                     labelText: strings.t('Password'),
                     prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      tooltip: _obscure
+                          ? strings.t('Show password')
+                          : strings.t('Hide password'),
+                      icon: Icon(_obscure
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined),
+                      onPressed: () => setState(() => _obscure = !_obscure),
+                    ),
                   ),
-                  obscureText: true,
                   validator: (v) => PasswordPolicy.isValid(v ?? '')
                       ? null
                       : strings.t(PasswordPolicy.errorMessage),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _confirmController,
+                  obscureText: _obscure,
+                  decoration: InputDecoration(
+                    labelText: strings.t('Confirm password'),
+                    prefixIcon: const Icon(Icons.lock_outline),
+                  ),
+                  validator: (v) => v == _passwordController.text
+                      ? null
+                      : strings.t('Passwords do not match'),
                 ),
                 const SizedBox(height: 12),
                 Container(
@@ -141,7 +229,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     color: Theme.of(context)
                         .colorScheme
                         .surfaceContainerHighest
-                        .withValues(alpha: 120),
+                        .withValues(alpha: 0.471),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                         color: Theme.of(context).colorScheme.outlineVariant),
@@ -179,7 +267,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           color: scheme.errorContainer,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                              color: scheme.error.withValues(alpha: 90)),
+                              color: scheme.error.withValues(alpha: 0.353)),
                         ),
                         child: Text(
                           _error!,
@@ -202,6 +290,26 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           )
                         : Text(strings.t('Create account')),
                   ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(child: Divider(color: muted.withValues(alpha: 0.353))),
+                    const SizedBox(width: 12),
+                    Text(strings.t('or'),
+                        style: Theme.of(context).textTheme.bodySmall),
+                    const SizedBox(width: 12),
+                    Expanded(child: Divider(color: muted.withValues(alpha: 0.353))),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                GoogleSignInButton(
+                  // First Google sign-in creates a patient account; pop back to
+                  // the auth gate which routes to the home/profile flow.
+                  onSignedIn: (_) {
+                    if (mounted) Navigator.of(context).maybePop();
+                  },
+                  onError: (msg) => setState(() => _error = msg),
                 ),
               ],
             ),

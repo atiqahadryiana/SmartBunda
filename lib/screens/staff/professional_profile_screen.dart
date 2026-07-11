@@ -106,7 +106,7 @@ class _ProfessionalHeader extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 230),
+                    color: Colors.white.withValues(alpha: 0.902),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
@@ -313,21 +313,12 @@ class _ProfessionalSettingsSection extends StatelessWidget {
       title: strings.t('Professional Settings'),
       icon: Icons.medical_services_outlined,
       children: [
+        // Single entry — the availability screen already contains the session
+        // schedule and appointment preferences, so separate tiles for those
+        // would just reopen the same page.
         _NavTile(
           icon: Icons.event_available_outlined,
           label: strings.t('Consultation Availability'),
-          onTap: () =>
-              _push(context, const ProfessionalAvailabilityScreen()),
-        ),
-        _NavTile(
-          icon: Icons.schedule_outlined,
-          label: strings.t('Session Schedule'),
-          onTap: () =>
-              _push(context, const ProfessionalAvailabilityScreen()),
-        ),
-        _NavTile(
-          icon: Icons.tune_outlined,
-          label: strings.t('Appointment Preferences'),
           onTap: () =>
               _push(context, const ProfessionalAvailabilityScreen()),
         ),
@@ -480,7 +471,9 @@ class _InfoRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: Text(label, style: const TextStyle(color: Colors.black54)),
+            child: Text(label,
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ),
           const SizedBox(width: 8),
           Expanded(

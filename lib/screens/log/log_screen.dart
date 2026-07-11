@@ -20,15 +20,6 @@ class LogScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(strings.t('Meal log')),
-        actions: [
-          IconButton(
-            tooltip: strings.t('Meal scanner'),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const FoodScanScreen()),
-            ),
-            icon: const Icon(Icons.center_focus_strong),
-          ),
-        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -100,9 +91,50 @@ class LogScreen extends ConsumerWidget {
                                   ],
                                 ),
                               ),
-                              trailing: Text(
-                                '${entry.date.day}/${entry.date.month}',
-                                style: const TextStyle(color: Colors.grey),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '${entry.date.day}/${entry.date.month}',
+                                    style: const TextStyle(color: Colors.grey),
+                                  ),
+                                  PopupMenuButton<String>(
+                                    tooltip: strings.t('Meal options'),
+                                    onSelected: (value) {
+                                      if (value == 'edit') {
+                                        MealLogActions.editEntrySheet(
+                                            context, ref, entry);
+                                      } else if (value == 'delete') {
+                                        MealLogActions.confirmDeleteEntry(
+                                            context, ref, entry);
+                                      }
+                                    },
+                                    itemBuilder: (context) => [
+                                      PopupMenuItem(
+                                        value: 'edit',
+                                        child: Row(
+                                          children: [
+                                            const Icon(Icons.edit_outlined,
+                                                size: 20),
+                                            const SizedBox(width: 12),
+                                            Text(strings.t('Edit')),
+                                          ],
+                                        ),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'delete',
+                                        child: Row(
+                                          children: [
+                                            const Icon(Icons.delete_outline,
+                                                size: 20),
+                                            const SizedBox(width: 12),
+                                            Text(strings.t('Delete')),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ),
                           );
@@ -114,10 +146,6 @@ class LogScreen extends ConsumerWidget {
             ),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => MealLogActions.showAddOptions(context, ref),
-        child: const Icon(Icons.add),
       ),
     );
   }
@@ -131,24 +159,39 @@ class _QuickLogActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
+    final scheme = Theme.of(context).colorScheme;
     return Row(
       children: [
+        // Search-style entry into the food database picker (left-aligned, like
+        // a real search bar so it doesn't read as a centered button).
         Expanded(
-          child: OutlinedButton.icon(
-            onPressed: () => MealLogActions.showAddEntrySheet(context, ref),
-            icon: const Icon(Icons.edit_outlined),
-            label: Text(strings.t('Manual entry')),
+          child: InkWell(
+            onTap: () => MealLogActions.showFoodPicker(context, ref),
+            borderRadius: BorderRadius.circular(28),
+            child: Container(
+              height: 48,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: scheme.outlineVariant),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.search, size: 20, color: scheme.onSurfaceVariant),
+                  const SizedBox(width: 12),
+                  Text(
+                    strings.t('Search the food database'),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: () => MealLogActions.showFoodPicker(context, ref),
-            icon: const Icon(Icons.search),
-            label: Text(strings.t('Food DB')),
-          ),
-        ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 10),
         IconButton.filled(
           tooltip: strings.t('Scan meal'),
           onPressed: () => Navigator.of(context).push(

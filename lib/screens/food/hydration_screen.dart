@@ -30,13 +30,108 @@ class _HydrationScreenState extends ConsumerState<HydrationScreen> {
   Future<void> _addWater(int amountMl) async {
     final user = ref.read(currentUserProvider);
     if (user == null || amountMl <= 0) return;
+    final strings = AppStrings.of(context);
+    final messenger = ScaffoldMessenger.of(context);
     final entry = HydrationEntry(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       userId: user.id,
       date: DateTime.now(),
       amountMl: amountMl,
     );
-    await ref.read(dataStoreProvider).addHydrationEntry(entry);
+    try {
+      await ref.read(dataStoreProvider).addHydrationEntry(entry);
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(strings.t('Water intake saved.'))),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(strings.saveFailed('$error'))),
+      );
+    }
+  }
+
+  Future<void> _editWater(HydrationEntry entry) async {
+    final strings = AppStrings.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final ctrl = TextEditingController(text: entry.amountMl.toString());
+    final newAmount = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(strings.t('Edit water intake')),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(labelText: strings.t('Amount (ml)')),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(strings.t('Cancel')),
+          ),
+          FilledButton(
+            onPressed: () {
+              final value = int.tryParse(ctrl.text);
+              Navigator.of(ctx).pop(value != null && value > 0 ? value : null);
+            },
+            child: Text(strings.t('Save')),
+          ),
+        ],
+      ),
+    );
+    if (newAmount == null) return;
+    try {
+      await ref
+          .read(dataStoreProvider)
+          .updateHydrationEntry(entry.copyWith(amountMl: newAmount));
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(strings.t('Water intake updated.'))),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(strings.saveFailed('$error'))),
+      );
+    }
+  }
+
+  Future<void> _confirmDeleteWater(HydrationEntry entry) async {
+    final strings = AppStrings.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(strings.t('Delete water intake?')),
+        content: Text(
+            strings.t('This hydration record will be permanently removed.')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(strings.t('Cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(strings.t('Delete')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await ref.read(dataStoreProvider).deleteHydrationEntry(entry);
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(strings.t('Water intake deleted.'))),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(strings.saveFailed('$error'))),
+      );
+    }
   }
 
   int _waterTarget(Pregnancy? pregnancy) {
@@ -195,6 +290,40 @@ class _HydrationScreenState extends ConsumerState<HydrationScreen> {
                                 leading: const Icon(Icons.water_drop_outlined),
                                 title: Text('${entry.amountMl} ml'),
                                 subtitle: Text(_timeLabel(entry.date)),
+                                trailing: PopupMenuButton<String>(
+                                  tooltip: strings.t('Options'),
+                                  onSelected: (value) {
+                                    if (value == 'edit') {
+                                      _editWater(entry);
+                                    } else if (value == 'delete') {
+                                      _confirmDeleteWater(entry);
+                                    }
+                                  },
+                                  itemBuilder: (context) => [
+                                    PopupMenuItem(
+                                      value: 'edit',
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.edit_outlined,
+                                              size: 20),
+                                          const SizedBox(width: 12),
+                                          Text(strings.t('Edit')),
+                                        ],
+                                      ),
+                                    ),
+                                    PopupMenuItem(
+                                      value: 'delete',
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.delete_outline,
+                                              size: 20),
+                                          const SizedBox(width: 12),
+                                          Text(strings.t('Delete')),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             );
                           },

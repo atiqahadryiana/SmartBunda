@@ -6,13 +6,14 @@ import 'package:smartbunda/models/app_user.dart';
 import 'package:smartbunda/models/pregnancy.dart';
 import 'package:smartbunda/models/profile.dart';
 import 'package:smartbunda/providers/app_providers.dart';
-import 'package:smartbunda/theme/app_theme.dart';
 import 'package:smartbunda/widgets/empty_state.dart';
 import 'package:smartbunda/widgets/require_sign_in.dart';
 import 'package:smartbunda/widgets/screen_header.dart';
 import 'package:smartbunda/screens/patient/edit_profile_screen.dart';
 import 'package:smartbunda/screens/staff/professional_profile_screen.dart';
 import 'package:smartbunda/screens/shared/settings_screen.dart';
+import 'package:smartbunda/screens/auth/login_screen.dart';
+import 'package:smartbunda/services/service_providers.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key, this.showAppBar = false});
@@ -42,70 +43,86 @@ class ProfileScreen extends ConsumerWidget {
     final pregnancyAsync = ref.watch(pregnancyProvider);
     final strings = AppStrings.of(context);
     return Scaffold(
-      appBar: showAppBar ? AppBar(title: Text(strings.profileTitle)) : null,
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: profileAsync.when(
-          data: (profile) {
-            final pregnancy = pregnancyAsync.valueOrNull;
-            return ListView(
-              children: [
-                ScreenHeader(
-                  title: strings.profileTitle,
-                  subtitle: strings.profileSubtitle,
-                  icon: Icons.person_outline,
-                  action: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        tooltip: strings.t('Settings'),
-                        onPressed: () => _openSettings(context),
-                        icon: const Icon(Icons.settings_outlined),
-                      ),
-                      FilledButton.icon(
-                        onPressed: () => _openEdit(context),
-                        icon: const Icon(Icons.edit_outlined),
-                        label: Text(strings.edit),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                if (profile == null) ...[
-                  EmptyState(
-                    icon: Icons.person_outline,
-                    title: strings.noProfileYet,
-                    message: strings.noProfileMessage,
-                    action: FilledButton.icon(
-                      onPressed: () => _openEdit(context),
-                      icon: const Icon(Icons.edit_outlined),
-                      label: Text(strings.editProfile),
+       appBar: showAppBar
+            ? AppBar(
+                title: Text(strings.profileTitle),
+              )
+           : null,
+       body: Padding(
+         padding: const EdgeInsets.all(16),
+         child: profileAsync.when(
+           data: (profile) {
+             final pregnancy = pregnancyAsync.valueOrNull;
+             return ListView(
+               children: [
+                 ScreenHeader(
+                   title: strings.profileTitle,
+                   subtitle: strings.profileSubtitle,
+                   icon: Icons.person_outline,
+                    action: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        FilledButton.icon(
+                          onPressed: () => _openEdit(context),
+                          icon: const Icon(Icons.edit_outlined),
+                          label: Text(strings.edit),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          tooltip: strings.t('Settings'),
+                          icon: const Icon(Icons.settings_outlined),
+                          onPressed: () => _openSettings(context),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  _SettingsTile(onTap: () => _openSettings(context)),
-                ] else ...[
-                  _OutcomesCard(profile: profile, pregnancy: pregnancy),
-                  const SizedBox(height: 12),
-                  _DetailsCard(profile: profile),
-                  const SizedBox(height: 12),
-                  _MedicalCard(profile: profile),
-                  const SizedBox(height: 12),
-                  _PregnancyCard(
-                    pregnancy: pregnancy,
-                    isLoading: pregnancyAsync.isLoading,
-                  ),
-                  const SizedBox(height: 12),
-                  _SettingsTile(onTap: () => _openSettings(context)),
-                ],
-              ],
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('Error: $e')),
-        ),
-      ),
-    );
+                 ),
+                 const SizedBox(height: 16),
+                 if (profile == null) ...[
+                   EmptyState(
+                     icon: Icons.person_outline,
+                     title: strings.noProfileYet,
+                     message: strings.noProfileMessage,
+                     action: FilledButton.icon(
+                       onPressed: () => _openEdit(context),
+                       icon: const Icon(Icons.edit_outlined),
+                       label: Text(strings.editProfile),
+                     ),
+                   ),
+                   const SizedBox(height: 12),
+                 ] else ...[
+                   _OutcomesCard(profile: profile, pregnancy: pregnancy),
+                   const SizedBox(height: 12),
+                   _DetailsCard(profile: profile),
+                   const SizedBox(height: 12),
+                   _MedicalCard(profile: profile),
+                   const SizedBox(height: 12),
+                   _PregnancyCard(
+                     pregnancy: pregnancy,
+                     isLoading: pregnancyAsync.isLoading,
+                   ),
+                   const SizedBox(height: 12),
+                 ],
+                 const SizedBox(height: 8),
+                 OutlinedButton.icon(
+                   onPressed: () => _confirmLogout(context, ref, strings),
+                   icon: const Icon(Icons.logout),
+                   label: Text(strings.t('Log out')),
+                   style: OutlinedButton.styleFrom(
+                     foregroundColor: Theme.of(context).colorScheme.error,
+                     side: BorderSide(
+                         color: Theme.of(context).colorScheme.error),
+                     minimumSize: const Size.fromHeight(48),
+                   ),
+                 ),
+                 const SizedBox(height: 24),
+               ],
+             );
+           },
+           loading: () => const Center(child: CircularProgressIndicator()),
+           error: (e, _) => Center(child: Text('Error: $e')),
+         ),
+       ),
+     );
   }
 
   void _openEdit(BuildContext context) {
@@ -121,31 +138,40 @@ class ProfileScreen extends ConsumerWidget {
       MaterialPageRoute(builder: (_) => const SettingsScreen()),
     );
   }
-}
 
-/// Card-style entry point into the [SettingsScreen].
-class _SettingsTile extends StatelessWidget {
-  const _SettingsTile({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final strings = AppStrings.of(context);
-    return Card(
-      margin: EdgeInsets.zero,
-      child: ListTile(
-        leading: const Icon(Icons.settings_outlined, color: AppTheme.darkPink),
-        title: Text(strings.t('Settings')),
-        subtitle: Text(
-          strings.t('Language, appearance, notifications, and more.'),
-        ),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: onTap,
+  Future<void> _confirmLogout(
+    BuildContext context,
+    WidgetRef ref,
+    AppStrings strings,
+  ) async {
+    final navigator = Navigator.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(strings.t('Log out')),
+        content: Text(strings.t('Are you sure you want to log out?')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(strings.t('Cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(strings.t('Log out')),
+          ),
+        ],
       ),
+    );
+    if (confirmed != true) return;
+    await ref.read(authRepositoryProvider).signOut();
+    navigator.pushNamedAndRemoveUntil(
+      LoginScreen.routeName,
+      (route) => false,
     );
   }
 }
+
+
 
 class _OutcomesCard extends StatelessWidget {
   const _OutcomesCard({required this.profile, required this.pregnancy});
@@ -208,7 +234,9 @@ class _OutcomeTile extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: Colors.black54)),
+        Text(label,
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant)),
         const SizedBox(height: 4),
         Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
       ],
@@ -287,18 +315,8 @@ class _MedicalCard extends StatelessWidget {
   }
 
   String _conditions(Profile profile, AppStrings strings) {
-    final labels = <String>[];
-    for (final condition in profile.medicalConditions) {
-      switch (condition) {
-        case MedicalCondition.anemia:
-          labels.add(strings.anemiaLabel);
-          break;
-        case MedicalCondition.gestationalDiabetes:
-          labels.add(strings.gdmLabel);
-          break;
-      }
-    }
-    return labels.isEmpty ? strings.noneReported : labels.join(', ');
+    if (profile.medicalConditions.isEmpty) return strings.noneReported;
+    return profile.medicalConditions.map((c) => c.label).join(', ');
   }
 }
 
@@ -337,7 +355,9 @@ class _PregnancyCard extends StatelessWidget {
               _InfoRow(label: strings.edd, value: _label(pregnancy!.edd)),
               _InfoRow(
                   label: strings.riskLevel,
-                  value: _label(pregnancy!.riskLevel)),
+                  value: PregnancyRiskLevel.fromCode(pregnancy!.riskLevel)
+                          ?.display ??
+                      _label(pregnancy!.riskLevel)),
             ],
           ],
         ),
@@ -365,7 +385,9 @@ class _InfoRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: Text(label, style: const TextStyle(color: Colors.black54)),
+            child: Text(label,
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ),
           const SizedBox(width: 8),
           Expanded(

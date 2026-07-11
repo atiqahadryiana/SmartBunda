@@ -4,6 +4,11 @@ import 'package:smartbunda/models/activity_log.dart';
 import 'package:smartbunda/models/alert_item.dart';
 import 'package:smartbunda/models/app_user.dart';
 import 'package:smartbunda/models/appointment.dart';
+import 'package:smartbunda/models/assessment_result.dart';
+import 'package:smartbunda/models/appointment_vitals.dart';
+import 'package:smartbunda/models/clinical_note.dart';
+import 'package:smartbunda/models/nutrition_guideline.dart';
+import 'package:smartbunda/services/food_recommendation_engine.dart';
 import 'package:smartbunda/models/backup_snapshot.dart';
 import 'package:smartbunda/models/feedback_entry.dart';
 import 'package:smartbunda/models/food_catalog_entry.dart';
@@ -61,6 +66,101 @@ final foodHistoryProvider = StreamProvider<List<FoodHistoryEntry>>((ref) {
 
 final allEntriesProvider = StreamProvider<Map<String, List<FoodEntry>>>((ref) {
   return ref.watch(dataStoreProvider).watchAllEntries();
+});
+
+final assessmentResultsProvider =
+    StreamProvider<List<AssessmentResult>>((ref) {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return const Stream.empty();
+  return ref
+      .watch(assessmentResultRepositoryProvider)
+      .watchForPatient(user.id);
+});
+
+/// Clinical notes authored by healthcare professionals for the current
+/// patient — surfaced read-only in their Medical Records.
+final clinicalNotesProvider = StreamProvider<List<ClinicalNote>>((ref) {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return const Stream.empty();
+  return ref.watch(clinicalNoteRepositoryProvider).watchForPatient(user.id);
+});
+
+/// Clinical notes for a specific patient — for the staff authoring/review view.
+final patientClinicalNotesProvider =
+    StreamProvider.family<List<ClinicalNote>, String>((ref, patientId) {
+  return ref.watch(clinicalNoteRepositoryProvider).watchForPatient(patientId);
+});
+
+/// ALL patients' assessment results — admin dashboard only.
+final allAssessmentResultsProvider =
+    StreamProvider<List<AssessmentResult>>((ref) {
+  return ref.watch(assessmentResultRepositoryProvider).watchAll();
+});
+
+/// ALL patients' clinical notes / consultations — admin dashboard only.
+final allClinicalNotesProvider = StreamProvider<List<ClinicalNote>>((ref) {
+  return ref.watch(clinicalNoteRepositoryProvider).watchAll();
+});
+
+/// Per-appointment vitals (weight, Hb, BP, …) for a specific patient — newest
+/// first. Used in the staff client view to show the visit-by-visit trend.
+final patientVitalsProvider =
+    StreamProvider.family<List<AppointmentVitals>, String>((ref, patientId) {
+  return ref
+      .watch(appointmentVitalsRepositoryProvider)
+      .watchForPatient(patientId);
+});
+
+/// The active nutrition guideline (highest-priority recommendation source).
+///
+/// Reads the admin-activated guideline from Firestore; falls back to the
+/// built-in MOH maternal default when none is active or while loading.
+final activeGuidelineProvider = Provider<NutritionGuideline>((ref) {
+  return ref.watch(_activeGuidelineStreamProvider).valueOrNull ??
+      NutritionGuideline.maternalDefault;
+});
+
+final _activeGuidelineStreamProvider =
+    StreamProvider<NutritionGuideline?>((ref) {
+  return ref.watch(nutritionGuidelineRepositoryProvider).watchActive();
+});
+
+/// Rotation seed for "Generate another recommendation" — bump to vary the pick
+/// among the safe top matches without losing compliance.
+final recommendationSeedProvider = StateProvider<int>((ref) => 0);
+
+/// Today's meals only (used for nutrient-gap analysis).
+final todaysMealsProvider = Provider<List<FoodEntry>>((ref) {
+  final all = ref.watch(entriesProvider).valueOrNull ?? const <FoodEntry>[];
+  final now = DateTime.now();
+  return all
+      .where((e) =>
+          e.date.year == now.year &&
+          e.date.month == now.month &&
+          e.date.day == now.day)
+      .toList();
+});
+
+/// The current AI food recommendation, assembled from every priority source.
+/// Null when the engine finds no safe candidate.
+final foodRecommendationProvider = Provider<FoodRecommendation?>((ref) {
+  final engine = ref.watch(foodRecommendationEngineProvider);
+  final guideline = ref.watch(activeGuidelineProvider);
+  final profile = ref.watch(profileProvider).valueOrNull;
+  final pregnancy = ref.watch(pregnancyProvider).valueOrNull;
+  final assessments =
+      ref.watch(assessmentResultsProvider).valueOrNull ?? const [];
+  final meals = ref.watch(todaysMealsProvider);
+  final seed = ref.watch(recommendationSeedProvider);
+
+  return engine.recommend(
+    guideline: guideline,
+    profile: profile,
+    pregnancy: pregnancy,
+    assessments: assessments,
+    todaysMeals: meals,
+    rotationSeed: seed,
+  );
 });
 
 final hydrationEntriesProvider = StreamProvider<List<HydrationEntry>>((ref) {

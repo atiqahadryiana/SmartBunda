@@ -66,11 +66,31 @@ class _ScanHero extends StatelessWidget {
               padding: const EdgeInsets.only(top: 12, bottom: 4),
               child: Row(
                 children: [
+                  if (Navigator.of(context).canPop()) ...[
+                    Material(
+                      color: Colors.white.withValues(alpha: 0.863),
+                      borderRadius: BorderRadius.circular(14),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () => Navigator.of(context).maybePop(),
+                        child: const SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: Icon(
+                            Icons.arrow_back,
+                            color: AppTheme.darkPink,
+                            size: 22,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
                   Container(
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 220),
+                      color: Colors.white.withValues(alpha: 0.863),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: const Icon(
@@ -136,12 +156,12 @@ class _ScanZone extends StatelessWidget {
           color: AppTheme.cardBackground,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: AppTheme.primaryPink.withValues(alpha: 100),
+            color: AppTheme.primaryPink.withValues(alpha: 0.392),
             width: 2,
           ),
           boxShadow: [
             BoxShadow(
-              color: AppTheme.primaryPink.withValues(alpha: 30),
+              color: AppTheme.primaryPink.withValues(alpha: 0.118),
               blurRadius: 24,
               offset: const Offset(0, 8),
             ),
@@ -163,7 +183,7 @@ class _ScanZone extends StatelessWidget {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: AppTheme.darkPink.withValues(alpha: 70),
+                        color: AppTheme.darkPink.withValues(alpha: 0.275),
                         blurRadius: 20,
                         offset: const Offset(0, 8),
                       ),
@@ -386,7 +406,7 @@ class _SecondaryActionButton extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
-        splashColor: AppTheme.primaryPink.withValues(alpha: 20),
+        splashColor: AppTheme.primaryPink.withValues(alpha: 0.078),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 18),
           decoration: BoxDecoration(
@@ -429,7 +449,7 @@ class _HowItWorksCard extends StatelessWidget {
         border: Border.all(color: const Color(0xFFF8BBD0)),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryPink.withValues(alpha: 12),
+            color: AppTheme.primaryPink.withValues(alpha: 0.047),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -474,14 +494,14 @@ class _HowItWorksCard extends StatelessWidget {
             number: '2',
             title: strings.t('AI detects the dish'),
             body: strings.t(
-                'TensorFlow Lite identifies the food and shows you the best matches with confidence scores.'),
+                'The photo is sent to our AI scanner, which identifies the food and shows the best matches with confidence scores.'),
           ),
           const SizedBox(height: 12),
           _Step(
             number: '3',
-            title: strings.t('Confirm and save'),
+            title: strings.t('Verify and save'),
             body: strings.t(
-                'Choose the correct match, set portion size, and add it to your daily log.'),
+                "If several foods are found, tick the ones that are correct. Set the portion and add it to your daily log."),
           ),
         ],
       ),
@@ -560,7 +580,7 @@ class _ScanTipBanner extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: AppTheme.blushGradient,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.primaryPink.withValues(alpha: 60)),
+        border: Border.all(color: AppTheme.primaryPink.withValues(alpha: 0.235)),
       ),
       child: Row(
         children: [

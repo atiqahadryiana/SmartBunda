@@ -5,6 +5,7 @@ import 'package:smartbunda/models/activity_log.dart';
 import 'package:smartbunda/models/app_user.dart';
 import 'package:smartbunda/providers/app_providers.dart';
 import 'package:smartbunda/services/service_providers.dart';
+import 'package:smartbunda/theme/app_components.dart';
 import 'package:smartbunda/widgets/empty_state.dart';
 import 'package:smartbunda/widgets/require_sign_in.dart';
 import 'package:smartbunda/widgets/screen_header.dart';
@@ -76,9 +77,58 @@ class ActivityLogScreen extends ConsumerWidget {
                 ],
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => ListView(
+              children: [
+                const ScreenHeader(
+                  title: 'Activity logs',
+                  subtitle: 'Review recent logins, updates, and approvals.',
+                  icon: Icons.history,
+                ),
+                const SizedBox(height: 16),
+                ...List.generate(10, (index) => const _ActivityLogSkeleton()),
+              ],
+            ),
             error: (e, _) => Center(child: Text('Error: $e')),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActivityLogSkeleton extends StatelessWidget {
+  const _ActivityLogSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Card(
+      child: ListTile(
+        leading: SbSkeletonLoader(
+          width: 24,
+          height: 24,
+        ),
+        title: SbSkeletonLoader(
+          height: 16,
+          width: 120,
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(height: 4),
+            SbSkeletonLoader(
+              height: 12,
+              width: 200,
+            ),
+            SizedBox(height: 4),
+            SbSkeletonLoader(
+              height: 12,
+              width: 150,
+            ),
+          ],
+        ),
+        trailing: SbSkeletonLoader(
+          height: 12,
+          width: 80,
         ),
       ),
     );

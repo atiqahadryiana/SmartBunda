@@ -123,6 +123,37 @@ class FoodDatabase {
     _cache = null;
   }
 
+  /// Deletes orphaned SEEDED foods — documents whose id starts with `seed-`
+  /// but is NOT in [currentSeedIds] (i.e. left over from an earlier seed/import
+  /// the current seed can no longer overwrite). Admin/custom foods (non-`seed-`
+  /// ids) are never touched. Returns the number of documents removed.
+  Future<int> deleteOrphanedSeedFoods(Set<String> currentSeedIds) async {
+    final snapshot = await _firestore.collection(FS.foods).get();
+    final toDelete = snapshot.docs.where(
+      (d) => d.id.startsWith('seed-') && !currentSeedIds.contains(d.id),
+    );
+    var removed = 0;
+    // Firestore batches cap at 500 ops; chunk to stay well under the limit.
+    var batch = _firestore.batch();
+    var inBatch = 0;
+    for (final doc in toDelete) {
+      batch.delete(doc.reference);
+      removed++;
+      if (++inBatch >= 400) {
+        await batch.commit();
+        batch = _firestore.batch();
+        inBatch = 0;
+      }
+    }
+    if (inBatch > 0) await batch.commit();
+    if (removed > 0) {
+      _customCache = null;
+      _systemCache = null;
+      _cache = null;
+    }
+    return removed;
+  }
+
   Map<String, dynamic> _toFoodDoc(
     FoodItem item, {
     required bool? isActive,
@@ -139,6 +170,10 @@ class FoodDatabase {
         'fat_g': item.fatG,
         'iron_mg': item.ironMg,
         'folate_mcg': item.folateMcg,
+        'calcium_mg': item.calciumMg,
+        'vitamin_d_mcg': item.vitaminDMcg,
+        'vitamin_b12_mcg': item.vitaminB12Mcg,
+        'sodium_mg': item.sodiumMg,
       },
       'source': 'custom',
       if (isActive != null) 'isActive': isActive,

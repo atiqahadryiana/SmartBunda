@@ -63,17 +63,27 @@ class _SplashGateState extends ConsumerState<SplashGate>
   }
 
   Future<void> _openNextScreen() async {
-    await Future<void>.delayed(const Duration(milliseconds: 2600));
+    // Resolve auth and the brand-animation floor in parallel, so the splash
+    // lasts only as long as the slower of the two (≈1s) instead of a fixed
+    // ~3.8s wait on every launch.
+    final minDisplay = Future<void>.delayed(const Duration(milliseconds: 900));
     AppUser? user;
     try {
+      // Give Firebase Auth enough time to restore a persisted session on a cold
+      // start before deciding the user is signed out. 1.5s was too aggressive
+      // on slow networks and bounced authenticated users to Login.
       user = await ref
           .read(authStateProvider.future)
-          .timeout(const Duration(milliseconds: 1200));
+          .timeout(const Duration(seconds: 4));
     } on TimeoutException {
-      user = null;
+      // Auth is still resolving — fall back to the repo's cached user rather
+      // than assuming signed-out. If it's genuinely null, HomeScreen re-watches
+      // the auth stream and self-corrects to Login.
+      user = ref.read(authRepositoryProvider).currentUser;
     } catch (_) {
-      user = null;
+      user = ref.read(authRepositoryProvider).currentUser;
     }
+    await minDisplay;
     if (!mounted) return;
 
     final next = user == null
@@ -242,15 +252,7 @@ class _SmartbundaLogo extends StatelessWidget {
           height: 156,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFFFF8DB6),
-                Color(0xFFA78BFA),
-                Color(0xFF4ECBC4),
-              ],
-            ),
+            color: Colors.white,
             boxShadow: [
               BoxShadow(
                 color: const Color(0xFFFF8DB6).withAlpha((glow * 255).round()),
@@ -265,13 +267,16 @@ class _SmartbundaLogo extends StatelessWidget {
               ),
             ],
           ),
-          child: CustomPaint(
-            painter: _LogoPainter(),
-            child: const Center(
-              child: Icon(
-                Icons.favorite,
-                color: Colors.white,
-                size: 48,
+          child: ClipOval(
+            child: Image.asset(
+              'assets/logo.png',
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => const Center(
+                child: Icon(
+                  Icons.favorite,
+                  color: Color(0xFFE91E63),
+                  size: 48,
+                ),
               ),
             ),
           ),
@@ -279,52 +284,6 @@ class _SmartbundaLogo extends StatelessWidget {
       },
     );
   }
-}
-
-class _LogoPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final white = Paint()
-      ..color = Colors.white.withAlpha(225)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4
-      ..strokeCap = StrokeCap.round;
-    final softFill = Paint()
-      ..color = Colors.white.withAlpha(38)
-      ..style = PaintingStyle.fill;
-
-    final mother = Offset(size.width * 0.39, size.height * 0.47);
-    final child = Offset(size.width * 0.62, size.height * 0.55);
-
-    canvas.drawCircle(mother, size.width * 0.105, softFill);
-    canvas.drawCircle(child, size.width * 0.075, softFill);
-    canvas.drawArc(
-      Rect.fromCircle(
-        center: Offset(size.width * 0.47, size.height * 0.67),
-        radius: size.width * 0.25,
-      ),
-      math.pi * 1.08,
-      math.pi * 0.86,
-      false,
-      white,
-    );
-    canvas.drawCircle(Offset(size.width * 0.73, size.height * 0.32), 4, white);
-    canvas.drawCircle(Offset(size.width * 0.78, size.height * 0.44), 3, white);
-    canvas.drawCircle(Offset(size.width * 0.66, size.height * 0.28), 3, white);
-    canvas.drawLine(
-      Offset(size.width * 0.73, size.height * 0.32),
-      Offset(size.width * 0.78, size.height * 0.44),
-      white,
-    );
-    canvas.drawLine(
-      Offset(size.width * 0.73, size.height * 0.32),
-      Offset(size.width * 0.66, size.height * 0.28),
-      white,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _SignalPill extends StatelessWidget {

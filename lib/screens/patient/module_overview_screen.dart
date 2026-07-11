@@ -43,7 +43,9 @@ class ModuleOverviewScreen extends StatelessWidget {
           ),
           if (footer != null) ...[
             const SizedBox(height: 12),
-            Text(footer!, style: const TextStyle(color: Colors.black54)),
+            Text(footer!,
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ],
         ],
       ),

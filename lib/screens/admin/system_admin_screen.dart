@@ -4,10 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smartbunda/models/system_settings.dart';
 import 'package:smartbunda/providers/app_providers.dart';
 import 'package:smartbunda/services/service_providers.dart';
+import 'package:smartbunda/theme/app_components.dart';
+import 'package:smartbunda/models/app_user.dart';
+import 'package:smartbunda/widgets/permission_gate.dart';
 import 'package:smartbunda/widgets/require_sign_in.dart';
 import 'package:smartbunda/widgets/screen_header.dart';
 import 'package:smartbunda/screens/admin/activity_log_screen.dart';
 import 'package:smartbunda/screens/admin/content_management_screen.dart';
+import 'package:smartbunda/screens/admin/nutrition_guideline_admin_screen.dart';
 import 'package:smartbunda/screens/food/food_catalog_screen.dart';
 
 class SystemAdminScreen extends ConsumerWidget {
@@ -41,7 +45,10 @@ class SystemAdminScreen extends ConsumerWidget {
     final headerTitle = title ?? 'System administration';
     final headerSubtitle =
         subtitle ?? 'Manage settings, backups, and system health.';
-    return RequireSignIn(
+    return PermissionGate(
+      permission: AccessPermission.systemAdministration,
+      title: headerTitle,
+      child: RequireSignIn(
       title: headerTitle,
       showAppBar: showAppBar,
       message: 'Please sign in to manage system settings.',
@@ -61,7 +68,7 @@ class SystemAdminScreen extends ConsumerWidget {
               const SizedBox(height: 8),
               settingsAsync.when(
                 data: (settings) => _SettingsCard(settings: settings),
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const _SettingsCardSkeleton(),
                 error: (e, _) => Text('Error: $e'),
               ),
             ],
@@ -89,6 +96,14 @@ class SystemAdminScreen extends ConsumerWidget {
                       MaterialPageRoute(builder: (_) => const ContentManagementScreen()),
                     ),
                     child: const Text('Manage content'),
+                  ),
+                  OutlinedButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) =>
+                              const NutritionGuidelineAdminScreen()),
+                    ),
+                    child: const Text('Nutrition guidelines'),
                   ),
                   OutlinedButton(
                     onPressed: () => Navigator.of(context).push(
@@ -136,7 +151,7 @@ class SystemAdminScreen extends ConsumerWidget {
                         .toList(),
                   );
                 },
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const _BackupListSkeleton(),
                 error: (e, _) => Text('Error: $e'),
               ),
             ],
@@ -164,12 +179,13 @@ class SystemAdminScreen extends ConsumerWidget {
                     ],
                   );
                 },
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const _SystemHealthSkeleton(),
                 error: (e, _) => Text('Error: $e'),
               ),
             ],
           ],
         ),
+      ),
       ),
     );
   }
@@ -376,6 +392,129 @@ class _HealthTile extends StatelessWidget {
       child: ListTile(
         title: Text(label),
         trailing: Text('$value'),
+      ),
+    );
+  }
+}
+
+class _SettingsCardSkeleton extends StatelessWidget {
+  const _SettingsCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Card(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SbSkeletonLoader(
+              height: 24,
+              width: 120,
+            ),
+            SizedBox(height: 16),
+            SbSkeletonLoader(
+              height: 16,
+              width: 200,
+            ),
+            SizedBox(height: 8),
+            SbSkeletonLoader(
+              height: 16,
+              width: 150,
+            ),
+            SizedBox(height: 8),
+            SbSkeletonLoader(
+              height: 16,
+              width: 180,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BackupListSkeleton extends StatelessWidget {
+  const _BackupListSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      children: [
+        _BackupItemSkeleton(),
+        _BackupItemSkeleton(),
+        _BackupItemSkeleton(),
+      ],
+    );
+  }
+}
+
+class _BackupItemSkeleton extends StatelessWidget {
+  const _BackupItemSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Card(
+      child: ListTile(
+        title: SbSkeletonLoader(
+          height: 16,
+          width: 120,
+        ),
+        subtitle: SbSkeletonLoader(
+          height: 12,
+          width: 100,
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SbSkeletonLoader(
+              width: 60,
+              height: 36,
+            ),
+            SizedBox(width: 8),
+            SbSkeletonLoader(
+              width: 60,
+              height: 36,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SystemHealthSkeleton extends StatelessWidget {
+  const _SystemHealthSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      children: [
+        _HealthTileSkeleton(),
+        _HealthTileSkeleton(),
+        _HealthTileSkeleton(),
+        _HealthTileSkeleton(),
+        _HealthTileSkeleton(),
+      ],
+    );
+  }
+}
+
+class _HealthTileSkeleton extends StatelessWidget {
+  const _HealthTileSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Card(
+      child: ListTile(
+        title: SbSkeletonLoader(
+          height: 16,
+          width: 80,
+        ),
+        trailing: SbSkeletonLoader(
+          height: 16,
+          width: 40,
+        ),
       ),
     );
   }

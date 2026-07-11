@@ -70,7 +70,7 @@ class ReportPdfService {
 
   static pw.Widget _buildHeader() {
     return pw.Container(
-      decoration: pw.BoxDecoration(
+      decoration: const pw.BoxDecoration(
         border: pw.Border(
           bottom: pw.BorderSide(color: primaryPink, width: 2),
         ),
@@ -89,7 +89,7 @@ class ReportPdfService {
           ),
           pw.Text(
             'Nutrition Report',
-            style: pw.TextStyle(
+            style: const pw.TextStyle(
               fontSize: 12,
               color: secondaryText,
             ),
@@ -101,7 +101,7 @@ class ReportPdfService {
 
   static pw.Widget _buildFooter(String reportDate) {
     return pw.Container(
-      decoration: pw.BoxDecoration(
+      decoration: const pw.BoxDecoration(
         border: pw.Border(
           top: pw.BorderSide(color: primaryPink, width: 1),
         ),
@@ -112,11 +112,11 @@ class ReportPdfService {
         children: [
           pw.Text(
             'Generated: $reportDate',
-            style: pw.TextStyle(fontSize: 9, color: secondaryText),
+            style: const pw.TextStyle(fontSize: 9, color: secondaryText),
           ),
           pw.Text(
             'Page #PAGENUM of #TOTALPAGES',
-            style: pw.TextStyle(fontSize: 9, color: secondaryText),
+            style: const pw.TextStyle(fontSize: 9, color: secondaryText),
           ),
         ],
       ),
@@ -138,7 +138,7 @@ class ReportPdfService {
         pw.SizedBox(height: 5),
         pw.Text(
           'Personal nutrition summary for the last 7 days',
-          style: pw.TextStyle(
+          style: const pw.TextStyle(
             fontSize: 12,
             color: secondaryText,
           ),
@@ -170,7 +170,7 @@ class ReportPdfService {
             border: pw.TableBorder.all(color: lightPink),
             children: [
               pw.TableRow(
-                decoration: pw.BoxDecoration(color: lightPink),
+                decoration: const pw.BoxDecoration(color: lightPink),
                 children: [
                   pw.Padding(
                     padding: const pw.EdgeInsets.all(8),
@@ -181,7 +181,7 @@ class ReportPdfService {
                   pw.Padding(
                     padding: const pw.EdgeInsets.all(8),
                     child: pw.Text('Medical Report',
-                        style: pw.TextStyle(fontSize: 10)),
+                        style: const pw.TextStyle(fontSize: 10)),
                   ),
                 ],
               ),
@@ -196,12 +196,12 @@ class ReportPdfService {
                   pw.Padding(
                     padding: const pw.EdgeInsets.all(8),
                     child: pw.Text('Completed',
-                        style: pw.TextStyle(fontSize: 10)),
+                        style: const pw.TextStyle(fontSize: 10)),
                   ),
                 ],
               ),
               pw.TableRow(
-                decoration: pw.BoxDecoration(color: lightPink),
+                decoration: const pw.BoxDecoration(color: lightPink),
                 children: [
                   pw.Padding(
                     padding: const pw.EdgeInsets.all(8),
@@ -212,7 +212,7 @@ class ReportPdfService {
                   pw.Padding(
                     padding: const pw.EdgeInsets.all(8),
                     child: pw.Text('SmartBunda Care Team',
-                        style: pw.TextStyle(fontSize: 10)),
+                        style: const pw.TextStyle(fontSize: 10)),
                   ),
                 ],
               ),
@@ -227,7 +227,7 @@ class ReportPdfService {
                   pw.Padding(
                     padding: const pw.EdgeInsets.all(8),
                     child: pw.Text(data.reportDate,
-                        style: pw.TextStyle(fontSize: 10)),
+                        style: const pw.TextStyle(fontSize: 10)),
                   ),
                 ],
               ),
@@ -295,7 +295,7 @@ class ReportPdfService {
         children: [
           pw.Text(
             label,
-            style: pw.TextStyle(fontSize: 10, color: secondaryText),
+            style: const pw.TextStyle(fontSize: 10, color: secondaryText),
           ),
           pw.SizedBox(height: 5),
           pw.Text(
@@ -309,12 +309,12 @@ class ReportPdfService {
           pw.SizedBox(height: 5),
           pw.Text(
             'Target: $target',
-            style: pw.TextStyle(fontSize: 9, color: secondaryText),
+            style: const pw.TextStyle(fontSize: 9, color: secondaryText),
           ),
           pw.SizedBox(height: 5),
           pw.Text(
             'Progress: $progress%',
-            style: pw.TextStyle(fontSize: 9, color: darkPink),
+            style: const pw.TextStyle(fontSize: 9, color: darkPink),
           ),
           pw.SizedBox(height: 8),
           _buildProgressBar(double.parse(progress) / 100),
@@ -359,7 +359,7 @@ class ReportPdfService {
         if (recentEntries.isEmpty)
           pw.Text(
             'No food entries logged.',
-            style: pw.TextStyle(fontSize: 10, color: secondaryText),
+            style: const pw.TextStyle(fontSize: 10, color: secondaryText),
           )
         else
           pw.Table(
@@ -373,7 +373,7 @@ class ReportPdfService {
             },
             children: [
               pw.TableRow(
-                decoration: pw.BoxDecoration(color: lightPink),
+                decoration: const pw.BoxDecoration(color: lightPink),
                 children: [
                   pw.Padding(
                     padding: const pw.EdgeInsets.all(6),
@@ -415,28 +415,28 @@ class ReportPdfService {
                     pw.Padding(
                       padding: const pw.EdgeInsets.all(6),
                       child: pw.Text(entry.meal,
-                          style: pw.TextStyle(fontSize: 9),
+                          style: const pw.TextStyle(fontSize: 9),
                           maxLines: 2),
                     ),
                     pw.Padding(
                       padding: const pw.EdgeInsets.all(6),
                       child: pw.Text(dateStr,
-                          style: pw.TextStyle(fontSize: 9)),
+                          style: const pw.TextStyle(fontSize: 9)),
                     ),
                     pw.Padding(
                       padding: const pw.EdgeInsets.all(6),
                       child: pw.Text('${entry.quantity.toStringAsFixed(0)}g',
-                          style: pw.TextStyle(fontSize: 9)),
+                          style: const pw.TextStyle(fontSize: 9)),
                     ),
                     pw.Padding(
                       padding: const pw.EdgeInsets.all(6),
                       child: pw.Text('${entry.calories}',
-                          style: pw.TextStyle(fontSize: 9)),
+                          style: const pw.TextStyle(fontSize: 9)),
                     ),
                     pw.Padding(
                       padding: const pw.EdgeInsets.all(6),
                       child: pw.Text('${entry.protein}g',
-                          style: pw.TextStyle(fontSize: 9)),
+                          style: const pw.TextStyle(fontSize: 9)),
                     ),
                   ],
                 );
@@ -471,7 +471,7 @@ class ReportPdfService {
             'The values are estimates based on the Malaysian Food Composition Database (MyFCD) and may vary by preparation method and ingredients. '
             'This report does not replace professional medical or nutritional advice. '
             'Please consult your healthcare provider for personalized guidance.',
-            style: pw.TextStyle(fontSize: 9, color: secondaryText),
+            style: const pw.TextStyle(fontSize: 9, color: secondaryText),
           ),
         ],
       ),

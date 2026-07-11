@@ -12,7 +12,20 @@
           "package_name": "com.example.smartbunda"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "762965727838-hunja0odfkqn9d9griq552dl64t74esp.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.smartbunda",
+            "certificate_hash": "4bdcb681cbda7418e88b9a165d763450e11352af"
+          }
+        },
+        {
+          "client_id": "762965727838-8c4g6rqtddup8htfou6ep9jqc1diljrd.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDAv1TEOsa3-Kj77FrNW6AAedOqlVIIzjY"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "762965727838-8c4g6rqtddup8htfou6ep9jqc1diljrd.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

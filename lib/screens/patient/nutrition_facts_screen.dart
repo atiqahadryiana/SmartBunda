@@ -59,7 +59,8 @@ class NutritionFactsScreen extends ConsumerWidget {
                 strings.t(
                   'These are general targets for pregnancy. Consult your care team for personal guidance.',
                 ),
-                style: const TextStyle(color: Colors.black54),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
             ],
           ),
@@ -70,14 +71,8 @@ class NutritionFactsScreen extends ConsumerWidget {
 
   String _conditionNote(Profile? profile, AppStrings strings) {
     if (profile == null || profile.medicalConditions.isEmpty) return '';
-    final labels = profile.medicalConditions.map((c) {
-      switch (c) {
-        case MedicalCondition.gestationalDiabetes:
-          return strings.t('GDM');
-        case MedicalCondition.anemia:
-          return strings.t('anemia');
-      }
-    }).join(', ');
+    final labels =
+        profile.medicalConditions.map((c) => strings.t(c.label)).join(', ');
     return strings.conditionsLabel(labels);
   }
 }

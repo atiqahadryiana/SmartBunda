@@ -1,6 +1,9 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // ─────────────────────────────────────────────────────────────────────────
+    // Helper functions
+    // ─────────────────────────────────────────────────────────────────────────
     function signedIn() {
       return request.auth != null;
     }
@@ -22,6 +25,8 @@ service cloud.firestore {
           .hasAny([permission]);
     }
 
+    // Any healthcare professional or admin. Roles are matched case-insensitively
+    // (both 'nurse' and 'NURSE' style values exist in the data).
     function isStaff() {
       return signedIn() && (userRole() in [
         'admin',
@@ -51,22 +56,34 @@ service cloud.firestore {
       return signedIn() && planOwner(planId) == request.auth.uid;
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Users / accounts
+    // ─────────────────────────────────────────────────────────────────────────
     match /Users/{userId} {
       allow read: if signedIn();
       // Self-registration is patient-only; staff/admin accounts are created by
-      // an administrator. An owner may update their own profile fields but not
-      // escalate their role, permissions, or status.
-      allow create: if isStaff()
+      // an administrator (admins, or the secondary-auth flow which runs as an
+      // admin). An owner may update their own profile fields but not escalate
+      // their role, permissions, or status.
+      allow create: if isAdmin()
         || (isOwner(userId)
             && request.resource.data.role in ['patient', 'PATIENT']);
-      allow update: if isStaff()
+      // Only an ADMIN may change another user's account (role / permissions /
+      // status). Non-admin staff used to be able to escalate any user — now they
+      // can't. An owner may still update their OWN safe fields (name, mmc,
+      // specialisation, phone, lastLoginAt) as long as role / permissions /
+      // status are unchanged.
+      allow update: if isAdmin()
         || (isOwner(userId)
             && request.resource.data.role == resource.data.role
             && request.resource.data.permissions == resource.data.permissions
             && request.resource.data.status == resource.data.status);
-      allow delete: if isOwner(userId) || isStaff();
+      allow delete: if isOwner(userId) || isAdmin();
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Food database & logs
+    // ─────────────────────────────────────────────────────────────────────────
     match /Foods/{foodId} {
       allow read: if signedIn();
       allow write: if isStaff() || hasPermission('foodDatabase');
@@ -80,6 +97,18 @@ service cloud.firestore {
           allow read, write: if isOwner(userId) || isStaff();
         }
       }
+    }
+
+    // Collection-group access for meal entries. The staff monitoring views read
+    // every patient's meals with `collectionGroup('Entries')`, which a strictly
+    // nested match (above) does NOT authorize — collection-group queries only
+    // match a rule whose path uses a recursive wildcard. Entries carry
+    // `patientId`, so staff (clinical review) and the owning patient may read.
+    // Writes remain governed by the nested rule above (owner/staff on the exact
+    // FoodLogs/{uid}/Days/{day}/Entries path).
+    match /{path=**}/Entries/{entryId} {
+      allow read: if isStaff() ||
+        (signedIn() && request.auth.uid == resource.data.patientId);
     }
 
     match /FoodLogItems/{id} {
@@ -103,13 +132,93 @@ service cloud.firestore {
          request.auth.uid == resource.data.patientId);
     }
 
+    // AI food-analysis history. Patient-owned; staff may read for clinical
+    // review. (Collection is FoodHistory; documents carry `patientId`.)
+    match /FoodHistory/{id} {
+      allow read: if signedIn() &&
+        (isStaff() || request.auth.uid == resource.data.patientId);
+      allow create: if signedIn() &&
+        (isStaff() || request.auth.uid == request.resource.data.patientId);
+      allow update: if signedIn() &&
+        (isStaff() ||
+         request.auth.uid == resource.data.patientId ||
+         request.auth.uid == request.resource.data.patientId);
+      allow delete: if signedIn() &&
+        (isStaff() || request.auth.uid == resource.data.patientId);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Clinical / patient health records
+    // ─────────────────────────────────────────────────────────────────────────
+    // Patient profile (height, weight, hemoglobin, blood type, conditions).
+    // The patient owns it; ALL staff (incl. nurses) may read AND write so a
+    // nurse can update weight / Hb at each appointment.
     match /PatientProfiles/{userId} {
       allow read, write: if isOwner(userId) || isStaff();
+    }
+
+    // Per-appointment clinical vitals captured by a nurse (or other staff).
+    // Each record is a snapshot for one visit (weight, Hb, BP, fundal height,
+    // etc.) keyed by patientId + appointmentId, preserving visit-by-visit
+    // history. Patient may read their own; staff read all and create/edit.
+    match /AppointmentVitals/{id} {
+      allow read: if signedIn() &&
+        (isStaff() || request.auth.uid == resource.data.patientId);
+      // Staff author the record; `recordedBy` must be the writer (audit trail).
+      allow create: if isStaff() &&
+        request.resource.data.recordedBy == request.auth.uid;
+      allow update: if isStaff() &&
+        request.resource.data.patientId == resource.data.patientId;
+      allow delete: if isStaff();
+    }
+
+    // Digital assessment results. Owned by the patient; staff may read them so
+    // healthcare professionals can review screenings.
+    match /AssessmentResults/{id} {
+      allow read: if signedIn() &&
+        (isStaff() || request.auth.uid == resource.data.patientId);
+      allow create: if signedIn() &&
+        request.auth.uid == request.resource.data.patientId;
+      allow update: if signedIn() &&
+        (request.auth.uid == resource.data.patientId ||
+         request.auth.uid == request.resource.data.patientId);
+      allow delete: if signedIn() &&
+        (isStaff() || request.auth.uid == resource.data.patientId);
+    }
+
+    // Legacy clinical pre-pregnancy assessment results. Owner field is `userId`
+    // (distinct from the newer AssessmentResults `patientId`). Patient-owned;
+    // staff may read for clinical review.
+    match /assessment_results/{id} {
+      allow read: if signedIn() &&
+        (isStaff() || request.auth.uid == resource.data.userId);
+      allow create: if signedIn() &&
+        request.auth.uid == request.resource.data.userId;
+      allow update: if signedIn() &&
+        (request.auth.uid == resource.data.userId ||
+         request.auth.uid == request.resource.data.userId);
+      allow delete: if signedIn() &&
+        (isStaff() || request.auth.uid == resource.data.userId);
+    }
+
+    // AI food-recommendation audit trail. Patient-owned, append-only from the
+    // client; staff may read for clinical review. Patients do not edit audit
+    // records (integrity), but may delete their own.
+    match /RecommendationAudit/{id} {
+      allow read: if signedIn() &&
+        (isStaff() || request.auth.uid == resource.data.patientId);
+      allow create: if signedIn() &&
+        request.auth.uid == request.resource.data.patientId;
+      allow update: if false;
+      allow delete: if signedIn() &&
+        (isStaff() || request.auth.uid == resource.data.patientId);
     }
 
     match /Pregnancies/{pregId} {
       allow create: if signedIn() &&
         (request.auth.uid == request.resource.data.patientId || isStaff());
+      // Patient owns it; ALL staff (incl. nurses) may update gestational week /
+      // risk level at each appointment.
       allow read, update, delete: if signedIn() &&
         (request.auth.uid == resource.data.patientId || isStaff());
     }
@@ -168,6 +277,9 @@ service cloud.firestore {
          request.auth.uid == resource.data.providerId);
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Nutrition plans & recommendations
+    // ─────────────────────────────────────────────────────────────────────────
     match /NutritionPlans/{id} {
       allow read: if signedIn() &&
         (isStaff() || request.auth.uid == resource.data.patientId);
@@ -203,33 +315,39 @@ service cloud.firestore {
       allow write: if isStaff();
     }
 
-    match /AuditLogs/{id} {
-      allow read: if isStaff();
-      allow write: if signedIn();
-    }
-
-    match /SystemSettings/{docId} {
+    // Nutrition guidelines for the AI food-recommendation engine. Any signed-in
+    // user may read the active guideline; only staff/admin may upload or change
+    // activation.
+    match /NutritionGuidelines/{id} {
       allow read: if signedIn();
       allow write: if isStaff();
     }
 
-    // Forward-compatible: consultations linked to an appointment. Readable by
-    // the patient, the assigned professional, and staff; written by staff or
-    // the assigned professional.
+    // ─────────────────────────────────────────────────────────────────────────
+    // Consultation notes & messaging
+    // ─────────────────────────────────────────────────────────────────────────
+    // Consultation / clinical notes authored by a healthcare professional
+    // (doctor, dietitian, OR nurse) for a patient. Readable by the patient, the
+    // authoring professional, and any staff. A professional creates/edits only
+    // their OWN notes (professionalId == uid); admins may manage any.
     match /Consultations/{id} {
       allow read: if signedIn() &&
         (isStaff() ||
          request.auth.uid == resource.data.patientId ||
          request.auth.uid == resource.data.professionalId);
-      allow create: if signedIn() &&
-        (isStaff() ||
-         request.auth.uid == request.resource.data.professionalId);
-      allow update, delete: if isStaff() ||
-        (signedIn() && request.auth.uid == resource.data.professionalId);
+      allow create: if isStaff() &&
+        request.resource.data.professionalId == request.auth.uid;
+      allow update: if isAdmin() ||
+        (isStaff() &&
+         request.auth.uid == resource.data.professionalId &&
+         request.resource.data.professionalId == resource.data.professionalId &&
+         request.resource.data.patientId == resource.data.patientId);
+      allow delete: if isAdmin() ||
+        (isStaff() && request.auth.uid == resource.data.professionalId);
     }
 
-    // Forward-compatible: 1:1 messages. Readable by sender, receiver, and
-    // staff; created only by the sender.
+    // 1:1 messages. Readable by sender, receiver, and staff; created only by
+    // the sender.
     match /ChatMessages/{id} {
       allow read: if signedIn() &&
         (isStaff() ||
@@ -239,6 +357,29 @@ service cloud.firestore {
         request.auth.uid == request.resource.data.senderId;
       allow update, delete: if isStaff() ||
         (signedIn() && request.auth.uid == resource.data.senderId);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // System / admin
+    // ─────────────────────────────────────────────────────────────────────────
+    // Append-only audit trail. Any signed-in user may CREATE a log entry (the
+    // client logs its own login / register / update events) but ONLY for an
+    // entry attributed to themselves — `actorId` must be the writer, so logs
+    // can't be forged in another user's name. Entries are immutable once
+    // written; only an admin may prune them.
+    match /AuditLogs/{id} {
+      allow read: if isStaff();
+      allow create: if signedIn()
+        && request.resource.data.actorId == request.auth.uid;
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // System configuration is admin-only to write (the client only ever edits
+    // it from admin screens; other staff merely READ it, e.g. monitoring).
+    match /SystemSettings/{docId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
     }
   }
 }

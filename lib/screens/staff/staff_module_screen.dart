@@ -8,9 +8,12 @@ import 'package:smartbunda/models/food_entry.dart';
 import 'package:smartbunda/models/firestore_doc.dart';
 import 'package:smartbunda/models/pregnancy.dart';
 import 'package:smartbunda/models/profile.dart';
+import 'package:smartbunda/models/appointment_vitals.dart';
 import 'package:smartbunda/providers/app_providers.dart';
 import 'package:smartbunda/services/appointment_filter_service.dart';
 import 'package:smartbunda/services/service_providers.dart';
+import 'package:smartbunda/screens/staff/add_clinical_note_screen.dart';
+import 'package:smartbunda/screens/staff/record_vitals_sheet.dart';
 
 class StaffDashboardScreen extends ConsumerWidget {
   const StaffDashboardScreen({
@@ -120,6 +123,21 @@ class _StaffTodayPatientsScreenState
   AppointmentStatusFilter _statusFilter = AppointmentStatusFilter.all;
   SessionSlotFilter _slotFilter = SessionSlotFilter.all;
   AppointmentTypeFilter _typeFilter = AppointmentTypeFilter.all;
+  bool _filtersExpanded = false;
+
+  /// How many filters are set to something other than "All".
+  int get _activeFilterCount =>
+      (_statusFilter != AppointmentStatusFilter.all ? 1 : 0) +
+      (_slotFilter != SessionSlotFilter.all ? 1 : 0) +
+      (_typeFilter != AppointmentTypeFilter.all ? 1 : 0);
+
+  void _clearFilters() {
+    setState(() {
+      _statusFilter = AppointmentStatusFilter.all;
+      _slotFilter = SessionSlotFilter.all;
+      _typeFilter = AppointmentTypeFilter.all;
+    });
+  }
 
   @override
   void dispose() {
@@ -182,29 +200,63 @@ class _StaffTodayPatientsScreenState
           ),
         ),
         const SizedBox(height: 12),
-        _TypedFilterStrip<AppointmentStatusFilter>(
-          label: 'Status',
-          values: AppointmentStatusFilter.values,
-          selected: _statusFilter,
-          labelOf: (value) => value.label,
-          onSelected: (value) => setState(() => _statusFilter = value),
+        // Collapsible filters — keeps the default view clean. The toggle shows
+        // how many filters are active and offers a one-tap Clear.
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () =>
+                    setState(() => _filtersExpanded = !_filtersExpanded),
+                icon: Icon(
+                  _filtersExpanded
+                      ? Icons.expand_less
+                      : Icons.tune_outlined,
+                  size: 18,
+                ),
+                label: Text(
+                  _activeFilterCount == 0
+                      ? 'Filters'
+                      : 'Filters ($_activeFilterCount)',
+                ),
+              ),
+            ),
+            if (_activeFilterCount > 0) ...[
+              const SizedBox(width: 8),
+              TextButton.icon(
+                onPressed: _clearFilters,
+                icon: const Icon(Icons.close, size: 16),
+                label: const Text('Clear'),
+              ),
+            ],
+          ],
         ),
-        const SizedBox(height: 8),
-        _TypedFilterStrip<SessionSlotFilter>(
-          label: 'Session',
-          values: SessionSlotFilter.values,
-          selected: _slotFilter,
-          labelOf: (value) => value.label,
-          onSelected: (value) => setState(() => _slotFilter = value),
-        ),
-        const SizedBox(height: 8),
-        _TypedFilterStrip<AppointmentTypeFilter>(
-          label: 'Type',
-          values: AppointmentTypeFilter.values,
-          selected: _typeFilter,
-          labelOf: (value) => value.label,
-          onSelected: (value) => setState(() => _typeFilter = value),
-        ),
+        if (_filtersExpanded) ...[
+          const SizedBox(height: 12),
+          _TypedFilterStrip<AppointmentStatusFilter>(
+            label: 'Status',
+            values: AppointmentStatusFilter.values,
+            selected: _statusFilter,
+            labelOf: (value) => value.label,
+            onSelected: (value) => setState(() => _statusFilter = value),
+          ),
+          const SizedBox(height: 8),
+          _TypedFilterStrip<SessionSlotFilter>(
+            label: 'Session',
+            values: SessionSlotFilter.values,
+            selected: _slotFilter,
+            labelOf: (value) => value.label,
+            onSelected: (value) => setState(() => _slotFilter = value),
+          ),
+          const SizedBox(height: 8),
+          _TypedFilterStrip<AppointmentTypeFilter>(
+            label: 'Type',
+            values: AppointmentTypeFilter.values,
+            selected: _typeFilter,
+            labelOf: (value) => value.label,
+            onSelected: (value) => setState(() => _typeFilter = value),
+          ),
+        ],
         const SizedBox(height: 16),
         if (filtered.isEmpty)
           const _StaffEmptyState(
@@ -359,16 +411,12 @@ class StaffPatientRecordDetailScreen extends ConsumerWidget {
                     profile?.conditionNotes ?? 'No treatment notes recorded'),
               ],
             ),
-            const _StaffRecordList(
-              title: 'Vital Signs',
-              icon: Icons.monitor_heart_outlined,
-              rows: [
-                _InfoRow('Blood pressure', '118/76 mmHg'),
-                _InfoRow('Heart rate', '78 bpm'),
-                _InfoRow('Oxygen level', '98%'),
-                _InfoRow('Body temperature', '36.8 C'),
-                _InfoRow('Blood sugar', '5.2 mmol/L'),
-              ],
+            _StaffVitalSignsTab(
+              role: role,
+              patient: patient,
+              profile: profile,
+              pregnancy: pregnancy,
+              appointmentId: appointment.id,
             ),
             _StaffNutritionTab(role: role, entries: foodLogs),
             _StaffReportsTab(reports: patientReports),
@@ -393,39 +441,72 @@ class _StaffHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The banner uses a fixed light pastel gradient in every theme, so the
+    // text is given explicit dark colours (not the theme's onSurface, which is
+    // near-white in dark mode and would vanish against this background).
+    const ink = Color(0xFF3A2F33); // high-contrast on the pastel gradient
+    const muted = Color(0xFF6B5560);
+    const accent = Color(0xFFC24879);
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
           colors: [Color(0xFFFFE3EE), Color(0xFFE7F6FF), Color(0xFFE8FAF8)],
         ),
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: accent.withValues(alpha: 0.14)),
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 25,
-            backgroundColor: Colors.white.withValues(alpha: 220),
-            child: Icon(_roleIcon(role), color: const Color(0xFFC24879)),
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: accent.withValues(alpha: 0.18),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Icon(_roleIcon(role), color: accent),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
+                Row(
+                  children: [
+                    const Text('👋', style: TextStyle(fontSize: 15)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          color: ink,
+                          fontSize: 19,
+                          fontWeight: FontWeight.w800,
+                          height: 1.15,
+                        ),
                       ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 5),
                 Text(
                   subtitle,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: const Color(0xFF59677D),
-                        height: 1.35,
-                      ),
+                  style: const TextStyle(
+                    color: muted,
+                    fontSize: 13.5,
+                    height: 1.4,
+                  ),
                 ),
               ],
             ),
@@ -463,7 +544,7 @@ class _TodayPatientCard extends StatelessWidget {
           border: Border.all(color: scheme.outlineVariant),
           boxShadow: [
             BoxShadow(
-              color: scheme.shadow.withValues(alpha: 12),
+              color: scheme.shadow.withValues(alpha: 0.047),
               blurRadius: 18,
               offset: const Offset(0, 10),
             ),
@@ -473,7 +554,7 @@ class _TodayPatientCard extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 25,
-              backgroundColor: scheme.primary.withValues(alpha: 18),
+              backgroundColor: scheme.primary.withValues(alpha: 0.071),
               child: Text(
                 _initials(patient?.displayName ?? patient?.email ?? 'P'),
                 style: TextStyle(
@@ -608,7 +689,9 @@ class _StaffRecordSummary extends StatelessWidget {
               value: pregnancy == null
                   ? '--'
                   : 'Week ${pregnancy!.gestationalWeek}',
-              detail: pregnancy?.riskLevel ?? 'not set',
+              detail:
+                  PregnancyRiskLevel.fromCode(pregnancy?.riskLevel)?.display ??
+                      'not set',
               color: const Color(0xFF8A7CF6),
             ),
             const _StaffMetricCard(
@@ -628,7 +711,13 @@ class _StaffRecordSummary extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
-        _ConsultationPanel(role: role),
+        _ConsultationPanel(
+          role: role,
+          patient: patient,
+          profile: profile,
+          pregnancy: pregnancy,
+          appointmentId: appointment.id,
+        ),
       ],
     );
   }
@@ -751,20 +840,183 @@ class _StaffReportsTab extends StatelessWidget {
                 title: Text(report.title ?? report.id),
                 subtitle: Text(DateFormat('d MMM yyyy')
                     .format(report.timestamp ?? DateTime.now())),
-                trailing: Wrap(
-                  children: [
-                    IconButton(
-                        onPressed: () {},
-                        icon: const Icon(Icons.visibility_outlined)),
-                    IconButton(
-                        onPressed: () {},
-                        icon: const Icon(Icons.download_outlined)),
-                  ],
+                trailing: IconButton(
+                  tooltip: 'View report details',
+                  icon: const Icon(Icons.visibility_outlined),
+                  onPressed: () => _showStaffReportDetails(context, report),
                 ),
+                onTap: () => _showStaffReportDetails(context, report),
               ),
             ),
       ],
     );
+  }
+
+  /// Read-only, clinical-style details dialog for a nutrition report document.
+  ///
+  /// Renders curated, human-readable rows (with units and computed adherence)
+  /// instead of dumping every raw Firestore field. The stored `createdAt` and
+  /// `generatedAt` are the same instant, so only one "Generated" date is shown,
+  /// and internal keys (id, patientId, raw timestamps) are never displayed.
+  void _showStaffReportDetails(BuildContext context, FirestoreDoc report) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final data = report.data;
+
+    int? asInt(dynamic v) =>
+        v is num ? v.round() : (v is String ? int.tryParse(v) : null);
+
+    final patient = StaffReportFormat.stringValue(data['patientName']) ??
+        StaffReportFormat.stringValue(data['patient']);
+    final generated = report.timestamp;
+
+    final avgCalories = asInt(data['avgCalories']);
+    final calorieTarget = asInt(data['calorieTarget']);
+    final avgProtein = asInt(data['avgProtein']);
+    final proteinTarget = asInt(data['proteinTarget']);
+
+    String pct(int? value, int? target) {
+      if (value == null || target == null || target == 0) return '—';
+      return '${(value / target * 100).round()}%';
+    }
+
+    final rows = <(String, String)>[
+      if (patient != null) ('Patient', patient),
+      if (generated != null)
+        ('Generated', DateFormat('d MMM yyyy, h:mm a').format(generated)),
+      if (avgCalories != null)
+        (
+          'Avg. daily calories',
+          calorieTarget != null
+              ? '$avgCalories / $calorieTarget kcal  (${pct(avgCalories, calorieTarget)})'
+              : '$avgCalories kcal'
+        ),
+      if (avgProtein != null)
+        (
+          'Avg. daily protein',
+          proteinTarget != null
+              ? '$avgProtein / $proteinTarget g  (${pct(avgProtein, proteinTarget)})'
+              : '$avgProtein g'
+        ),
+    ];
+
+    final hasIntake = avgCalories != null || avgProtein != null;
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        titlePadding: EdgeInsets.zero,
+        title: Container(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+          decoration: BoxDecoration(
+            color: scheme.primary,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.description_outlined, color: Colors.white),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Nutrition Report',
+                        style: text.titleMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800)),
+                    if (report.title != null)
+                      Text(report.title!,
+                          style: text.bodySmall
+                              ?.copyWith(color: Colors.white70)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        content: SizedBox(
+          width: 420,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final (label, value) in rows)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 7),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: 140,
+                          child: Text(label,
+                              style: text.bodyMedium?.copyWith(
+                                  color: scheme.onSurfaceVariant)),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(value,
+                              style: text.bodyMedium
+                                  ?.copyWith(fontWeight: FontWeight.w600)),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (!hasIntake)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'No meals were logged in this reporting period, so '
+                      'intake averages are unavailable.',
+                      style: text.bodySmall
+                          ?.copyWith(color: scheme.onSurfaceVariant),
+                    ),
+                  ),
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: scheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.info_outline,
+                          size: 16, color: scheme.onSurfaceVariant),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Screening summary for clinical reference. Confirm '
+                          'against the patient record before acting.',
+                          style: text.bodySmall
+                              ?.copyWith(color: scheme.onSurfaceVariant),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).maybePop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Helpers for rendering report documents.
+abstract final class StaffReportFormat {
+  static String? stringValue(dynamic raw) {
+    if (raw is! String) return null;
+    final t = raw.trim();
+    return t.isEmpty ? null : t;
   }
 }
 
@@ -796,34 +1048,212 @@ class _StaffProgressTab extends StatelessWidget {
   }
 }
 
-class _ConsultationPanel extends StatelessWidget {
-  const _ConsultationPanel({required this.role});
+/// Vital Signs tab — shows the patient's REAL recorded vitals (latest summary +
+/// per-visit history from AppointmentVitals) and a button to record new ones.
+class _StaffVitalSignsTab extends ConsumerWidget {
+  const _StaffVitalSignsTab({
+    required this.role,
+    required this.patient,
+    required this.profile,
+    required this.pregnancy,
+    required this.appointmentId,
+  });
+
+  final UserRole role;
+  final AppUser? patient;
+  final Profile? profile;
+  final Pregnancy? pregnancy;
+  final String appointmentId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = patient;
+    if (p == null) {
+      return const _StaffEmptyState(
+        icon: Icons.monitor_heart_outlined,
+        title: 'Patient not loaded',
+        message: 'Open the patient record again to view vitals.',
+      );
+    }
+    final vitalsAsync = ref.watch(patientVitalsProvider(p.id));
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _StaffHero(
+          title: 'Vital Signs',
+          subtitle: 'Recorded measurements for ${p.displayName ?? p.email}.',
+          role: role,
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: () => showRecordVitalsSheet(
+              context,
+              ref,
+              patient: p,
+              profile: profile,
+              pregnancy: pregnancy,
+              appointmentId: appointmentId,
+            ),
+            icon: const Icon(Icons.add_chart_outlined),
+            label: const Text('Record vitals'),
+          ),
+        ),
+        const SizedBox(height: 16),
+        vitalsAsync.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (e, _) => Text('Could not load vitals: $e'),
+          data: (records) {
+            if (records.isEmpty) {
+              return const _StaffEmptyState(
+                icon: Icons.monitor_heart_outlined,
+                title: 'No vitals recorded yet',
+                message: 'Tap "Record vitals" to add weight, Hb, BP and more '
+                    'for this appointment.',
+              );
+            }
+            final latest = records.first;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _StaffRecordList(
+                  title: 'Latest vitals',
+                  icon: Icons.monitor_heart_outlined,
+                  rows: [
+                    _InfoRow('Weight', _fmt(latest.weightKg, 'kg')),
+                    _InfoRow('Hemoglobin', _fmt(latest.hemoglobinGdl, 'g/dL')),
+                    _InfoRow('Blood pressure',
+                        latest.bloodPressure == null
+                            ? '--'
+                            : '${latest.bloodPressure} mmHg'),
+                    _InfoRow('Fundal height',
+                        _fmt(latest.fundalHeightCm, 'cm')),
+                    _InfoRow(
+                        'Gestational week',
+                        latest.gestationalWeek == null
+                            ? '--'
+                            : 'Week ${latest.gestationalWeek}'),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Text('History',
+                      style: Theme.of(context).textTheme.titleSmall),
+                ),
+                const SizedBox(height: 8),
+                for (final v in records)
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.event_note_outlined),
+                      title: Text(_vitalsLine(v)),
+                      subtitle: Text(
+                        '${DateFormat('d MMM yyyy, h:mm a').format(v.recordedAt)}'
+                        ' · ${v.recordedByName}'
+                        '${v.notes != null && v.notes!.isNotEmpty ? '\n${v.notes}' : ''}',
+                      ),
+                      isThreeLine: v.notes != null && v.notes!.isNotEmpty,
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  static String _fmt(double? value, String unit) =>
+      (value == null) ? '--' : '${value.toStringAsFixed(1)} $unit';
+
+  static String _vitalsLine(AppointmentVitals v) {
+    final parts = <String>[
+      if (v.weightKg != null) '${v.weightKg!.toStringAsFixed(1)} kg',
+      if (v.hemoglobinGdl != null) 'Hb ${v.hemoglobinGdl!.toStringAsFixed(1)}',
+      if (v.bloodPressure != null) 'BP ${v.bloodPressure}',
+      if (v.fundalHeightCm != null)
+        'FH ${v.fundalHeightCm!.toStringAsFixed(1)} cm',
+      if (v.gestationalWeek != null) 'Wk ${v.gestationalWeek}',
+    ];
+    return parts.isEmpty ? 'No measurements' : parts.join(' · ');
+  }
+}
+
+/// One consultation action. [onTap] null = not yet wired (shows a coming-soon
+/// snackbar); non-null = a real, working action.
+class _ConsultAction {
+  const _ConsultAction(this.label, this.icon, [this.onTap]);
+  final String label;
+  final IconData icon;
+  final VoidCallback? onTap;
+}
+
+class _ConsultationPanel extends ConsumerWidget {
+  const _ConsultationPanel({
+    required this.role,
+    this.patient,
+    this.profile,
+    this.pregnancy,
+    this.appointmentId,
+  });
 
   final UserRole role;
 
+  /// Patient context. When null (dashboard / generic views) the patient-specific
+  /// actions are hidden and only placeholders show.
+  final AppUser? patient;
+  final Profile? profile;
+  final Pregnancy? pregnancy;
+  final String? appointmentId;
+
+  bool get _hasPatient => patient != null;
+
   @override
-  Widget build(BuildContext context) {
-    final actions = switch (role) {
-      UserRole.doctor => [
-          'Add diagnosis',
-          'Prescribe medication',
-          'Treatment plan',
-          'Consultation notes'
-        ],
-      UserRole.dietitian => [
-          'Create meal plan',
-          'Update recommendations',
-          'Calorie review',
-          'Diet compliance'
-        ],
-      UserRole.nurse => [
-          'Update vital signs',
-          'Patient observation',
-          'Condition update',
-          'Appointment flow'
-        ],
-      _ => ['Care update'],
-    };
+  Widget build(BuildContext context, WidgetRef ref) {
+    // The two core, fully-wired actions available to ALL staff (incl. nurses):
+    // record vitals (weight/Hb/BP…) and add a consultation note.
+    void recordVitals() {
+      final p = patient;
+      if (p == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Patient record not loaded yet.')),
+        );
+        return;
+      }
+      showRecordVitalsSheet(
+        context,
+        ref,
+        patient: p,
+        profile: profile,
+        pregnancy: pregnancy,
+        appointmentId: appointmentId,
+      );
+    }
+
+    void addNote() {
+      final p = patient;
+      if (p == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Patient record not loaded yet.')),
+        );
+        return;
+      }
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => AddClinicalNoteScreen(patient: p)),
+      );
+    }
+
+    // Only real, working actions are shown — no "coming soon" placeholders.
+    final actions = <_ConsultAction>[
+      _ConsultAction('Record vitals', Icons.monitor_heart_outlined, recordVitals),
+      _ConsultAction('Consultation note', Icons.note_add_outlined, addNote),
+    ];
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -840,21 +1270,28 @@ class _ConsultationPanel extends StatelessWidget {
                   .titleMedium
                   ?.copyWith(fontWeight: FontWeight.w900)),
           const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final action in actions)
-                ActionChip(
-                  avatar: const Icon(Icons.add_circle_outline, size: 18),
-                  label: Text(action),
-                  onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content: Text(
-                              '$action ready for secure notes integration.'))),
-                ),
-            ],
-          ),
+          if (_hasPatient)
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final action in actions)
+                  ActionChip(
+                    avatar: Icon(action.icon, size: 18),
+                    label: Text(action.label),
+                    onPressed: action.onTap,
+                  ),
+              ],
+            )
+          else
+            Text(
+              'Open a patient from Today\'s Patients or Health Records to '
+              'record vitals or add a consultation note.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    height: 1.4,
+                  ),
+            ),
         ],
       ),
     );
@@ -1111,7 +1548,7 @@ class _StaffChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 18),
+        color: color.withValues(alpha: 0.071),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(label,

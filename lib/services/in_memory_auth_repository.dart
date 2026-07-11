@@ -213,6 +213,23 @@ class InMemoryAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<AppUser> signInWithGoogle() async {
+    // The in-memory store has no real Google integration; used for tests/dev.
+    throw Exception('Google sign-in is not available in offline mode.');
+  }
+
+  @override
+  bool get isEmailVerified => true; // Offline/dev accounts are pre-verified.
+
+  @override
+  Future<void> sendEmailVerification() async {
+    // No-op in offline mode.
+  }
+
+  @override
+  Future<bool> reloadEmailVerified() async => true;
+
+  @override
   Future<AppUser> register({
     required String email,
     required String password,
@@ -405,6 +422,12 @@ class InMemoryAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<Map<String, dynamic>> loadUserSettings(String userId) async {
+    // No server-side store in the in-memory repository.
+    return <String, dynamic>{};
+  }
+
+  @override
   Future<void> changePassword({
     required String currentPassword,
     required String newPassword,
@@ -446,6 +469,29 @@ class InMemoryAuthRepository implements AuthRepository {
     _log(
       ActivityType.passwordResetAdmin,
       'Admin reset password for $normalized',
+      actorId: _currentUser?.id,
+      subjectId: record.user.id,
+    );
+  }
+
+  @override
+  Future<void> adminSetUserPassword({
+    required String uid,
+    required String email,
+    required String newPassword,
+  }) async {
+    _validatePassword(newPassword);
+    final record = _recordsById[uid] ??
+        (_idByEmail[_normalizeEmail(email)] != null
+            ? _recordsById[_idByEmail[_normalizeEmail(email)]]
+            : null);
+    if (record == null) {
+      throw Exception('User not found');
+    }
+    _setPassword(record, newPassword);
+    _log(
+      ActivityType.passwordSetAdmin,
+      'Admin set a new password for ${record.user.email}',
       actorId: _currentUser?.id,
       subjectId: record.user.id,
     );

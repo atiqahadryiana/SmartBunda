@@ -135,7 +135,7 @@ class ReportMetadataItem extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 4),
+            color: Colors.black.withValues(alpha: 0.016),
             blurRadius: 2,
             offset: const Offset(0, 1),
           ),
@@ -213,7 +213,7 @@ class PDFPreviewSection extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.darkPink.withValues(alpha: 8),
+            color: AppTheme.darkPink.withValues(alpha: 0.031),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -413,7 +413,7 @@ class MedicalDisclaimerBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF3E0).withValues(alpha: 200),
+        color: const Color(0xFFFFF3E0).withValues(alpha: 0.784),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: const Color(0xFFFFB74D),

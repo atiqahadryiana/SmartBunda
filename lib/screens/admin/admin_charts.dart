@@ -57,7 +57,7 @@ class AdminLineChart extends StatelessWidget {
             drawVerticalLine: false,
             horizontalInterval: maxY / 4,
             getDrawingHorizontalLine: (_) => FlLine(
-              color: scheme.outlineVariant.withValues(alpha: 90),
+              color: scheme.outlineVariant.withValues(alpha: 0.353),
               strokeWidth: 1,
             ),
           ),
@@ -131,7 +131,7 @@ class AdminLineChart extends StatelessWidget {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    lineColor.withValues(alpha: 60),
+                    lineColor.withValues(alpha: 0.235),
                     lineColor.withValues(alpha: 0),
                   ],
                 ),
@@ -176,7 +176,7 @@ class AdminBarChart extends StatelessWidget {
             drawVerticalLine: false,
             horizontalInterval: maxY / 4,
             getDrawingHorizontalLine: (_) => FlLine(
-              color: scheme.outlineVariant.withValues(alpha: 90),
+              color: scheme.outlineVariant.withValues(alpha: 0.353),
               strokeWidth: 1,
             ),
           ),
@@ -243,7 +243,7 @@ class AdminBarChart extends StatelessWidget {
                       begin: Alignment.bottomCenter,
                       end: Alignment.topCenter,
                       colors: [
-                        barColor.withValues(alpha: 160),
+                        barColor.withValues(alpha: 0.627),
                         barColor,
                       ],
                     ),

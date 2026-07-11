@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smartbunda/app.dart';
 import 'package:smartbunda/firebase_options.dart';
 import 'package:smartbunda/providers/locale_provider.dart';
+import 'package:smartbunda/services/meal_reminder_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,6 +19,12 @@ Future<void> main() async {
     await Firebase.initializeApp();
   }
   final prefs = await SharedPreferences.getInstance();
+
+  // Arm the daily meal-log reminders (breakfast/lunch/dinner). Mobile-only and
+  // best-effort — never block app start if scheduling fails.
+  if (!kIsWeb) {
+    unawaited(MealReminderService().scheduleDailyReminders().catchError((_) {}));
+  }
   runApp(
     ProviderScope(
       overrides: [

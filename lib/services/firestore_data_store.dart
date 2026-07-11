@@ -272,6 +272,33 @@ class FirestoreDataStore implements DataStore {
   }
 
   @override
+  Future<void> updateEntry(FoodEntry entry) async {
+    // The day-path is derived from the entry date, which may have changed, so
+    // re-create the entry under the (possibly new) day and refresh the mirror.
+    await deleteEntry(entry);
+    await addEntry(entry);
+  }
+
+  @override
+  Future<void> deleteEntry(FoodEntry entry) async {
+    final logDate = _formatDate(entry.date);
+    final entryRef = _firestore
+        .collection(FS.foodLogs)
+        .doc(entry.userId)
+        .collection('Days')
+        .doc(logDate)
+        .collection('Entries')
+        .doc(entry.id);
+    final logItemRef = _firestore
+        .collection(FS.foodLogItems)
+        .doc('${entry.userId}_${entry.id}');
+    final batch = _firestore.batch();
+    batch.delete(entryRef);
+    batch.delete(logItemRef);
+    await batch.commit();
+  }
+
+  @override
   Stream<Map<String, List<FoodEntry>>> watchAllEntries() {
     final controller =
         StreamController<Map<String, List<FoodEntry>>>.broadcast();
@@ -332,6 +359,19 @@ class FirestoreDataStore implements DataStore {
         .collection(FS.hydrationLogs)
         .doc(entry.id)
         .set(_hydrationToMap(entry));
+  }
+
+  @override
+  Future<void> updateHydrationEntry(HydrationEntry entry) async {
+    await _firestore
+        .collection(FS.hydrationLogs)
+        .doc(entry.id)
+        .set(_hydrationToMap(entry), SetOptions(merge: true));
+  }
+
+  @override
+  Future<void> deleteHydrationEntry(HydrationEntry entry) async {
+    await _firestore.collection(FS.hydrationLogs).doc(entry.id).delete();
   }
 
   @override
@@ -423,34 +463,28 @@ class FirestoreDataStore implements DataStore {
     );
   }
 
-  String _conditionToString(MedicalCondition condition) {
-    switch (condition) {
-      case MedicalCondition.anemia:
-        return 'anemia';
-      case MedicalCondition.gestationalDiabetes:
-        return 'gestationalDiabetes';
+  String _conditionToString(MedicalCondition condition) => condition.key;
+
+  MedicalCondition? _conditionFromString(String value) {
+    final v = value.trim().toLowerCase();
+    if (v == 'anaemia') return MedicalCondition.anemia; // legacy spelling
+    for (final c in MedicalCondition.values) {
+      if (c.name.toLowerCase() == v) return c;
     }
+    return null;
   }
 
   Set<MedicalCondition> _conditionsFromJson(dynamic raw) {
     if (raw is! List) return const <MedicalCondition>{};
     return raw
         .whereType<String>()
-        .map((value) {
-          switch (value.toLowerCase()) {
-            case 'anemia':
-            case 'anaemia':
-              return MedicalCondition.anemia;
-            case 'gestationaldiabetes':
-              return MedicalCondition.gestationalDiabetes;
-          }
-          return null;
-        })
+        .map(_conditionFromString)
         .whereType<MedicalCondition>()
         .toSet();
   }
 
   Map<String, dynamic> _pregnancyToMap(Pregnancy pregnancy) {
+    final lmp = pregnancy.lmp;
     return {
       'pregnancyId': pregnancy.id,
       'patientId': pregnancy.patientId,
@@ -459,6 +493,9 @@ class FirestoreDataStore implements DataStore {
       'edd': pregnancy.edd,
       'riskLevel': pregnancy.riskLevel,
       'updatedAt': pregnancy.updatedAt ?? FieldValue.serverTimestamp(),
+      // Stored as a yyyy-MM-dd string (like `edd`); the source of truth for
+      // gestational week / EDD when present.
+      'lmp': lmp == null ? null : _formatDate(lmp),
     };
   }
 
@@ -474,6 +511,7 @@ class FirestoreDataStore implements DataStore {
       edd: json['edd'] as String? ?? '',
       riskLevel: json['riskLevel'] as String? ?? '',
       updatedAt: _asDate(json['updatedAt']),
+      lmp: _asDate(json['lmp']),
     );
   }
 

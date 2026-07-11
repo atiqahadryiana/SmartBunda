@@ -120,7 +120,8 @@ class PerinatalCareManualScreen extends StatelessWidget {
           Text(
             strings.t(
                 'Use this as care-team reference material, not as a replacement for clinician judgement.'),
-            style: const TextStyle(color: Colors.black54),
+            style:
+                TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
         ],
       ),

@@ -145,7 +145,7 @@ class _AppointmentCalendarScreenState extends State<AppointmentCalendarScreen> {
                         Icon(
                           Icons.calendar_today_outlined,
                           size: 48,
-                          color: AppTheme.secondaryText.withValues(alpha: 180),
+                          color: AppTheme.secondaryText.withValues(alpha: 0.706),
                         ),
                         const SizedBox(height: 12),
                         Text(
@@ -234,7 +234,7 @@ class _AppointmentDateCard extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 20),
+                    color: statusColor.withValues(alpha: 0.078),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
@@ -273,9 +273,9 @@ class _AppointmentDateCard extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 20),
+                    color: statusColor.withValues(alpha: 0.078),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: statusColor.withValues(alpha: 60)),
+                    border: Border.all(color: statusColor.withValues(alpha: 0.235)),
                   ),
                   child: Text(
                     _statusLabel,

@@ -1,6 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:google_sign_in/google_sign_in.dart';
 
 import 'package:smartbunda/firestore_paths.dart';
 import 'package:smartbunda/models/activity_log.dart';
@@ -50,7 +53,7 @@ class FirebaseAuthRepository implements AuthRepository {
         return ActivityLogEntry(
           id: doc.id,
           timestamp: _asDate(data['timestamp']) ?? DateTime.now(),
-          type: _activityTypeFromString(data['type'] as String?),
+          type: activityTypeFromName(data['type'] as String?),
           message: data['message'] as String? ?? '',
           actorId: data['actorId'] as String?,
           subjectId: data['subjectId'] as String?,
@@ -121,6 +124,123 @@ class FirebaseAuthRepository implements AuthRepository {
     return appUser;
   }
 
+  bool _googleInitialized = false;
+
+  @override
+  bool get isEmailVerified {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+    // Password users must verify; federated (Google) sign-ins are pre-verified.
+    if (user.emailVerified) return true;
+    return user.providerData.any((p) => p.providerId == 'google.com');
+  }
+
+  @override
+  Future<void> sendEmailVerification() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('You must be signed in to verify your email.');
+    }
+    if (user.emailVerified) return;
+    await user.sendEmailVerification();
+  }
+
+  @override
+  Future<bool> reloadEmailVerified() async {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+    await user.reload();
+    return _auth.currentUser?.emailVerified ?? false;
+  }
+
+  @override
+  Future<AppUser> signInWithGoogle() async {
+    final fb.UserCredential cred;
+    try {
+      cred = kIsWeb ? await _googleSignInWeb() : await _googleSignInMobile();
+    } on fb.FirebaseAuthException catch (e) {
+      if (e.code == 'account-exists-with-different-credential') {
+        throw Exception(
+          'An account already exists with this email using a different '
+          'sign-in method. Please sign in with your email and password.',
+        );
+      }
+      rethrow;
+    }
+
+    final user = cred.user;
+    if (user == null) {
+      throw Exception('Google sign-in failed. Please try again.');
+    }
+    // First-time users get a patient, ACTIVE doc (patient-only guarantee).
+    await _ensureUserDoc(user);
+    final doc = await _userDoc(user.uid).get();
+    final appUser = _appUserFromDoc(doc.id, doc.data());
+    try {
+      _guardAccess(appUser, doc.data());
+    } catch (_) {
+      await _auth.signOut();
+      rethrow;
+    }
+    _currentUser = appUser;
+    await _touchLogin(user.uid);
+    await _log(
+      ActivityType.login,
+      'User logged in via Google',
+      actorId: user.uid,
+      subjectId: user.uid,
+    );
+    return appUser;
+  }
+
+  /// Web Google sign-in via Firebase's built-in popup flow. Uses the project's
+  /// configured web OAuth client (from firebase_options.dart) — no extra client
+  /// id needed in index.html.
+  Future<fb.UserCredential> _googleSignInWeb() async {
+    final provider = fb.GoogleAuthProvider()..addScope('email');
+    try {
+      return await _auth.signInWithPopup(provider);
+    } on fb.FirebaseAuthException catch (e) {
+      if (e.code == 'popup-closed-by-user' || e.code == 'cancelled-popup-request') {
+        throw Exception('Google sign-in was cancelled.');
+      }
+      if (e.code == 'popup-blocked') {
+        throw Exception(
+          'The sign-in popup was blocked. Please allow popups for this site '
+          'and try again.',
+        );
+      }
+      rethrow;
+    }
+  }
+
+  /// Mobile Google sign-in via the native account picker (google_sign_in),
+  /// exchanged for a Firebase credential.
+  Future<fb.UserCredential> _googleSignInMobile() async {
+    final google = GoogleSignIn.instance;
+    if (!_googleInitialized) {
+      await google.initialize();
+      _googleInitialized = true;
+    }
+
+    final GoogleSignInAccount account;
+    try {
+      account = await google.authenticate(scopeHint: const ['email']);
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        throw Exception('Google sign-in was cancelled.');
+      }
+      throw Exception('Google sign-in failed. Please try again.');
+    }
+
+    final idToken = account.authentication.idToken;
+    if (idToken == null) {
+      throw Exception('Google sign-in failed: missing credentials.');
+    }
+    final credential = fb.GoogleAuthProvider.credential(idToken: idToken);
+    return _auth.signInWithCredential(credential);
+  }
+
   @override
   Future<AppUser> register({
     required String email,
@@ -158,13 +278,22 @@ class FirebaseAuthRepository implements AuthRepository {
       jlmNumber: jlmNumber,
     );
     if (needsApproval) {
-      await _auth.signOut();
+      // Log while still authenticated (the AuditLogs rule requires
+      // actorId == the writer's uid), then sign out to hold for approval.
       await _log(
         ActivityType.approvalRequested,
         'Approval requested for ${email.trim().toLowerCase()}',
         actorId: user.uid,
       );
+      await _auth.signOut();
       throw Exception('Registration submitted. Awaiting admin approval.');
+    }
+    // Send a verification email so the patient can confirm ownership.
+    // Non-fatal: registration still succeeds if the email fails to send.
+    try {
+      await user.sendEmailVerification();
+    } catch (_) {
+      // Ignore — the user can resend from the verification prompt.
     }
     final appUser = await _loadUser(user.uid);
     _currentUser = appUser;
@@ -180,8 +309,8 @@ class FirebaseAuthRepository implements AuthRepository {
   @override
   Future<void> signOut() async {
     final actor = _currentUser;
-    _currentUser = null;
-    await _auth.signOut();
+    // Log BEFORE signing out: the AuditLogs rule requires the writer to be
+    // authenticated as `actorId`, so a post-signout write would be denied.
     if (actor != null) {
       await _log(
         ActivityType.logout,
@@ -190,6 +319,8 @@ class FirebaseAuthRepository implements AuthRepository {
         subjectId: actor.id,
       );
     }
+    _currentUser = null;
+    await _auth.signOut();
   }
 
   @override
@@ -320,6 +451,14 @@ class FirebaseAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<Map<String, dynamic>> loadUserSettings(String userId) async {
+    final doc = await _userDoc(userId).get();
+    final raw = doc.data()?['settings'];
+    if (raw is Map) return Map<String, dynamic>.from(raw);
+    return <String, dynamic>{};
+  }
+
+  @override
   Future<void> changePassword({
     required String currentPassword,
     required String newPassword,
@@ -355,6 +494,35 @@ class FirebaseAuthRepository implements AuthRepository {
     await _log(
       ActivityType.passwordResetAdmin,
       'Admin sent password reset for ${email.trim().toLowerCase()}',
+      actorId: _currentUser?.id,
+    );
+  }
+
+  @override
+  Future<void> adminSetUserPassword({
+    required String uid,
+    required String email,
+    required String newPassword,
+  }) async {
+    _validatePassword(newPassword);
+    try {
+      final callable = FirebaseFunctions.instance
+          .httpsCallable('adminSetUserPassword');
+      await callable.call<Map<String, dynamic>>({
+        'uid': uid,
+        'email': email.trim(),
+        'newPassword': newPassword,
+      });
+    } on FirebaseFunctionsException catch (e) {
+      // Surface the function's own message (permission-denied, not-found, …)
+      // rather than a raw plugin error.
+      throw Exception(e.message ?? 'Could not set the password (${e.code}).');
+    }
+    // The function writes its own AuditLogs entry server-side; mirror a local
+    // activity log so the admin's own view updates immediately.
+    await _log(
+      ActivityType.passwordSetAdmin,
+      'Admin set a new password for ${email.trim().toLowerCase()}',
       actorId: _currentUser?.id,
     );
   }
@@ -705,35 +873,6 @@ class FirebaseAuthRepository implements AuthRepository {
   void _validatePassword(String password) {
     if (!PasswordPolicy.isValid(password)) {
       throw Exception(PasswordPolicy.errorMessage);
-    }
-  }
-
-  ActivityType _activityTypeFromString(String? value) {
-    switch (value?.toLowerCase()) {
-      case 'login':
-        return ActivityType.login;
-      case 'logout':
-        return ActivityType.logout;
-      case 'register':
-        return ActivityType.register;
-      case 'approvalRequested':
-        return ActivityType.approvalRequested;
-      case 'approvalCompleted':
-        return ActivityType.approvalCompleted;
-      case 'userCreated':
-        return ActivityType.userCreated;
-      case 'userUpdated':
-        return ActivityType.userUpdated;
-      case 'userDeactivated':
-        return ActivityType.userDeactivated;
-      case 'passwordResetRequested':
-        return ActivityType.passwordResetRequested;
-      case 'passwordResetCompleted':
-        return ActivityType.passwordResetCompleted;
-      case 'passwordResetAdmin':
-        return ActivityType.passwordResetAdmin;
-      default:
-        return ActivityType.login;
     }
   }
 

@@ -7,7 +7,10 @@ import 'package:smartbunda/models/profile.dart';
 import 'package:smartbunda/providers/app_providers.dart';
 import 'package:smartbunda/services/auth_repository.dart';
 import 'package:smartbunda/services/service_providers.dart';
+import 'package:smartbunda/theme/app_components.dart';
+import 'package:smartbunda/utils/auth_error_messages.dart';
 import 'package:smartbunda/utils/password_policy.dart';
+import 'package:smartbunda/widgets/permission_gate.dart';
 import 'package:smartbunda/widgets/require_sign_in.dart';
 
 class AdminScreen extends ConsumerStatefulWidget {
@@ -46,7 +49,10 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     final allProfilesAsync = ref.watch(allProfilesProvider);
     final pendingApprovalsAsync = ref.watch(pendingApprovalsProvider);
 
-    return RequireSignIn(
+    return PermissionGate(
+      permission: AccessPermission.userManagement,
+      title: 'User management',
+      child: RequireSignIn(
       title: 'User management',
       showAppBar: widget.showAppBar,
       message: 'Please sign in to manage users.',
@@ -324,12 +330,26 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                     ],
                   );
                 },
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => ListView(
+                  children: [
+                    const _AdminPageHeaderSkeleton(),
+                    const SizedBox(height: 20),
+                    const _MetricGridSkeleton(),
+                    const SizedBox(height: 20),
+                    const _FilterToolbarSkeleton(),
+                    const SizedBox(height: 20),
+                    ...List.generate(
+                        2, (index) => const _PanelCardSkeleton()),
+                    const SizedBox(height: 20),
+                    const _UserDirectorySkeleton(),
+                  ],
+                ),
                 error: (error, _) => Center(child: Text('Error: $error')),
               ),
             ),
           ),
         ),
+      ),
       ),
     );
   }
@@ -408,10 +428,16 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     var permissions = Set<AccessPermission>.from(
         user?.effectivePermissions ?? defaultPermissionsFor(role));
     final formKey = GlobalKey<FormState>();
+    final messenger = ScaffoldMessenger.of(context);
+    // Dialog-level state shared by the form and the Save action so the button
+    // can show a spinner and surface a backend error inline.
+    var saving = false;
+    String? errorText;
 
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
         title: Text(title),
         content: StatefulBuilder(
           builder: (context, setState) {
@@ -514,38 +540,78 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
           },
         ),
         actions: [
+          if (errorText != null)
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Text(
+                  errorText!,
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                      fontSize: 12.5),
+                ),
+              ),
+            ),
           TextButton(
-            onPressed: () => Navigator.of(context).maybePop(),
+            onPressed:
+                saving ? null : () => Navigator.of(context).maybePop(),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () async {
-              if (!formKey.currentState!.validate()) return;
-              if (user == null) {
-                await ref.read(authRepositoryProvider).createUser(
-                      email: emailCtrl.text.trim(),
-                      password: passwordCtrl.text,
-                      role: role,
-                      displayName: nameCtrl.text.trim(),
-                      isActive: isActive,
-                      permissions: permissions,
-                    );
-              } else {
-                await ref.read(authRepositoryProvider).updateUser(
-                      userId: user.id,
-                      displayName: nameCtrl.text.trim(),
-                      role: role,
-                      isActive: isActive,
-                      permissions: permissions,
-                    );
-              }
-              if (context.mounted) {
-                Navigator.of(context).maybePop();
-              }
-            },
-            child: const Text('Save'),
+            onPressed: saving
+                ? null
+                : () async {
+                    if (!formKey.currentState!.validate()) return;
+                    setDialogState(() {
+                      saving = true;
+                      errorText = null;
+                    });
+                    try {
+                      if (user == null) {
+                        await ref.read(authRepositoryProvider).createUser(
+                              email: emailCtrl.text.trim(),
+                              password: passwordCtrl.text,
+                              role: role,
+                              displayName: nameCtrl.text.trim(),
+                              isActive: isActive,
+                              permissions: permissions,
+                            );
+                      } else {
+                        await ref.read(authRepositoryProvider).updateUser(
+                              userId: user.id,
+                              displayName: nameCtrl.text.trim(),
+                              role: role,
+                              isActive: isActive,
+                              permissions: permissions,
+                            );
+                      }
+                      if (context.mounted) {
+                        Navigator.of(context).maybePop();
+                      }
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text(user == null
+                              ? 'User created.'
+                              : 'User updated.'),
+                        ),
+                      );
+                    } catch (error) {
+                      setDialogState(() {
+                        saving = false;
+                        errorText = friendlyAuthError(error);
+                      });
+                    }
+                  },
+            child: saving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Save'),
           ),
         ],
+        ),
       ),
     );
   }
@@ -555,32 +621,82 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     WidgetRef ref,
     String email,
   ) async {
-    await showDialog(
+    final messenger = ScaffoldMessenger.of(context);
+    await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reset password'),
-        content: Text('Send a password reset email to $email?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).maybePop(),
-            child: const Text('Cancel'),
+      builder: (dialogContext) {
+        var sending = false;
+        return StatefulBuilder(
+          builder: (dialogContext, setState) => AlertDialog(
+            title: const Text('Reset password'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Send a secure password-reset link to:'),
+                const SizedBox(height: 6),
+                Text(
+                  email,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'The user will receive an email with a link to set a new '
+                  'password. Their current password keeps working until they '
+                  'complete the reset.',
+                  style: Theme.of(dialogContext).textTheme.bodySmall?.copyWith(
+                        color:
+                            Theme.of(dialogContext).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed:
+                    sending ? null : () => Navigator.of(dialogContext).maybePop(),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: sending
+                    ? null
+                    : () async {
+                        setState(() => sending = true);
+                        try {
+                          await ref
+                              .read(authRepositoryProvider)
+                              .adminResetPassword(email: email, newPassword: '');
+                          if (dialogContext.mounted) {
+                            Navigator.of(dialogContext).maybePop();
+                          }
+                          messenger.showSnackBar(
+                            SnackBar(
+                                content: Text('Reset link sent to $email.')),
+                          );
+                        } catch (error) {
+                          setState(() => sending = false);
+                          messenger.showSnackBar(
+                            SnackBar(
+                                content: Text(
+                                    'Could not send reset link: ${friendlyAuthError(error)}')),
+                          );
+                        }
+                      },
+                child: sending
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Send reset link'),
+              ),
+            ],
           ),
-          FilledButton(
-            onPressed: () async {
-              await ref.read(authRepositoryProvider).adminResetPassword(
-                    email: email,
-                    newPassword: '',
-                  );
-              if (context.mounted) {
-                Navigator.of(context).maybePop();
-              }
-            },
-            child: const Text('Send email'),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
+
 }
 
 enum _StatusFilter { all, active, inactive }
@@ -617,7 +733,7 @@ class _AdminPageHeader extends StatelessWidget {
         border: Border.all(color: scheme.outlineVariant),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 8),
+            color: Colors.black.withValues(alpha: 0.031),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -745,7 +861,7 @@ class _AdminMetricTile extends StatelessWidget {
         border: Border.all(color: scheme.outlineVariant),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 6),
+            color: Colors.black.withValues(alpha: 0.024),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -757,7 +873,7 @@ class _AdminMetricTile extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: accent.withValues(alpha: 14),
+              color: accent.withValues(alpha: 0.055),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(icon, color: accent),
@@ -1033,7 +1149,7 @@ class _PanelCard extends StatelessWidget {
         border: Border.all(color: scheme.outlineVariant),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 5),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),
@@ -1140,7 +1256,7 @@ class _PendingApprovalCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 60),
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.235),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: scheme.outlineVariant),
       ),
@@ -1238,7 +1354,7 @@ class _EmptyPanelState extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 60),
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.235),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -1248,7 +1364,7 @@ class _EmptyPanelState extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: scheme.primary.withValues(alpha: 14),
+              color: scheme.primary.withValues(alpha: 0.055),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: scheme.primary),
@@ -1336,7 +1452,7 @@ class _UserDirectory extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: scheme.surfaceContainerHighest.withValues(alpha: 70),
+                    color: scheme.surfaceContainerHighest.withValues(alpha: 0.275),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Row(
@@ -1725,9 +1841,9 @@ class _InfoChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: resolvedAccent.withValues(alpha: 12),
+        color: resolvedAccent.withValues(alpha: 0.047),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: resolvedAccent.withValues(alpha: 42)),
+        border: Border.all(color: resolvedAccent.withValues(alpha: 0.165)),
       ),
       child: Text(
         label,
@@ -1747,4 +1863,332 @@ class _Totals {
   final int protein;
 
   bool get hasData => calories > 0 || protein > 0;
+}
+
+class _AdminPageHeaderSkeleton extends StatelessWidget {
+  const _AdminPageHeaderSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(),
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SbSkeletonLoader(
+            height: 24,
+            width: 200,
+          ),
+          SizedBox(height: 8),
+          SbSkeletonLoader(
+            height: 16,
+            width: 400,
+          ),
+          SizedBox(height: 16),
+          SbSkeletonLoader(
+            height: 36,
+            width: 120,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MetricGridSkeleton extends StatelessWidget {
+  const _MetricGridSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: 4,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        mainAxisSpacing: 16,
+        crossAxisSpacing: 16,
+        childAspectRatio: 1.9,
+      ),
+      itemBuilder: (context, index) => const _AdminMetricTileSkeleton(),
+    );
+  }
+}
+
+class _AdminMetricTileSkeleton extends StatelessWidget {
+  const _AdminMetricTileSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(),
+      ),
+      child: const Row(
+        children: [
+          SbSkeletonLoader(
+            width: 48,
+            height: 48,
+            borderRadius: BorderRadius.all(Radius.circular(14)),
+          ),
+          SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SbSkeletonLoader(
+                  height: 14,
+                  width: 80,
+                ),
+                SizedBox(height: 6),
+                SbSkeletonLoader(
+                  height: 24,
+                  width: 60,
+                ),
+                SizedBox(height: 6),
+                SbSkeletonLoader(
+                  height: 12,
+                  width: 120,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FilterToolbarSkeleton extends StatelessWidget {
+  const _FilterToolbarSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(),
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              SbSkeletonLoader(
+                height: 48,
+                width: 320,
+              ),
+              SbSkeletonLoader(
+                height: 36,
+                width: 120,
+              ),
+              SbSkeletonLoader(
+                height: 36,
+                width: 120,
+              ),
+              SbSkeletonLoader(
+                height: 36,
+                width: 160,
+              ),
+              SbSkeletonLoader(
+                height: 36,
+                width: 140,
+              ),
+            ],
+          ),
+          SizedBox(height: 14),
+          SbSkeletonLoader(
+            height: 14,
+            width: 120,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PanelCardSkeleton extends StatelessWidget {
+  const _PanelCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(),
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SbSkeletonLoader(
+                      height: 22,
+                      width: 160,
+                    ),
+                    SizedBox(height: 6),
+                    SbSkeletonLoader(
+                      height: 16,
+                      width: 300,
+                    ),
+                  ],
+                ),
+              ),
+              SbSkeletonLoader(
+                height: 16,
+                width: 120,
+              ),
+            ],
+          ),
+          SizedBox(height: 18),
+          SbSkeletonLoader(
+            height: 100,
+            width: double.infinity,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UserDirectorySkeleton extends StatelessWidget {
+  const _UserDirectorySkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(),
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SbSkeletonLoader(
+                      height: 22,
+                      width: 160,
+                    ),
+                    SizedBox(height: 6),
+                    SbSkeletonLoader(
+                      height: 16,
+                      width: 300,
+                    ),
+                  ],
+                ),
+              ),
+              SbSkeletonLoader(
+                height: 16,
+                width: 120,
+              ),
+            ],
+          ),
+          SizedBox(height: 18),
+          _UserRowSkeleton(),
+          _UserRowSkeleton(),
+          _UserRowSkeleton(),
+          _UserRowSkeleton(),
+          _UserRowSkeleton(),
+        ],
+      ),
+    );
+  }
+}
+
+class _UserRowSkeleton extends StatelessWidget {
+  const _UserRowSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: const Row(
+        children: [
+          Expanded(
+            flex: 3,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SbSkeletonLoader(
+                  height: 16,
+                  width: 120,
+                ),
+                SizedBox(height: 4),
+                SbSkeletonLoader(
+                  height: 12,
+                  width: 100,
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: SbSkeletonLoader(
+              height: 16,
+              width: 80,
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: SbSkeletonLoader(
+              height: 16,
+              width: 60,
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: SbSkeletonLoader(
+              height: 16,
+              width: 80,
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: SbSkeletonLoader(
+              height: 16,
+              width: 100,
+            ),
+          ),
+          Expanded(
+            flex: 1,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: SbSkeletonLoader(
+                height: 24,
+                width: 24,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

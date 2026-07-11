@@ -6,6 +6,7 @@ import 'package:smartbunda/models/food_entry.dart';
 import 'package:smartbunda/models/profile.dart';
 import 'package:smartbunda/providers/app_providers.dart';
 import 'package:smartbunda/services/service_providers.dart';
+import 'package:smartbunda/theme/app_components.dart';
 import 'package:smartbunda/widgets/empty_state.dart';
 import 'package:smartbunda/widgets/require_sign_in.dart';
 import 'package:smartbunda/widgets/screen_header.dart';
@@ -49,58 +50,77 @@ class NurseMonitoringScreen extends ConsumerWidget {
                 );
               }
 
-              return ListView(
-                children: [
-                  const ScreenHeader(
-                    title: 'Monitoring & alerts',
-                    subtitle: 'Review nutrition summaries and body mass details.',
-                    icon: Icons.monitor_heart_outlined,
-                  ),
-                  const SizedBox(height: 16),
-                  ...patients.map((patient) {
-                    final profile = profiles[patient.id];
-                    final entries = entriesByUser[patient.id] ?? const <FoodEntry>[];
-                    final pregnancy = pregnancies[patient.id];
-                    final nutrition = _nutritionSummary(entries);
-                    final bodyMass = _bodyMassSummary(profile);
-                    final bmi = profile?.bmi ?? 0;
-                    final isHigh = bmi >= 30;
+              return RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(usersProvider);
+                  ref.invalidate(allEntriesProvider);
+                  ref.invalidate(allProfilesProvider);
+                  ref.invalidate(allPregnanciesProvider);
+                  await Future.delayed(const Duration(milliseconds: 500));
+                },
+                child: ListView(
+                  children: [
+                    const ScreenHeader(
+                      title: 'Monitoring & alerts',
+                      subtitle: 'Review nutrition summaries and body mass details.',
+                      icon: Icons.monitor_heart_outlined,
+                    ),
+                    const SizedBox(height: 16),
+                    ...patients.map((patient) {
+                      final profile = profiles[patient.id];
+                      final entries = entriesByUser[patient.id] ?? const <FoodEntry>[];
+                      final pregnancy = pregnancies[patient.id];
+                      final nutrition = _nutritionSummary(entries);
+                      final bodyMass = _bodyMassSummary(profile);
+                      final bmi = profile?.bmi ?? 0;
+                      final isHigh = bmi >= 30;
 
-                    return Card(
-                      child: ListTile(
-                        leading: const Icon(Icons.person_outline),
-                        title: Text(patient.displayName ?? patient.email),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(nutrition),
-                            const SizedBox(height: 4),
-                            Text(
-                              bodyMass,
-                              style: TextStyle(color: isHigh ? Colors.red : null),
-                            ),
-                          ],
-                        ),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => NutritionistClientScreen(
-                                client: patient,
-                                entries: entries,
-                                profile: profile,
-                                pregnancy: pregnancy,
+                      return Card(
+                        child: ListTile(
+                          leading: const Icon(Icons.person_outline),
+                          title: Text(patient.displayName ?? patient.email),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(nutrition),
+                              const SizedBox(height: 4),
+                              Text(
+                                bodyMass,
+                                style: TextStyle(color: isHigh ? Colors.red : null),
                               ),
-                            ),
-                          );
-                        },
-                      ),
-                    );
-                  }),
-                ],
+                            ],
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => NutritionistClientScreen(
+                                  client: patient,
+                                  entries: entries,
+                                  profile: profile,
+                                  pregnancy: pregnancy,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    }),
+                  ],
+                ),
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => ListView(
+              children: [
+                const ScreenHeader(
+                  title: 'Monitoring & alerts',
+                  subtitle: 'Review nutrition summaries and body mass details.',
+                  icon: Icons.monitor_heart_outlined,
+                ),
+                const SizedBox(height: 16),
+                ...List.generate(5, (index) => const _SkeletonListItem()),
+              ],
+            ),
             error: (e, _) => Center(child: Text('Error: $e')),
           ),
         ),
@@ -148,4 +168,44 @@ class _Totals {
 
   final int calories;
   final int protein;
+}
+
+class _SkeletonListItem extends StatelessWidget {
+  const _SkeletonListItem();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Card(
+      child: ListTile(
+        leading: SbSkeletonLoader(
+          width: 40,
+          height: 40,
+          shape: BoxShape.circle,
+        ),
+        title: SbSkeletonLoader(
+          height: 16,
+          width: 120,
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(height: 8),
+            SbSkeletonLoader(
+              height: 12,
+              width: 200,
+            ),
+            SizedBox(height: 4),
+            SbSkeletonLoader(
+              height: 12,
+              width: 150,
+            ),
+          ],
+        ),
+        trailing: SbSkeletonLoader(
+          width: 24,
+          height: 24,
+        ),
+      ),
+    );
+  }
 }

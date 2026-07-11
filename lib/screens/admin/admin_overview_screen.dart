@@ -245,7 +245,7 @@ class _AdminTopBar extends ConsumerWidget {
         border: Border.all(color: adminBorder(context)),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.darkPink.withValues(alpha: 14),
+            color: AppTheme.darkPink.withValues(alpha: 0.055),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -362,7 +362,7 @@ class _AdminSidebar extends StatelessWidget {
         border: Border.all(color: adminBorder(context)),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.darkPink.withValues(alpha: 16),
+            color: AppTheme.darkPink.withValues(alpha: 0.063),
             blurRadius: 26,
             offset: const Offset(0, 14),
           ),
@@ -534,12 +534,12 @@ class _SidebarItem extends StatelessWidget {
           horizontal: collapsed ? 0 : 12, vertical: 11),
       decoration: BoxDecoration(
         color: selected
-            ? AppTheme.primaryPink.withValues(alpha: 38)
+            ? AppTheme.primaryPink.withValues(alpha: 0.149)
             : Colors.transparent,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: selected
-              ? activeColor.withValues(alpha: 90)
+              ? activeColor.withValues(alpha: 0.353)
               : Colors.transparent,
         ),
       ),

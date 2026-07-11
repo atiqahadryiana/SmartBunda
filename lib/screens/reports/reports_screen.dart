@@ -186,7 +186,7 @@ class _PatientReportViewState extends ConsumerState<_PatientReportView> {
                       : strings.t('Generate PDF')),
                 ),
                 const SizedBox(height: 16),
-                MedicalDisclaimerBanner(),
+                const MedicalDisclaimerBanner(),
                 const SizedBox(height: 16),
                 Text(
                   strings.t('Saved reports'),
@@ -277,6 +277,10 @@ class _PatientReportViewState extends ConsumerState<_PatientReportView> {
   ) async {
     if (user == null) return;
 
+    // Capture the messenger before the async gap so we never touch `context`
+    // after an await (use_build_context_synchronously).
+    final messenger = ScaffoldMessenger.of(context);
+
     setState(() => _generatingPdf = true);
 
     try {
@@ -296,13 +300,13 @@ class _PatientReportViewState extends ConsumerState<_PatientReportView> {
 
       if (mounted) {
         setState(() => _pdfBytes = pdfBytes);
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           const SnackBar(content: Text('PDF generated successfully')),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(content: Text('Error generating PDF: $e')),
         );
       }
@@ -579,7 +583,9 @@ class _ReportRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: Text(label, style: const TextStyle(color: Colors.black54)),
+            child: Text(label,
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ),
           const SizedBox(width: 8),
           Expanded(

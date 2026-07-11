@@ -10,6 +10,7 @@ import 'package:smartbunda/screens/auth/get_started_screen.dart';
 import 'package:smartbunda/screens/patient/nutrition_facts_screen.dart';
 import 'package:smartbunda/screens/auth/register_screen.dart';
 import 'package:smartbunda/screens/auth/splash_screen.dart';
+import 'package:smartbunda/screens/assessment/assessment_list_screen.dart';
 import 'package:smartbunda/theme/app_theme.dart';
 import 'package:smartbunda/widgets/nutrition_slider.dart';
 
@@ -43,6 +44,8 @@ class SmartbundaApp extends ConsumerWidget {
         NutritionFactsScreen.routeName: (context) =>
             const NutritionFactsScreen(),
         FoodScanScreen.routeName: (context) => const FoodScanScreen(),
+        AssessmentListScreen.routeName: (context) =>
+            const AssessmentListScreen(),
         '/onboarding': (context) => const NutritionSlider(),
       },
     );

@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:smartbunda/localization/app_strings.dart';
-import 'package:smartbunda/screens/food/food_picker_modal.dart';
-import 'package:smartbunda/screens/food/food_picker_confirm_screen.dart';
+import 'package:smartbunda/theme/app_components.dart';
 import 'package:smartbunda/theme/app_theme.dart';
+import 'package:smartbunda/screens/food/ai_food_recommendation_card.dart';
 import 'package:smartbunda/screens/food/food_scan_screen.dart';
-import 'package:smartbunda/screens/food/food_history_screen.dart';
 import 'package:smartbunda/screens/food/hydration_screen.dart';
 import 'package:smartbunda/screens/food/log_screen.dart';
 
@@ -17,61 +16,40 @@ class FoodLoggingHubScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
     return Scaffold(
-      appBar: showAppBar
-          ? AppBar(title: Text(strings.t('Food logging & nutrition')))
-          : null,
+      appBar: showAppBar ? AppBar(title: Text(strings.t('Log'))) : null,
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 128),
+        padding: EdgeInsets.zero,
         children: [
-          _NutritionHero(
-            title: strings.t('Food & Water Log'),
+          SbHeaderBanner(
+            title: strings.t('Log'),
             subtitle: strings.t(
-              'Track meals, hydration, AI scan results, and daily nutrition in one clean flow.',
+              'Scan food, log meals, and track hydration in one place.',
             ),
-          ),
-          const SizedBox(height: 16),
-          _SummaryStrip(strings: strings),
-          const SizedBox(height: 18),
-          _ModuleCard(
             icon: Icons.restaurant_menu,
-            title: strings.t('Meal log'),
-            subtitle:
-                strings.t('Add meals manually or from the food database.'),
-            onTap: () => _open(context, const LogScreen()),
+            safeAreaTop: !showAppBar,
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: Column(
+              children: [
+          // AI Food Recommendation — top of the Log Meal module (spec).
+          const AiFoodRecommendationCard(),
+          const SizedBox(height: 18),
+          // (Calories/Water summary lives on Home only.)
           _ModuleCard(
             icon: Icons.center_focus_strong,
-            title: strings.t('Meal scanner'),
+            title: strings.t('Scan food'),
             subtitle: strings.t(
               'Use your camera or gallery to detect a meal and save it faster.',
             ),
             onTap: () => _open(context, const FoodScanScreen()),
           ),
           _ModuleCard(
-            icon: Icons.history,
-            title: strings.t('Food History'),
-            subtitle: strings.t(
-              'Review past scans with confidence and quality scores.',
-            ),
-            onTap: () => _open(context, const FoodHistoryScreen()),
-          ),
-          _ModuleCard(
-            icon: Icons.search_outlined,
-            title: strings.t('Browse food database'),
-            subtitle: strings.t(
-              'Find and select meals from our curated Malaysian food database.',
-            ),
-            onTap: () async {
-              final result = await showFoodPickerModal(context);
-              if (result != null && context.mounted) {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        FoodPickerConfirmScreen(result: result),
-                  ),
-                );
-              }
-            },
+            icon: Icons.restaurant_menu,
+            title: strings.t('Log meal'),
+            subtitle: strings
+                .t('Add meals from the food database or meal scanner.'),
+            onTap: () => _open(context, const LogScreen()),
           ),
           _ModuleCard(
             icon: Icons.water_drop_outlined,
@@ -83,6 +61,10 @@ class FoodLoggingHubScreen extends StatelessWidget {
           _TipBanner(
             text: strings.t(
               'Scan clear food photos, or use manual entry when the dish is mixed.',
+            ),
+          ),
+          const SizedBox(height: 128),
+              ],
             ),
           ),
         ],
@@ -97,142 +79,7 @@ class FoodLoggingHubScreen extends StatelessWidget {
   }
 }
 
-class _NutritionHero extends StatelessWidget {
-  const _NutritionHero({required this.title, required this.subtitle});
 
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: AppTheme.heroGradient,
-        borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: AppTheme.primaryPink.withValues(alpha: 50)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 220),
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.darkPink.withValues(alpha: 20),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: const Icon(Icons.restaurant_menu, color: AppTheme.darkPink),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF59677D),
-                      ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SummaryStrip extends StatelessWidget {
-  const _SummaryStrip({required this.strings});
-
-  final AppStrings strings;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _MiniSummary(
-            icon: Icons.local_fire_department_outlined,
-            label: strings.t('Calories'),
-            value: '0 kcal',
-            color: AppTheme.darkPink,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _MiniSummary(
-            icon: Icons.water_drop_outlined,
-            label: strings.t('Water'),
-            value: '0.0 L',
-            color: AppTheme.healthcareTeal,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _MiniSummary extends StatelessWidget {
-  const _MiniSummary({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTheme.cardBackground,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFF8BBD0)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: color),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: Theme.of(context).textTheme.bodySmall),
-                Text(
-                  value,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _ModuleCard extends StatelessWidget {
   const _ModuleCard({
@@ -257,7 +104,7 @@ class _ModuleCard extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(22),
-          splashColor: AppTheme.primaryPink.withValues(alpha: 20),
+          splashColor: AppTheme.primaryPink.withValues(alpha: 0.078),
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -288,6 +135,8 @@ class _ModuleCard extends StatelessWidget {
                         title,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.w800,
+                              // Card is always white → pin title to dark text.
+                              color: AppTheme.primaryText,
                             ),
                       ),
                       const SizedBox(height: 3),
@@ -322,7 +171,7 @@ class _TipBanner extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: AppTheme.blushGradient,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppTheme.primaryPink.withValues(alpha: 50)),
+        border: Border.all(color: AppTheme.primaryPink.withValues(alpha: 0.196)),
       ),
       child: Row(
         children: [

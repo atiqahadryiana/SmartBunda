@@ -1,0 +1,154 @@
+# SmartBunda Deployment Guide
+
+## APK Deployment
+
+### Location of Generated APK:
+File: C:\Users\adryi\Desktop\FYP\Smartbunda\build\app\outputs\flutter-apk\app-release.apk
+Size: 71.8MB
+
+### Steps to Deploy APK:
+
+1. **Local Testing:**
+   - Connect Android device via USB
+   - Enable Developer Options and USB Debugging
+   - Install APK: `adb install app-release.apk`
+
+2. **Google Play Store Deployment:**
+   - Create Google Play Developer account
+   - Prepare store listing assets (screenshots, descriptions)
+   - Upload APK to Google Play Console
+   - Complete content rating and pricing
+   - Submit for review
+
+3. **Direct Distribution:**
+   - Host APK on website for direct download
+   - Users need to enable "Install from Unknown Sources"
+   - Consider using services like Firebase App Distribution for beta testing
+
+## Web Deployment
+
+### Location of Generated Web Build:
+Directory: C:\Users\adryi\Desktop\FYP\Smartbunda\build\web
+
+### Steps to Deploy Web Application:
+
+1. **Firebase Hosting (Recommended):**
+   ```bash
+   # Install Firebase CLI
+   npm install -g firebase-tools
+   
+   # Login to Firebase
+   firebase login
+   
+   # Initialize Firebase project
+   firebase init hosting
+   
+   # Deploy to Firebase
+   firebase deploy
+   ```
+
+2. **Manual Web Hosting:**
+   - Upload entire contents of build\web directory to web server
+   - Ensure proper MIME types are configured
+   - Configure web server for single-page application routing
+
+3. **GitHub Pages Deployment:**
+   - Create gh-pages branch
+   - Push build\web contents to gh-pages branch
+   - Configure GitHub Pages in repository settings
+
+## Build Commands Used
+
+### APK Release Build:
+```bash
+flutter build apk --release
+```
+
+### Web Release Build:
+```bash
+flutter build web --release
+```
+
+## System Requirements
+
+### For APK:
+- Android 5.0 (API level 21) or higher
+- Minimum 2GB RAM recommended
+- Camera access for food scanning feature
+
+### For Web:
+- Modern browser (Chrome, Firefox, Safari, Edge)
+- JavaScript enabled
+- WebGL support for optimal performance
+
+## Testing Performed
+
+### Mobile Testing:
+- Android device testing completed
+- Various screen sizes and resolutions verified
+- Performance optimization confirmed
+
+### Web Testing:
+- Cross-browser compatibility verified
+- Responsive design tested on multiple devices
+- Loading performance optimized
+
+## Version Information
+
+### Current Build:
+- Version: 0.1.0+1
+- Build Date: [Current Date]
+- Flutter Version: 3.4.0 or higher
+- Dart Version: 3.4.0 or higher
+
+## Additional Notes
+
+### Security Considerations:
+- Firebase rules properly configured
+- User authentication implemented
+- Data encryption in transit
+
+### Performance Optimizations:
+- Tree-shaken fonts reducing bundle size
+- Optimized widget rendering
+- Efficient state management with Riverpod
+
+### Accessibility Features:
+- Color-blind friendly UI elements
+- Proper contrast ratios
+- Semantic status indicators
+
+## Troubleshooting
+
+### Common APK Issues:
+1. Installation blocked by Play Protect
+   - Solution: Tap "Install anyway" or disable Play Protect temporarily
+
+2. Insufficient storage space
+   - Solution: Clear cache or free up device storage
+
+### Common Web Issues:
+1. Browser compatibility
+   - Solution: Use latest Chrome, Firefox, Safari, or Edge
+
+2. Slow loading times
+   - Solution: Enable CDN and compression on hosting platform
+
+## Support and Maintenance
+
+### Code Repository:
+- Location: C:\Users\adryi\Desktop\FYP\Smartbunda
+- Branching strategy: main development branch
+
+### Future Updates:
+1. Increment version number in pubspec.yaml
+2. Rebuild with same commands
+3. Redeploy updated files
+4. Update changelog for user communication
+
+### Contact Information:
+- Developer: [Your Name]
+- Supervisor: [Supervisor Name]
+- Institution: [University Name]
+
+This deployment guide ensures smooth distribution of both mobile and web versions of the SmartBunda application.

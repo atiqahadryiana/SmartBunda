@@ -151,6 +151,17 @@ class AppStrings {
   String get pregnancySectionTitle => isMalay ? 'Kehamilan' : 'Pregnancy';
   String get gestationalWeekLabel =>
       isMalay ? 'Minggu kehamilan' : 'Gestational week';
+  String get lmpLabel => isMalay
+      ? 'Hari pertama haid terakhir (HPHT)'
+      : 'First day of last period (LMP)';
+  String get lmpHelper => isMalay
+      ? 'Minggu kehamilan & tarikh jangka lahir dikira secara automatik.'
+      : 'Gestational week & due date are calculated automatically.';
+  String get lmpFutureError => isMalay
+      ? 'Tarikh tidak boleh pada masa hadapan.'
+      : 'The date cannot be in the future.';
+  String weeksValue(int weeks) =>
+      isMalay ? '$weeks minggu' : '$weeks weeks';
   String get trimesterLabelText => isMalay ? 'Trimester' : 'Trimester';
   String get trimester1 => 'Trimester 1';
   String get trimester2 => 'Trimester 2';
@@ -623,16 +634,16 @@ class AppStrings {
     'Manual entry': 'Input manual',
     'Pick from Malaysian food DB': 'Pilih dari DB makanan Malaysia',
     'Food DB': 'DB makanan',
-    'Add meals manually or from the food database.':
-        'Tambah makanan secara manual atau daripada pangkalan data makanan.',
+    'Add meals from the food database or meal scanner.':
+        'Tambah makanan daripada pangkalan data makanan atau pengimbas.',
     'Tip: scan when you have a clear food photo, or use manual entry when the dish is mixed.':
         'Tip: imbas apabila foto makanan jelas, atau gunakan input manual apabila hidangan bercampur.',
     'Type the meal and nutrients yourself.':
         'Taip makanan dan nutrien sendiri.',
     'Search saved foods and portions.':
         'Cari makanan dan saiz hidangan yang disimpan.',
-    'Take a fresh photo for TensorFlow Lite detection.':
-        'Ambil foto baharu untuk pengesanan TensorFlow Lite.',
+    'Take a fresh photo for AI food detection.':
+        'Ambil foto baharu untuk pengesanan AI makanan.',
     'Choose an existing photo from your gallery.':
         'Pilih foto sedia ada daripada galeri anda.',
     'Scan with camera': 'Imbas dengan kamera',
@@ -645,8 +656,8 @@ class AppStrings {
         'Gunakan kamera atau galeri anda untuk mengesan hidangan Malaysia dan menambahkannya ke log makanan anda.',
     'Scan and save meals faster':
         'Imbas dan simpan makanan dengan lebih pantas',
-    'Smartbunda analyzes the image with TensorFlow Lite, matches the result to your food database, then lets you confirm the detected meal before saving.':
-        'Smartbunda menganalisis imej dengan TensorFlow Lite, memadankan hasilnya dengan pangkalan data makanan anda, kemudian membolehkan anda mengesahkan makanan yang dikesan sebelum disimpan.',
+    'Smartbunda analyzes the image with AI, matches the result to your food database, then lets you confirm the detected meal before saving.':
+        'Smartbunda menganalisis imej dengan AI, memadankan hasilnya dengan pangkalan data makanan anda, kemudian membolehkan anda mengesahkan makanan yang dikesan sebelum disimpan.',
     'How it works': 'Cara ia berfungsi',
     'Take a photo or choose one from your gallery.':
         'Ambil foto atau pilih satu daripada galeri anda.',
@@ -655,9 +666,9 @@ class AppStrings {
     'Confirm meal time and quantity, then save the log entry.':
         'Sahkan waktu makan dan kuantiti, kemudian simpan entri log.',
     'Scanner requirements': 'Keperluan pengimbas',
-    'TensorFlow Lite scanner': 'Pengimbas TensorFlow Lite',
-    'The TensorFlow Lite model and labels must be present in assets/ml before image scanning can run.':
-        'Model TensorFlow Lite dan label mesti ada dalam assets/ml sebelum imbasan imej boleh dijalankan.',
+    'AI scanner': 'Pengimbas AI',
+    'The AI scanner sends the photo to a vision model for food identification.':
+        'Pengimbas AI menghantar foto ke model penglihatan untuk pengenalpastian makanan.',
     'Use a bright, clear image with one main dish for better suggestions.':
         'Gunakan imej terang dan jelas dengan satu hidangan utama untuk cadangan yang lebih baik.',
     'Analyzing image...': 'Menganalisis imej...',

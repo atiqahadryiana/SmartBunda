@@ -86,7 +86,7 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
               if (profileAsync.valueOrNull == null)
                 Card(
                   color: Color.alphaBlend(
-                    scheme.secondary.withValues(alpha: 45),
+                    scheme.secondary.withValues(alpha: 0.176),
                     scheme.surface,
                   ),
                   child: ListTile(
@@ -352,7 +352,7 @@ class _NutrientSplitCard extends StatelessWidget {
     final empty = total <= 0;
     final titleStyle = Theme.of(context).textTheme.titleMedium;
     final muted =
-        Theme.of(context).colorScheme.onSurface.withValues(alpha: 140);
+        Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.549);
 
     return Card(
       child: Padding(
@@ -437,7 +437,7 @@ class _NutrientSplitCard extends StatelessWidget {
         intake: totals.carbs.toDouble(),
         target: targets.carbs.toDouble(),
         unit: 'g',
-        color: Colors.red.shade400.withValues(alpha: 180),
+        color: Colors.red.shade400.withValues(alpha: 0.706),
       ),
       _MacroSegment(
         label: strings.t('Fat'),
@@ -493,7 +493,7 @@ class _MacroLegendItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final muted =
-        Theme.of(context).colorScheme.onSurface.withValues(alpha: 150);
+        Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.588);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
@@ -537,7 +537,7 @@ class _MacroPieChart extends StatelessWidget {
     final strings = AppStrings.of(context);
     final total = segments.fold<double>(0, (sum, s) => sum + s.value);
     final muted =
-        Theme.of(context).colorScheme.onSurface.withValues(alpha: 120);
+        Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.471);
     final average = segments.isEmpty ? 0 : (total / segments.length * 100);
     return Stack(
       alignment: Alignment.center,

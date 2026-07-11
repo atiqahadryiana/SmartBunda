@@ -25,7 +25,7 @@ class ScreenHeader extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: scheme.primary.withValues(alpha: 18),
+              color: scheme.primary.withValues(alpha: 0.071),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(icon, color: scheme.primary),

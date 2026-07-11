@@ -18,6 +18,11 @@ class FS {
   static const auditLogs = "AuditLogs";
   static const systemSettings = "SystemSettings";
   static const foodHistory = "FoodHistory";
+  static const assessmentResults = "AssessmentResults";
+  static const recommendationAudit = "RecommendationAudit";
+  static const consultations = "Consultations";
+  static const nutritionGuidelines = "NutritionGuidelines";
+  static const appointmentVitals = "AppointmentVitals";
 
   static const globalSettingsDoc = "global";
 }

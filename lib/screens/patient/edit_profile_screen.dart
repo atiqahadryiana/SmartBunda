@@ -10,6 +10,9 @@ import 'package:smartbunda/services/service_providers.dart';
 import 'package:smartbunda/widgets/require_sign_in.dart';
 import 'package:smartbunda/widgets/screen_header.dart';
 
+/// The eight standard ABO/Rh blood groups, shown in the blood-type dropdown.
+const _bloodTypeOptions = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key, this.showAppBar = false});
 
@@ -27,12 +30,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   late final TextEditingController _hemoglobinCtrl;
   late final TextEditingController _abdominalCircumferenceCtrl;
   late final TextEditingController _bloodTypeCtrl;
-  late final TextEditingController _weekCtrl;
-  late final TextEditingController _eddCtrl;
-  late final TextEditingController _riskCtrl;
-  bool _hasAnemia = false;
-  bool _hasGdm = false;
+  /// Last menstrual period — the single input that drives gestational week and
+  /// EDD (both auto-computed). Null until the patient picks a date.
+  DateTime? _lmp;
+  /// MOH colour-coded obstetric risk level (dropdown). Null = not set.
+  PregnancyRiskLevel? _riskLevel;
+  /// Selected pregnancy-related conditions (multi-select dropdown).
+  final Set<MedicalCondition> _conditions = {};
   bool _saving = false;
+  // True once the user edits a field; gates the unsaved-changes guard. Reset
+  // after a successful save and when the form re-syncs from the backend.
+  bool _dirty = false;
   Profile? _syncedProfile;
   Pregnancy? _syncedPregnancy;
 
@@ -45,9 +53,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _hemoglobinCtrl = TextEditingController();
     _abdominalCircumferenceCtrl = TextEditingController();
     _bloodTypeCtrl = TextEditingController();
-    _weekCtrl = TextEditingController();
-    _eddCtrl = TextEditingController();
-    _riskCtrl = TextEditingController();
 
     final profileNow = ref.read(profileProvider).valueOrNull;
     if (profileNow != null) {
@@ -70,7 +75,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       _syncedProfile = profile;
       _syncProfile(profile);
       if (mounted) {
-        setState(() {});
+        setState(() => _dirty = false);
       }
     });
 
@@ -83,7 +88,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       _syncedPregnancy = pregnancy;
       _syncPregnancy(pregnancy);
       if (mounted) {
-        setState(() {});
+        setState(() => _dirty = false);
       }
     });
   }
@@ -96,9 +101,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _hemoglobinCtrl.dispose();
     _abdominalCircumferenceCtrl.dispose();
     _bloodTypeCtrl.dispose();
-    _weekCtrl.dispose();
-    _eddCtrl.dispose();
-    _riskCtrl.dispose();
     super.dispose();
   }
 
@@ -110,15 +112,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _abdominalCircumferenceCtrl.text =
         profile.abdominalCircumferenceCm?.toStringAsFixed(1) ?? '';
     _bloodTypeCtrl.text = profile.bloodType;
-    _hasAnemia = profile.medicalConditions.contains(MedicalCondition.anemia);
-    _hasGdm = profile.medicalConditions
-        .contains(MedicalCondition.gestationalDiabetes);
+    _conditions
+      ..clear()
+      ..addAll(profile.medicalConditions);
   }
 
   void _syncPregnancy(Pregnancy pregnancy) {
-    _weekCtrl.text = pregnancy.gestationalWeek.toString();
-    _eddCtrl.text = pregnancy.edd;
-    _riskCtrl.text = pregnancy.riskLevel;
+    _lmp = pregnancy.lmp;
+    _riskLevel = PregnancyRiskLevel.fromCode(pregnancy.riskLevel);
   }
 
   double? _currentBmi() {
@@ -134,31 +135,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     return weightKg / (heightM * heightM);
   }
 
-  String? _validateWeek(String? value) {
-    final strings = AppStrings.of(context);
-    if (value == null || value.trim().isEmpty) return strings.requiredField;
-    final week = int.tryParse(value);
-    if (week == null || week < 1 || week > 42) {
-      return strings.weekRangeError;
-    }
-    return null;
-  }
-
-  String? _validateDate(String? value) {
-    final strings = AppStrings.of(context);
-    if (value == null || value.trim().isEmpty) return null;
-    final trimmed = value.trim();
-    final pattern = RegExp(r'^\d{4}-\d{2}-\d{2}$');
-    if (!pattern.hasMatch(trimmed)) {
-      return strings.useYmd;
-    }
-    final parsed = DateTime.tryParse(trimmed);
-    if (parsed == null) {
-      return strings.invalidDate;
-    }
-    return null;
-  }
-
   String? _validateOptionalNumber(String? value) {
     final strings = AppStrings.of(context);
     final trimmed = value?.trim() ?? '';
@@ -166,30 +142,123 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     return double.tryParse(trimmed) == null ? strings.numberField : null;
   }
 
-  String _trimesterFromWeekLabel(AppStrings strings) {
-    final week = int.tryParse(_weekCtrl.text.trim());
-    final trimester = week == null ? null : Pregnancy.trimesterFromWeek(week);
-    if (trimester == null) return '--';
+  String _lmpLabelText() {
+    final lmp = _lmp;
+    if (lmp == null) return '--';
+    final month = lmp.month.toString().padLeft(2, '0');
+    final day = lmp.day.toString().padLeft(2, '0');
+    return '${lmp.year}-$month-$day';
+  }
+
+  /// MOH colour-code swatch for the risk-level dropdown.
+  Color _riskColor(PregnancyRiskLevel level) {
+    switch (level) {
+      case PregnancyRiskLevel.white:
+        return Colors.white;
+      case PregnancyRiskLevel.green:
+        return const Color(0xFF4CAF50);
+      case PregnancyRiskLevel.yellow:
+        return const Color(0xFFFFEB3B);
+      case PregnancyRiskLevel.red:
+        return const Color(0xFFE53935);
+    }
+  }
+
+  /// Gestational week derived from the picked LMP (0 when unset).
+  int get _computedWeek => Pregnancy.gestationalWeekFromLmp(_lmp);
+
+  String _computedWeekLabel(AppStrings strings) =>
+      _lmp == null ? '--' : strings.weeksValue(_computedWeek);
+
+  String _trimesterFromLmpLabel(AppStrings strings) {
+    final trimester = Pregnancy.trimesterFromWeek(_computedWeek);
+    if (_lmp == null || trimester == null) return '--';
     final label = strings.trimesterLabel(trimester);
     return strings.isMalay ? 'Trimester $label' : '$label trimester';
   }
 
-  Future<void> _pickEdd(BuildContext context) async {
-    DateTime initialDate = DateTime.now().add(const Duration(days: 200));
-    final existing = DateTime.tryParse(_eddCtrl.text.trim());
-    if (existing != null) {
-      initialDate = existing;
-    }
+  String _computedEddLabel() {
+    final edd = Pregnancy.eddFromLmp(_lmp);
+    if (edd == null) return '--';
+    final month = edd.month.toString().padLeft(2, '0');
+    final day = edd.day.toString().padLeft(2, '0');
+    return '${edd.year}-$month-$day';
+  }
+
+  /// Date picker for the last menstrual period — drives week and EDD.
+  Future<void> _pickLmp(BuildContext context) async {
+    final now = DateTime.now();
+    final initialDate = _lmp ?? now.subtract(const Duration(days: 7 * 8));
     final picked = await showDatePicker(
       context: context,
       initialDate: initialDate,
-      firstDate: DateTime.now().subtract(const Duration(days: 1)),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      // A pregnancy spans at most ~42 weeks; an LMP older than that is invalid.
+      firstDate: now.subtract(const Duration(days: 7 * 45)),
+      lastDate: now,
     );
     if (picked == null) return;
-    _eddCtrl.text =
-        '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
-    setState(() {});
+    setState(() {
+      _lmp = picked;
+      _dirty = true;
+    });
+  }
+
+  /// Multi-select checklist of common pregnancy conditions, shown as a modal
+  /// sheet. Updates [_conditions] live as the user toggles items.
+  Future<void> _pickConditions() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text('Medical conditions',
+                          style: Theme.of(sheetContext).textTheme.titleMedium),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(sheetContext).maybePop(),
+                      child: const Text('Done'),
+                    ),
+                  ],
+                ),
+              ),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    for (final c in MedicalCondition.values)
+                      CheckboxListTile(
+                        title: Text(c.label),
+                        value: _conditions.contains(c),
+                        controlAffinity: ListTileControlAffinity.leading,
+                        onChanged: (checked) {
+                          setSheetState(() {});
+                          setState(() {
+                            if (checked ?? false) {
+                              _conditions.add(c);
+                            } else {
+                              _conditions.remove(c);
+                            }
+                            _dirty = true;
+                          });
+                        },
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -245,7 +314,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               const SizedBox(height: 12),
               Text(
                 strings.pregnancyModuleNote,
-                style: const TextStyle(color: Colors.black54),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
             ],
           ),
@@ -253,7 +323,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       );
     }
 
-    return Scaffold(
+    return PopScope(
+      canPop: !_dirty,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final leave = await _confirmDiscard();
+        if (leave && context.mounted) Navigator.of(context).pop();
+      },
+      child: Scaffold(
       appBar:
           widget.showAppBar ? AppBar(title: Text(strings.editProfile)) : null,
       body: Padding(
@@ -262,6 +339,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           data: (_) {
             return Form(
               key: _formKey,
+              onChanged: () {
+                if (!_dirty) setState(() => _dirty = true);
+              },
               child: ListView(
                 children: [
                   ScreenHeader(
@@ -337,27 +417,68 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       ),
                     ],
                   ),
-                  TextFormField(
-                    controller: _bloodTypeCtrl,
+                  DropdownButtonFormField<String>(
+                    // Value is mirrored into _bloodTypeCtrl so the existing
+                    // save logic is unchanged. Unknown/legacy text → no
+                    // selection (shows the hint) rather than crashing.
+                    initialValue: _bloodTypeOptions
+                            .contains(_bloodTypeCtrl.text.trim())
+                        ? _bloodTypeCtrl.text.trim()
+                        : null,
+                    isExpanded: true,
                     decoration:
                         InputDecoration(labelText: strings.bloodTypeLabel),
+                    hint: Text(strings.t('Select blood type')),
+                    items: [
+                      for (final type in _bloodTypeOptions)
+                        DropdownMenuItem(value: type, child: Text(type)),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() {
+                        _bloodTypeCtrl.text = value;
+                        _dirty = true;
+                      });
+                    },
                   ),
                   const SizedBox(height: 12),
                   Text(
                     strings.medicalConditions,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(strings.anemiaLabel),
-                    value: _hasAnemia,
-                    onChanged: (v) => setState(() => _hasAnemia = v),
-                  ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(strings.gdmLabel),
-                    value: _hasGdm,
-                    onChanged: (v) => setState(() => _hasGdm = v),
+                  const SizedBox(height: 8),
+                  InkWell(
+                    onTap: _pickConditions,
+                    borderRadius: BorderRadius.circular(8),
+                    child: InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: 'Select conditions',
+                        suffixIcon: Icon(Icons.arrow_drop_down),
+                      ),
+                      child: _conditions.isEmpty
+                          ? Text(
+                              'None selected',
+                              style: TextStyle(
+                                color:
+                                    Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                            )
+                          : Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: [
+                                for (final c in _conditions)
+                                  Chip(
+                                    label: Text(c.label),
+                                    visualDensity: VisualDensity.compact,
+                                    materialTapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                    onDeleted: () =>
+                                        setState(() => _conditions.remove(c)),
+                                  ),
+                              ],
+                            ),
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -368,37 +489,87 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   pregnancyAsync.when(
                     data: (_) => Column(
                       children: [
-                        TextFormField(
-                          controller: _weekCtrl,
-                          decoration: InputDecoration(
-                            labelText: strings.gestationalWeekLabel,
-                          ),
-                          keyboardType: TextInputType.number,
-                          validator: _validateWeek,
-                          onChanged: (_) => setState(() {}),
-                        ),
-                        InputDecorator(
-                          decoration: InputDecoration(
-                              labelText: strings.trimesterLabelText),
-                          child: Text(_trimesterFromWeekLabel(strings)),
-                        ),
-                        TextFormField(
-                          controller: _eddCtrl,
-                          decoration: InputDecoration(
-                            labelText: strings.eddLabel,
-                            suffixIcon: IconButton(
-                              tooltip: strings.pickDateTooltip,
-                              onPressed: () => _pickEdd(context),
-                              icon: const Icon(Icons.calendar_month),
+                        // LMP date picker — the single input. Gestational week
+                        // and EDD below are derived from it automatically.
+                        InkWell(
+                          onTap: () => _pickLmp(context),
+                          borderRadius: BorderRadius.circular(4),
+                          child: InputDecorator(
+                            decoration: InputDecoration(
+                              labelText: strings.lmpLabel,
+                              suffixIcon: const Icon(Icons.calendar_month),
                             ),
+                            child: Text(_lmpLabelText()),
                           ),
-                          keyboardType: TextInputType.datetime,
-                          validator: _validateDate,
                         ),
-                        TextFormField(
-                          controller: _riskCtrl,
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: InputDecorator(
+                                decoration: InputDecoration(
+                                  labelText: strings.gestationalWeekLabel,
+                                ),
+                                child: Text(_computedWeekLabel(strings)),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: InputDecorator(
+                                decoration: InputDecoration(
+                                    labelText: strings.trimesterLabelText),
+                                child: Text(_trimesterFromLmpLabel(strings)),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        InputDecorator(
+                          decoration: InputDecoration(labelText: strings.eddLabel),
+                          child: Text(_computedEddLabel()),
+                        ),
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<PregnancyRiskLevel>(
+                          initialValue: _riskLevel,
+                          isExpanded: true,
                           decoration: InputDecoration(
-                              labelText: strings.riskLevelLabel),
+                            labelText: strings.riskLevelLabel,
+                          ),
+                          items: [
+                            for (final level in PregnancyRiskLevel.values)
+                              DropdownMenuItem(
+                                value: level,
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 14,
+                                      height: 14,
+                                      decoration: BoxDecoration(
+                                        color: _riskColor(level),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .outlineVariant,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Text(level.label),
+                                  ],
+                                ),
+                              ),
+                          ],
+                          onChanged: (value) =>
+                              setState(() {
+                            _riskLevel = value;
+                            _dirty = true;
+                          }),
+                        ),
+                        const SizedBox(height: 10),
+                        _RiskLevelReference(
+                          selected: _riskLevel,
+                          colorOf: _riskColor,
                         ),
                       ],
                     ),
@@ -438,66 +609,60 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                                   hemoglobinGdl: hemoglobin,
                                   abdominalCircumferenceCm:
                                       abdominalCircumference,
-                                  medicalConditions: {
-                                    if (_hasAnemia) MedicalCondition.anemia,
-                                    if (_hasGdm)
-                                      MedicalCondition.gestationalDiabetes,
-                                  },
+                                  medicalConditions: Set.of(_conditions),
                                 );
                                 await ref
                                     .read(dataStoreProvider)
                                     .saveProfile(profile);
 
-                                final weekText = _weekCtrl.text.trim();
-                                final eddText = _eddCtrl.text.trim();
-                                final riskText = _riskCtrl.text.trim();
-                                final hasPregnancyInput = weekText.isNotEmpty ||
-                                    eddText.isNotEmpty ||
-                                    riskText.isNotEmpty;
+                                // Pregnancy details derive from the LMP date
+                                // (gestational week + EDD) plus the chosen risk
+                                // level. Persist only when at least one is set.
+                                final lmp = _lmp;
+                                final hasPregnancyInput =
+                                    lmp != null || _riskLevel != null;
                                 if (hasPregnancyInput) {
-                                  final week = int.tryParse(weekText);
-                                  final eddDate = eddText.isEmpty
-                                      ? null
-                                      : DateTime.tryParse(eddText);
-                                  if (week == null) {
-                                    throw const FormatException(
-                                        'Pregnancy week');
-                                  }
-                                  if (eddText.isNotEmpty && eddDate == null) {
-                                    throw const FormatException('EDD');
-                                  }
+                                  final week =
+                                      Pregnancy.gestationalWeekFromLmp(lmp);
+                                  final eddDate = Pregnancy.eddFromLmp(lmp);
+                                  final eddText = eddDate == null
+                                      ? ''
+                                      : '${eddDate.year}-'
+                                          '${eddDate.month.toString().padLeft(2, '0')}-'
+                                          '${eddDate.day.toString().padLeft(2, '0')}';
                                   final pregnancyId = _syncedPregnancy?.id ??
                                       DateTime.now()
                                           .microsecondsSinceEpoch
                                           .toString();
-                                  final trimesterIndex =
-                                      Pregnancy.trimesterIndexFromWeek(week);
                                   final pregnancy = Pregnancy(
                                     id: pregnancyId,
                                     patientId: user.id,
                                     gestationalWeek: week,
-                                    trimester: trimesterIndex,
+                                    trimester:
+                                        Pregnancy.trimesterIndexFromWeek(week),
                                     edd: eddText,
-                                    riskLevel: riskText,
+                                    riskLevel: _riskLevel?.code ?? '',
                                     updatedAt: DateTime.now(),
+                                    lmp: lmp,
                                   );
                                   await ref
                                       .read(dataStoreProvider)
                                       .savePregnancy(pregnancy);
                                 }
 
+                                _dirty = false; // saved → no unsaved changes
                                 if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(content: Text(strings.profileSaved)),
                                 );
                               } on FormatException catch (e) {
                                 if (!context.mounted) return;
-                                final label = e.message;
-                                final message = label == 'Height/weight'
+                                // The only structured failure left is a bad
+                                // height/weight number; everything else falls
+                                // through to the generic catch below.
+                                final message = e.message == 'Height/weight'
                                     ? strings.heightWeightNumberError
-                                    : (label == 'Pregnancy week'
-                                        ? strings.weekNumberError
-                                        : strings.eddInvalidError);
+                                    : strings.saveFailed(e.message);
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                       content:
@@ -531,6 +696,165 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Center(child: Text('Error: $e')),
         ),
+      ),
+      ),
+    );
+  }
+
+  /// Asks the user to confirm leaving with unsaved edits.
+  Future<bool> _confirmDiscard() async {
+    final strings = AppStrings.of(context);
+    final leave = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(strings.t('Discard changes?')),
+        content: Text(
+          strings.t('You have unsaved changes. Leave without saving?'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(strings.t('Keep editing')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(strings.t('Discard')),
+          ),
+        ],
+      ),
+    );
+    return leave ?? false;
+  }
+}
+
+/// Reference panel for the MOH 4-tier obstetric colour coding. Lists every
+/// tier (colour swatch + label + care meaning); the patient's selected tier is
+/// highlighted. Collapsed by default to keep the form compact.
+class _RiskLevelReference extends StatefulWidget {
+  const _RiskLevelReference({required this.selected, required this.colorOf});
+
+  final PregnancyRiskLevel? selected;
+  final Color Function(PregnancyRiskLevel) colorOf;
+
+  @override
+  State<_RiskLevelReference> createState() => _RiskLevelReferenceState();
+}
+
+class _RiskLevelReferenceState extends State<_RiskLevelReference> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 18, color: scheme.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text('MOH colour-coding guide',
+                        style: text.labelLarge),
+                  ),
+                  Icon(_expanded ? Icons.expand_less : Icons.expand_more,
+                      color: scheme.onSurfaceVariant),
+                ],
+              ),
+            ),
+          ),
+          if (_expanded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+              child: Column(
+                children: [
+                  for (final level in PregnancyRiskLevel.values)
+                    _RiskTierRow(
+                      level: level,
+                      color: widget.colorOf(level),
+                      highlighted: widget.selected == level,
+                    ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RiskTierRow extends StatelessWidget {
+  const _RiskTierRow({
+    required this.level,
+    required this.color,
+    required this.highlighted,
+  });
+
+  final PregnancyRiskLevel level;
+  final Color color;
+  final bool highlighted;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: highlighted
+            ? scheme.primary.withValues(alpha: 0.08)
+            : scheme.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: highlighted ? scheme.primary : scheme.outlineVariant,
+          width: highlighted ? 1.5 : 1,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 16,
+            height: 16,
+            margin: const EdgeInsets.only(top: 2),
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+              border: Border.all(color: scheme.outlineVariant),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(level.label,
+                    style: text.labelLarge
+                        ?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 2),
+                Text(
+                  level.description,
+                  style: text.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

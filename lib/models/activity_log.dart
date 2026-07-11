@@ -10,6 +10,26 @@ enum ActivityType {
   passwordResetRequested,
   passwordResetCompleted,
   passwordResetAdmin,
+  passwordSetAdmin,
+}
+
+/// Parse a stored activity-type string back into an [ActivityType].
+///
+/// Logs persist the type as `type.name` (camelCase, e.g. "approvalRequested"),
+/// so matching is done case-insensitively against the enum's names. Unknown or
+/// empty values fall back to [ActivityType.login]. Centralised here so every
+/// reader stays in sync with the enum — a hand-maintained switch previously
+/// lowercased the input and compared it to camelCase literals that could never
+/// match, mislabelling most entries as logins.
+ActivityType activityTypeFromName(String? value) {
+  final normalized = value?.trim().toLowerCase();
+  if (normalized == null || normalized.isEmpty) {
+    return ActivityType.login;
+  }
+  for (final type in ActivityType.values) {
+    if (type.name.toLowerCase() == normalized) return type;
+  }
+  return ActivityType.login;
 }
 
 extension ActivityTypeLabel on ActivityType {
@@ -36,7 +56,9 @@ extension ActivityTypeLabel on ActivityType {
       case ActivityType.passwordResetCompleted:
         return 'Password reset completed';
       case ActivityType.passwordResetAdmin:
-        return 'Admin password reset';
+        return 'Admin sent reset link';
+      case ActivityType.passwordSetAdmin:
+        return 'Admin set password';
     }
   }
 }

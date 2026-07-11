@@ -172,7 +172,7 @@ class _FoodPickerSheetState extends ConsumerState<_FoodPickerSheet> {
                       boxShadow: isSelected
                           ? [
                               BoxShadow(
-                                color: AppTheme.darkPink.withValues(alpha: 50),
+                                color: AppTheme.darkPink.withValues(alpha: 0.196),
                                 blurRadius: 8,
                                 offset: const Offset(0, 2),
                               ),
@@ -430,7 +430,7 @@ class _MacroBar extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              color: color.withValues(alpha: 160),
+              color: color.withValues(alpha: 0.627),
               fontWeight: FontWeight.w600,
               fontSize: 11,
             ),
@@ -608,7 +608,7 @@ class _EmptySearchState extends StatelessWidget {
             Icon(
               Icons.search_off,
               size: 48,
-              color: AppTheme.secondaryText.withValues(alpha: 180),
+              color: AppTheme.secondaryText.withValues(alpha: 0.706),
             ),
             const SizedBox(height: 12),
             Text(

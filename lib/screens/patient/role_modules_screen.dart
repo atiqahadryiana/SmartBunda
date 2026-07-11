@@ -396,7 +396,7 @@ class _ModulesHeader extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Color.alphaBlend(
-          scheme.primary.withValues(alpha: 14),
+          scheme.primary.withValues(alpha: 0.055),
           scheme.surface,
         ),
         borderRadius: BorderRadius.circular(8),
@@ -503,7 +503,7 @@ class _StartHereCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Card(
       color: Color.alphaBlend(
-        scheme.secondary.withValues(alpha: 20),
+        scheme.secondary.withValues(alpha: 0.078),
         scheme.surface,
       ),
       child: InkWell(
@@ -565,7 +565,7 @@ class _ModuleCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CircleAvatar(
-                backgroundColor: scheme.primary.withValues(alpha: 20),
+                backgroundColor: scheme.primary.withValues(alpha: 0.078),
                 child: Icon(module.icon, color: scheme.primary),
               ),
               const SizedBox(width: 12),
@@ -616,9 +616,9 @@ class _SprintChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: scheme.primary.withValues(alpha: 18),
+        color: scheme.primary.withValues(alpha: 0.071),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: scheme.primary.withValues(alpha: 90)),
+        border: Border.all(color: scheme.primary.withValues(alpha: 0.353)),
       ),
       child: Text(
         'Sprint $index',

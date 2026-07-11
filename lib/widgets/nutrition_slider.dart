@@ -44,7 +44,7 @@ class _NutritionSliderState extends State<NutritionSlider> {
     final accent = scheme.primary;
     final accentSoft = scheme.secondary;
     final accentStrong = Color.alphaBlend(
-      Colors.black.withValues(alpha: 45),
+      Colors.black.withValues(alpha: 0.176),
       accent,
     );
 
@@ -84,7 +84,7 @@ class _NutritionSliderState extends State<NutritionSlider> {
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 18,
-                              color: accentStrong.withValues(alpha: 210),
+                              color: accentStrong.withValues(alpha: 0.824),
                             ),
                           ),
                         ),
@@ -106,7 +106,7 @@ class _NutritionSliderState extends State<NutritionSlider> {
                     decoration: BoxDecoration(
                       color: _currentPage == index
                           ? accent
-                          : accentSoft.withValues(alpha: 180),
+                          : accentSoft.withValues(alpha: 0.706),
                       borderRadius: BorderRadius.circular(5),
                     ),
                   ),

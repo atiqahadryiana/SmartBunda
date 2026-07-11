@@ -12,7 +12,7 @@ import 'package:smartbunda/screens/admin/admin_screen.dart';
 import 'package:smartbunda/screens/admin/admin_overview_screen.dart';
 import 'package:smartbunda/screens/appointments/appointments_screen.dart';
 import 'package:smartbunda/screens/shared/education_screen.dart';
-import 'package:smartbunda/screens/food/food_scan_screen.dart';
+import 'package:smartbunda/screens/food/food_logging_hub_screen.dart';
 import 'package:smartbunda/screens/patient/health_record_screen.dart';
 import 'package:smartbunda/screens/auth/login_screen.dart';
 import 'package:smartbunda/screens/staff/nurse_monitoring_screen.dart';
@@ -20,9 +20,10 @@ import 'package:smartbunda/screens/staff/nurse_overview_screen.dart';
 import 'package:smartbunda/screens/staff/nutritionist_screen.dart';
 import 'package:smartbunda/screens/staff/nutrition_plan_management_screen.dart';
 import 'package:smartbunda/screens/patient/patient_dashboard_screen.dart';
-import 'package:smartbunda/screens/patient/pre_pregnancy_assessment_screen.dart';
+import 'package:smartbunda/screens/assessment/assessment_list_screen.dart';
 import 'package:smartbunda/screens/staff/patient_profiles_screen.dart';
 import 'package:smartbunda/screens/patient/profile_screen.dart';
+import 'package:smartbunda/screens/ai/ai_chat_screen.dart';
 import 'package:smartbunda/screens/reports/reports_screen.dart';
 import 'package:smartbunda/screens/patient/role_modules_screen.dart';
 import 'package:smartbunda/screens/staff/staff_module_screen.dart';
@@ -64,15 +65,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               title: Text(_titleForRole(role, name, strings)),
               actions: _actionsForRole(context, role, strings),
             ),
-      extendBody: true,
-      body: LazyIndexedStack(index: safeIndex, children: pages),
-      bottomNavigationBar: _FloatingBottomNavigationBar(
-        selectedIndex: safeIndex,
-        onDestinationSelected: (value) => setState(() => _index = value),
-        destinations: tabs,
-      ),
-      // Admin tab accessible only for allowed roles.
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+       extendBody: true,
+       body: LazyIndexedStack(index: safeIndex, children: pages),
+       bottomNavigationBar: _FloatingBottomNavigationBar(
+         selectedIndex: safeIndex,
+         onDestinationSelected: (value) => setState(() => _index = value),
+         destinations: tabs,
+       ),
+       // AI assistant entry point removed per request. The chat screen and
+       // [_showAiChat] are kept in code so it can be re-enabled later by
+       // restoring the floatingActionButton here.
     );
   }
 
@@ -127,66 +129,88 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
     );
     if (confirmed != true) return;
-    await ref.read(authRepositoryProvider).signOut();
-    if (!context.mounted) return;
-    Navigator.of(context)
-        .pushNamedAndRemoveUntil(LoginScreen.routeName, (route) => false);
-  }
+     await ref.read(authRepositoryProvider).signOut();
+     if (!context.mounted) return;
+     Navigator.of(context)
+         .pushNamedAndRemoveUntil(LoginScreen.routeName, (route) => false);
+   }
 
-  List<_NavItem> _navItemsForUser(AppUser user, AppStrings strings) {
+   // Kept for re-enabling the AI assistant later; the entry-point FAB that
+   // called this was removed per request.
+   // ignore: unused_element
+   void _showAiChat() {
+     Navigator.of(context).push(
+       MaterialPageRoute(builder: (_) => const AiChatScreen()),
+     );
+   }
+
+   List<_NavItem> _navItemsForUser(AppUser user, AppStrings strings) {
     final permissions = user.effectivePermissions;
     if (user.role == UserRole.patient) {
-      // 4-tab structure: Home → Scan → History → Profile
-      // Scanner is top-level navigation (not buried inside Food & Water Log).
-      final patientItems = <_NavItem>[
-        _NavItem(
-          page: PatientDashboardScreen(
-            onOpenTab: (value) => setState(() => _index = value),
-            onOpenRiskAssessment: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => const PrePregnancyAssessmentScreen(),
-              ),
-            ),
-            onOpenEducation: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const EducationScreen()),
-            ),
-            onLogout: () => _confirmLogout(context, strings),
-          ),
-          destination: const NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          permission: AccessPermission.reporting,
-        ),
-        const _NavItem(
-          page: FoodScanScreen(),
-          destination: NavigationDestination(
-            icon: Icon(Icons.center_focus_strong_outlined),
-            selectedIcon: Icon(Icons.center_focus_strong),
-            label: 'Scan',
-          ),
-          permission: AccessPermission.foodLogging,
-        ),
-        const _NavItem(
-          page: HealthRecordScreen(),
-          destination: NavigationDestination(
-            icon: Icon(Icons.history_outlined),
-            selectedIcon: Icon(Icons.history),
-            label: 'History',
-          ),
-          permission: AccessPermission.patientProfiles,
-        ),
-        const _NavItem(
-          page: ProfileScreen(),
-          destination: NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-          permission: AccessPermission.patientProfiles,
-        ),
-      ];
+       // 5-tab structure: Home → Log → Appointment → History → Profile
+       final patientItems = <_NavItem>[
+         _NavItem(
+           page: PatientDashboardScreen(
+             onOpenTab: (value) => setState(() => _index = value),
+             onOpenRiskAssessment: () => Navigator.of(context).push(
+               MaterialPageRoute(
+                 builder: (_) => const AssessmentListScreen(),
+               ),
+             ),
+             onOpenAssessments: () => Navigator.of(context).push(
+               MaterialPageRoute(
+                 builder: (_) => const AssessmentListScreen(),
+               ),
+             ),
+             onOpenEducation: () => Navigator.of(context).push(
+               MaterialPageRoute(builder: (_) => const EducationScreen()),
+             ),
+             onLogout: () => _confirmLogout(context, strings),
+           ),
+           destination: const NavigationDestination(
+             icon: Icon(Icons.home_outlined),
+             selectedIcon: Icon(Icons.home),
+             label: 'Home',
+           ),
+           permission: AccessPermission.reporting,
+         ),
+         const _NavItem(
+           page: FoodLoggingHubScreen(),
+           destination: NavigationDestination(
+             icon: Icon(Icons.edit_note_outlined),
+             selectedIcon: Icon(Icons.edit_note),
+             label: 'Log',
+           ),
+           permission: AccessPermission.foodLogging,
+         ),
+         const _NavItem(
+           page: AppointmentsScreen(role: UserRole.patient),
+           destination: NavigationDestination(
+             icon: Icon(Icons.calendar_today_outlined),
+             selectedIcon: Icon(Icons.calendar_today),
+             label: 'Appointment',
+           ),
+           permission: AccessPermission.appointments,
+         ),
+         const _NavItem(
+           page: HealthRecordScreen(),
+           destination: NavigationDestination(
+             icon: Icon(Icons.history_outlined),
+             selectedIcon: Icon(Icons.history),
+             label: 'History',
+           ),
+           permission: AccessPermission.patientProfiles,
+         ),
+         const _NavItem(
+           page: ProfileScreen(),
+           destination: NavigationDestination(
+             icon: Icon(Icons.person_outline),
+             selectedIcon: Icon(Icons.person),
+             label: 'Profile',
+           ),
+           permission: AccessPermission.patientProfiles,
+         ),
+       ];
       return patientItems
           .where(
             (item) =>
@@ -469,8 +493,8 @@ class _FloatingBottomNavigationBar extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     // Glassmorphism surface: blush-tinted frosted glass
     final surface = isDark
-        ? const Color(0xFF18242E).withValues(alpha: 200)
-        : Colors.white.withValues(alpha: 195);
+        ? const Color(0xFF18242E).withValues(alpha: 0.784)
+        : Colors.white.withValues(alpha: 0.765);
 
     return SafeArea(
       minimum: const EdgeInsets.fromLTRB(16, 0, 16, 14),
@@ -480,13 +504,14 @@ class _FloatingBottomNavigationBar extends StatelessWidget {
           boxShadow: [
             // base shadow
             BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 60 : 22),
+              color: Colors.black.withValues(alpha: isDark ? 0.235 : 0.086),
               blurRadius: 32,
               offset: const Offset(0, 16),
             ),
             // pink glow
             BoxShadow(
-              color: const Color(0xFFEC407A).withValues(alpha: isDark ? 40 : 22),
+              color: const Color(0xFFEC407A)
+                  .withValues(alpha: isDark ? 0.157 : 0.086),
               blurRadius: 22,
               offset: const Offset(0, 6),
             ),
@@ -504,8 +529,8 @@ class _FloatingBottomNavigationBar extends StatelessWidget {
                 borderRadius: BorderRadius.circular(32),
                 border: Border.all(
                   color: isDark
-                      ? Colors.white.withValues(alpha: 18)
-                      : const Color(0xFFF8BBD0).withValues(alpha: 180),
+                      ? Colors.white.withValues(alpha: 0.071)
+                      : const Color(0xFFF8BBD0).withValues(alpha: 0.706),
                   width: 1.0,
                 ),
               ),
@@ -570,7 +595,7 @@ class _GlassNavItem extends StatelessWidget {
               boxShadow: selected
                   ? [
                       BoxShadow(
-                        color: const Color(0xFFEC407A).withValues(alpha: 55),
+                        color: const Color(0xFFEC407A).withValues(alpha: 0.216),
                         blurRadius: 14,
                         offset: const Offset(0, 5),
                       ),
@@ -591,7 +616,7 @@ class _GlassNavItem extends StatelessWidget {
                       color: selected
                           ? Colors.white
                           : isDark
-                              ? Colors.white.withValues(alpha: 150)
+                              ? Colors.white.withValues(alpha: 0.588)
                               : const Color(0xFF9E9E9E),
                     ),
                     child: icon,
@@ -606,7 +631,7 @@ class _GlassNavItem extends StatelessWidget {
                       color: selected
                           ? Colors.white
                           : isDark
-                              ? Colors.white.withValues(alpha: 130)
+                              ? Colors.white.withValues(alpha: 0.51)
                               : const Color(0xFF9E9E9E),
                       fontWeight:
                           selected ? FontWeight.w800 : FontWeight.w600,

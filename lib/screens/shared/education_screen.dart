@@ -348,10 +348,10 @@ class _EducationChatBoxState extends ConsumerState<_EducationChatBox> {
     final strings = AppStrings.of(context);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final muted = scheme.onSurface.withValues(alpha: 150);
-    final assistantFill = scheme.surfaceContainerHighest.withValues(alpha: 180);
+    final muted = scheme.onSurface.withValues(alpha: 0.588);
+    final assistantFill = scheme.surfaceContainerHighest.withValues(alpha: 0.706);
     final userFill = Color.alphaBlend(
-      scheme.primary.withValues(alpha: 32),
+      scheme.primary.withValues(alpha: 0.125),
       scheme.surface,
     );
 

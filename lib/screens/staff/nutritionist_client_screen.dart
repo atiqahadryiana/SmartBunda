@@ -5,8 +5,10 @@ import 'package:smartbunda/models/app_user.dart';
 import 'package:smartbunda/models/food_entry.dart';
 import 'package:smartbunda/models/pregnancy.dart';
 import 'package:smartbunda/models/profile.dart';
+import 'package:smartbunda/models/appointment_vitals.dart';
 import 'package:smartbunda/providers/app_providers.dart';
 import 'package:smartbunda/services/service_providers.dart';
+import 'package:smartbunda/screens/staff/record_vitals_sheet.dart';
 import 'package:smartbunda/utils/nutrition_guides.dart';
 import 'package:smartbunda/widgets/require_sign_in.dart';
 import 'package:smartbunda/widgets/screen_header.dart';
@@ -126,6 +128,23 @@ class NutritionistClientScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
             _ProfileCard(profile: profile, pregnancy: pregnancy),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.tonalIcon(
+                onPressed: () => showRecordVitalsSheet(
+                  context,
+                  ref,
+                  patient: client,
+                  profile: profile,
+                  pregnancy: pregnancy,
+                ),
+                icon: const Icon(Icons.monitor_heart_outlined),
+                label: const Text('Record vitals (this appointment)'),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _VitalsHistoryCard(patientId: client.id),
             const SizedBox(height: 12),
             _ConditionFeedbackCard(
               profile: profile,
@@ -368,6 +387,98 @@ class _ProfileCard extends StatelessWidget {
 String _measurement(double? value, String unit) {
   if (value == null || value <= 0) return '--';
   return '${value.toStringAsFixed(1)} $unit';
+}
+
+/// Newest-first list of per-appointment vitals recorded for the patient.
+class _VitalsHistoryCard extends ConsumerWidget {
+  const _VitalsHistoryCard({required this.patientId});
+
+  final String patientId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final vitalsAsync = ref.watch(patientVitalsProvider(patientId));
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Vitals history',
+                style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 6),
+            vitalsAsync.when(
+              data: (records) {
+                if (records.isEmpty) {
+                  return const Text('No vitals recorded yet.');
+                }
+                final shown = records.take(5).toList();
+                return Column(
+                  children: [
+                    for (final v in shown) _VitalsRow(vitals: v),
+                  ],
+                );
+              },
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (e, _) => Text('Could not load vitals: $e'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _VitalsRow extends StatelessWidget {
+  const _VitalsRow({required this.vitals});
+
+  final AppointmentVitals vitals;
+
+  @override
+  Widget build(BuildContext context) {
+    final d = vitals.recordedAt;
+    final parts = <String>[
+      if (vitals.weightKg != null)
+        '${vitals.weightKg!.toStringAsFixed(1)} kg',
+      if (vitals.hemoglobinGdl != null)
+        'Hb ${vitals.hemoglobinGdl!.toStringAsFixed(1)}',
+      if (vitals.bloodPressure != null) 'BP ${vitals.bloodPressure}',
+      if (vitals.fundalHeightCm != null)
+        'FH ${vitals.fundalHeightCm!.toStringAsFixed(1)} cm',
+      if (vitals.gestationalWeek != null) 'Wk ${vitals.gestationalWeek}',
+    ];
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('${d.day}/${d.month}/${d.year}',
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              Text(vitals.recordedByName,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      )),
+            ],
+          ),
+          Text(parts.isEmpty ? 'No measurements' : parts.join(' · ')),
+          if (vitals.notes != null && vitals.notes!.isNotEmpty)
+            Text(
+              vitals.notes!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+          const Divider(height: 12),
+        ],
+      ),
+    );
+  }
 }
 
 class _GapRow extends StatelessWidget {

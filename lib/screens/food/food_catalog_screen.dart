@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:smartbunda/data/seed_foods.dart';
 import 'package:smartbunda/models/food_catalog_entry.dart';
 import 'package:smartbunda/models/food_item.dart';
 import 'package:smartbunda/providers/app_providers.dart';
@@ -49,6 +50,16 @@ class FoodCatalogScreen extends ConsumerWidget {
                       onPressed: () => _importExcel(context, ref),
                       icon: const Icon(Icons.upload_file),
                       label: const Text('Upload Excel'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => _seedSampleFoods(context, ref),
+                      icon: const Icon(Icons.restaurant),
+                      label: const Text('Seed sample foods'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => _cleanUpOldFoods(context, ref),
+                      icon: const Icon(Icons.cleaning_services_outlined),
+                      label: const Text('Clean up old foods'),
                     ),
                   ],
                 ),
@@ -141,6 +152,10 @@ class FoodCatalogScreen extends ConsumerWidget {
     'fat': 5,
     'iron': 6,
     'folate': 7,
+    'calcium': 8,
+    'vitamin_d': 9,
+    'vitamin_b12': 10,
+    'sodium': 11,
   };
 
   static const Map<String, String> _headerAliases = {
@@ -173,7 +188,123 @@ class FoodCatalogScreen extends ConsumerWidget {
     'ironmg': 'iron',
     'folate': 'folate',
     'folatemcg': 'folate',
+    'calcium': 'calcium',
+    'calciummg': 'calcium',
+    'vitamind': 'vitamin_d',
+    'vitamindmcg': 'vitamin_d',
+    'vitd': 'vitamin_d',
+    'vitaminb12': 'vitamin_b12',
+    'vitaminb12mcg': 'vitamin_b12',
+    'b12': 'vitamin_b12',
+    'sodium': 'sodium',
+    'sodiummg': 'sodium',
+    'salt': 'sodium',
   };
+
+  /// Bulk-inserts a curated set of Chinese, Indian and Western sample foods
+  /// into the catalog. Stable ids mean re-running overwrites rather than
+  /// duplicating. Confirms first since it writes many documents.
+  Future<void> _seedSampleFoods(BuildContext context, WidgetRef ref) async {
+    final foods = buildSeedFoods();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Seed sample foods?'),
+        content: Text(
+          'This adds ${foods.length} Malay, Chinese, Indian and Western '
+          'dishes (including pregnancy-friendly salads) to the catalog. '
+          'Re-running updates them rather than creating duplicates.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Add foods'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Adding sample foods...')),
+    );
+    try {
+      await ref.read(foodDatabaseProvider).addCustomItems(foods);
+      await ref.read(foodDatabaseProvider).refresh();
+      if (!context.mounted) return;
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(content: Text('Added ${foods.length} sample foods.')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(content: Text('Could not seed foods: $e')),
+      );
+    }
+  }
+
+  /// Removes legacy/orphaned seeded foods — old `seed-*` documents the current
+  /// seed set no longer includes (e.g. an earlier import with stale values).
+  /// Admin-added custom foods and the current seed are preserved.
+  Future<void> _cleanUpOldFoods(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Clean up old foods?'),
+        content: const Text(
+          'This permanently removes outdated seeded foods left over from an '
+          'earlier import. Your custom foods and the current sample set are '
+          'kept.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Cleaning up…')),
+    );
+    try {
+      final currentSeedIds = buildSeedFoods().map((f) => f.id).toSet();
+      final removed = await ref
+          .read(foodDatabaseProvider)
+          .removeOrphanedSeedFoods(currentSeedIds);
+      if (!context.mounted) return;
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(removed == 0
+              ? 'No old foods to clean up.'
+              : 'Removed $removed old food '
+                  '${removed == 1 ? 'entry' : 'entries'}.'),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(content: Text('Could not clean up: $e')),
+      );
+    }
+  }
 
   Future<void> _importExcel(BuildContext context, WidgetRef ref) async {
     final result = await FilePicker.platform.pickFiles(
@@ -246,6 +377,14 @@ class FoodCatalogScreen extends ConsumerWidget {
               _doubleFromCell(_cellAt(row, _columnIndex('iron', useHeader, headerMap))),
           folateMcg:
               _doubleFromCell(_cellAt(row, _columnIndex('folate', useHeader, headerMap))),
+          calciumMg:
+              _doubleFromCell(_cellAt(row, _columnIndex('calcium', useHeader, headerMap))),
+          vitaminDMcg: _doubleFromCell(
+              _cellAt(row, _columnIndex('vitamin_d', useHeader, headerMap))),
+          vitaminB12Mcg: _doubleFromCell(
+              _cellAt(row, _columnIndex('vitamin_b12', useHeader, headerMap))),
+          sodiumMg:
+              _doubleFromCell(_cellAt(row, _columnIndex('sodium', useHeader, headerMap))),
         );
         items.add(item);
       }
@@ -404,6 +543,14 @@ class FoodCatalogScreen extends ConsumerWidget {
         TextEditingController(text: entry?.item.ironMg.toString() ?? '');
     final folateCtrl =
         TextEditingController(text: entry?.item.folateMcg.toString() ?? '');
+    final calciumCtrl =
+        TextEditingController(text: entry?.item.calciumMg.toString() ?? '');
+    final vitaminDCtrl =
+        TextEditingController(text: entry?.item.vitaminDMcg.toString() ?? '');
+    final vitaminB12Ctrl =
+        TextEditingController(text: entry?.item.vitaminB12Mcg.toString() ?? '');
+    final sodiumCtrl =
+        TextEditingController(text: entry?.item.sodiumMg.toString() ?? '');
     final formKey = GlobalKey<FormState>();
 
     try {
@@ -436,6 +583,10 @@ class FoodCatalogScreen extends ConsumerWidget {
                     _numberField(fatCtrl, 'Fat (g)'),
                     _numberField(ironCtrl, 'Iron (mg)'),
                     _numberField(folateCtrl, 'Folate (mcg)'),
+                    _numberField(calciumCtrl, 'Calcium (mg)'),
+                    _numberField(vitaminDCtrl, 'Vitamin D (mcg)'),
+                    _numberField(vitaminB12Ctrl, 'Vitamin B12 (mcg)'),
+                    _numberField(sodiumCtrl, 'Sodium (mg)'),
                   ],
                 ),
               ),
@@ -459,6 +610,10 @@ class FoodCatalogScreen extends ConsumerWidget {
                   fatG: _parseIntField(fatCtrl.text),
                   ironMg: _parseDoubleField(ironCtrl.text),
                   folateMcg: _parseDoubleField(folateCtrl.text),
+                  calciumMg: _parseDoubleField(calciumCtrl.text),
+                  vitaminDMcg: _parseDoubleField(vitaminDCtrl.text),
+                  vitaminB12Mcg: _parseDoubleField(vitaminB12Ctrl.text),
+                  sodiumMg: _parseDoubleField(sodiumCtrl.text),
                 );
                 final ok = await _runCatalogAction(context, () async {
                   if (entry == null) {

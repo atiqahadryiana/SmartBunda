@@ -9,8 +9,10 @@ import 'package:smartbunda/models/profile.dart';
 import 'package:smartbunda/providers/app_providers.dart';
 import 'package:smartbunda/services/service_providers.dart';
 import 'package:smartbunda/widgets/empty_state.dart';
+import 'package:smartbunda/widgets/permission_gate.dart';
 import 'package:smartbunda/widgets/require_sign_in.dart';
 import 'package:smartbunda/widgets/screen_header.dart';
+import 'package:smartbunda/screens/staff/add_clinical_note_screen.dart';
 import 'package:smartbunda/screens/staff/nutritionist_client_screen.dart';
 
 class PatientProfilesScreen extends ConsumerWidget {
@@ -26,11 +28,14 @@ class PatientProfilesScreen extends ConsumerWidget {
     final pregnanciesAsync = ref.watch(allPregnanciesProvider);
     final entriesAsync = ref.watch(allEntriesProvider);
 
-    return RequireSignIn(
+    return PermissionGate(
+      permission: AccessPermission.patientProfiles,
       title: strings.t('Patient profiles'),
-      showAppBar: showAppBar,
-      message: strings.t('Please sign in to view patient profiles.'),
-      child: Scaffold(
+      child: RequireSignIn(
+        title: strings.t('Patient profiles'),
+        showAppBar: showAppBar,
+        message: strings.t('Please sign in to view patient profiles.'),
+        child: Scaffold(
         appBar: showAppBar
             ? AppBar(title: Text(strings.t('Patient profiles')))
             : null,
@@ -72,7 +77,16 @@ class PatientProfilesScreen extends ConsumerWidget {
                       title: Text(patient.displayName ?? patient.email),
                       subtitle: Text(_profileSummary(
                           profile, pregnancies[patient.id], strings)),
-                      trailing: Text(strings.logsCount(patientEntries.length)),
+                      trailing: IconButton(
+                        tooltip: strings.t('Add clinical note'),
+                        icon: const Icon(Icons.note_add_outlined),
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                AddClinicalNoteScreen(patient: patient),
+                          ),
+                        ),
+                      ),
                       onTap: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
@@ -93,6 +107,7 @@ class PatientProfilesScreen extends ConsumerWidget {
           },
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Center(child: Text('Error: $e')),
+        ),
         ),
       ),
     );
@@ -125,7 +140,7 @@ class PatientProfilesScreen extends ConsumerWidget {
     final fallback = initials.isEmpty ? '?' : initials.toUpperCase();
     final base = Theme.of(context).colorScheme;
     return CircleAvatar(
-      backgroundColor: base.secondary.withValues(alpha: 120),
+      backgroundColor: base.secondary.withValues(alpha: 0.471),
       child:
           Text(fallback, style: const TextStyle(fontWeight: FontWeight.bold)),
     );

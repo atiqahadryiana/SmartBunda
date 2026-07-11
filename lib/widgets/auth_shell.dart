@@ -36,7 +36,7 @@ class AuthShell extends StatelessWidget {
     );
     final subtitleStyle =
         (textTheme.bodyMedium ?? const TextStyle(fontSize: 14)).copyWith(
-      color: deep.withValues(alpha: 170),
+      color: deep.withValues(alpha: 0.667),
       height: 1.4,
     );
 
@@ -214,17 +214,26 @@ class _BrandHeader extends StatelessWidget {
             width: 64,
             height: 64,
             decoration: BoxDecoration(
-              gradient: AppTheme.primaryGradient,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(18),
               boxShadow: [
                 BoxShadow(
-                  color: AppTheme.darkPink.withValues(alpha: 38),
+                  color: AppTheme.darkPink.withValues(alpha: 0.149),
                   blurRadius: 14,
                   offset: const Offset(0, 6),
                 ),
               ],
             ),
-            child: const Icon(Icons.favorite, color: Colors.white, size: 30),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              child: Image.asset(
+                'assets/logo.png',
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => const Center(
+                  child: Icon(Icons.favorite, color: AppTheme.darkPink, size: 30),
+                ),
+              ),
+            ),
           ),
           const SizedBox(height: 12),
           Text(title, style: titleStyle, textAlign: TextAlign.center),

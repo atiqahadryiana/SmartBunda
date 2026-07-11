@@ -273,7 +273,7 @@ class _SlidePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final muted = scheme.onSurface.withValues(alpha: 170);
+    final muted = scheme.onSurface.withValues(alpha: 0.667);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(28, 18, 28, 24),
@@ -343,10 +343,10 @@ class _WelcomeMark extends StatelessWidget {
           height: 190,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.white.withValues(alpha: 185),
+            color: Colors.white.withValues(alpha: 0.725),
             boxShadow: [
               BoxShadow(
-                color: accent.withValues(alpha: 35),
+                color: accent.withValues(alpha: 0.137),
                 blurRadius: 36,
                 offset: const Offset(0, 18),
               ),
@@ -358,17 +358,17 @@ class _WelcomeMark extends StatelessWidget {
           height: 138,
           decoration: const BoxDecoration(
             shape: BoxShape.circle,
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFFFF8DB6),
-                Color(0xFFA78BFA),
-                Color(0xFF4ECBC4),
-              ],
+            color: Colors.white,
+          ),
+          child: ClipOval(
+            child: Image.asset(
+              'assets/logo.png',
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => const Center(
+                child: Icon(Icons.favorite, color: AppTheme.darkPink, size: 48),
+              ),
             ),
           ),
-          child: const Icon(Icons.favorite, color: Colors.white, size: 48),
         ),
         Positioned(
           right: 12,
@@ -381,7 +381,7 @@ class _WelcomeMark extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 20),
+                  color: Colors.black.withValues(alpha: 0.078),
                   blurRadius: 14,
                   offset: const Offset(0, 8),
                 ),
@@ -411,9 +411,9 @@ class _FeaturePill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 210),
+        color: Colors.white.withValues(alpha: 0.824),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withValues(alpha: 75)),
+        border: Border.all(color: color.withValues(alpha: 0.294)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

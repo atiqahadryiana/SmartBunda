@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:smartbunda/localization/app_strings.dart';
 import 'package:smartbunda/models/food_entry.dart';
 import 'package:smartbunda/models/food_item.dart';
+import 'package:smartbunda/widgets/portion_icon.dart';
 
 class MealOption {
   const MealOption({
@@ -94,48 +95,50 @@ FoodEntry entryFromFood(
   );
 }
 
-Future<double?> promptQuantity(
+/// Lets the user pick a plate portion (1/3, 1/2, 2/3, 3/4, 1 plate) for [item].
+///
+/// Returns the chosen fraction (0–1), which is used directly as the [quantity]
+/// multiplier in [entryFromFood] — so the saved nutrition is
+/// `per-serving value × fraction`, matching the per-portion nutrition formula.
+/// Each row previews the resulting calories for that portion.
+Future<double?> promptPlatePortion(
   BuildContext context,
   AppStrings strings,
   FoodItem item,
-) async {
-  final controller = TextEditingController(text: '1');
-  String? errorText;
-  final result = await showDialog<double>(
+) {
+  return showModalBottomSheet<double>(
     context: context,
-    builder: (context) => StatefulBuilder(
-      builder: (context, setState) => AlertDialog(
-        title: Text(strings.t('Quantity')),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            labelText: strings.t('Quantity'),
-            errorText: errorText,
+    builder: (context) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                strings.t('How much of a plate?'),
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
           ),
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).maybePop(),
-            child: Text(strings.t('Cancel')),
-          ),
-          FilledButton(
-            onPressed: () {
-              final parsed = parseQuantity(controller.text);
-              if (parsed == null || parsed <= 0) {
-                setState(() => errorText = strings.numberField);
-                return;
-              }
-              Navigator.of(context).maybePop(parsed);
-            },
-            child: Text(strings.t('Save')),
-          ),
+          for (final portion in PlatePortion.values)
+            ListTile(
+              leading: PortionIcon(portion: portion),
+              title: Text(portion.label),
+              subtitle: Text(
+                '${(item.caloriesPerServing * portion.fraction).round()} kcal'
+                ' | P ${(item.proteinG * portion.fraction).round()}g'
+                ' | C ${(item.carbG * portion.fraction).round()}g'
+                ' | F ${(item.fatG * portion.fraction).round()}g',
+              ),
+              onTap: () => Navigator.of(context).maybePop(portion.fraction),
+            ),
+          const SizedBox(height: 8),
         ],
       ),
     ),
   );
-  controller.dispose();
-  return result;
 }
 
 Future<String?> selectMealType(BuildContext context) async {

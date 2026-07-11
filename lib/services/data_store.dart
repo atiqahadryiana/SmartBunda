@@ -15,11 +15,15 @@ abstract class DataStore {
 
   Stream<List<FoodEntry>> watchEntries(String userId);
   Future<void> addEntry(FoodEntry entry);
+  Future<void> updateEntry(FoodEntry entry);
+  Future<void> deleteEntry(FoodEntry entry);
 
   Stream<Map<String, List<FoodEntry>>> watchAllEntries(); // for clinician/admin overview
 
   Stream<List<HydrationEntry>> watchHydrationEntries(String userId);
   Future<void> addHydrationEntry(HydrationEntry entry);
+  Future<void> updateHydrationEntry(HydrationEntry entry);
+  Future<void> deleteHydrationEntry(HydrationEntry entry);
 
   Stream<List<FeedbackEntry>> watchFeedback(String userId);
   Stream<List<FeedbackEntry>> watchAllFeedback();

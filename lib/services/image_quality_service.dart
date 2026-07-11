@@ -2,7 +2,7 @@
 ///
 /// Offline, pre-classification check that scores a food photo on blur,
 /// brightness, contrast, and resolution and produces an overall 0–100 quality
-/// score. Used to warn or block before running TFLite recognition so blurry /
+/// score. Used to warn or block before running AI recognition so blurry /
 /// dark / low-resolution images don't yield unreliable nutrition estimates.
 library smartbunda.image_quality_service;
 

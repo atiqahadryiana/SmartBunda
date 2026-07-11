@@ -4,6 +4,9 @@
 *.pyc
 *.swp
 .DS_Store
+
+# Firebase Admin SDK private key — NEVER commit
+serviceAccount.json
 .atom/
 .build/
 .buildlog/
@@ -57,9 +60,16 @@ malaysian-food-dataset/artifacts/
 malaysian-food-dataset/.tmp/
 malaysian-food-dataset/.venv/
 malaysian-food-dataset/dataset/
+malaysian-food-dataset/dataset.zip
 lib/screens/oracleJdk-26/
 *.keras
 *.tflite
+
+# Local assistant and documentation folders
+.claude/
+.codex/
+docs/
+node_modules
 node_modules
 node_modules
 node_modules

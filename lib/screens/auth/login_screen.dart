@@ -8,7 +8,9 @@ import 'package:smartbunda/localization/app_strings.dart';
 import 'package:smartbunda/models/app_user.dart';
 import 'package:smartbunda/services/service_providers.dart';
 import 'package:smartbunda/utils/auth_error_messages.dart';
+import 'package:smartbunda/utils/email_validator.dart';
 import 'package:smartbunda/widgets/auth_shell.dart';
+import 'package:smartbunda/widgets/google_sign_in_button.dart';
 import 'package:smartbunda/screens/home_screen.dart';
 import 'package:smartbunda/screens/auth/register_screen.dart';
 
@@ -30,6 +32,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _loading = false;
   bool _linkSending = false;
   bool _checkedEmailLink = false;
+  bool _obscure = true;
   String? _error;
   bool _didRedirect = false;
 
@@ -233,7 +236,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _sendEmailLink() async {
     final strings = AppStrings.of(context);
     final email = _emailController.text.trim();
-    if (email.isEmpty || !email.contains('@')) {
+    if (!isValidEmail(email)) {
       setState(() =>
           _error = strings.t('Enter a valid email for email link sign-in.'));
       return;
@@ -294,7 +297,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       footer: Builder(
         builder: (context) {
           final muted =
-              Theme.of(context).colorScheme.onSurface.withValues(alpha: 140);
+              Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.549);
           return Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -322,7 +325,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       child: Builder(
         builder: (context) {
           final muted =
-              Theme.of(context).colorScheme.onSurface.withValues(alpha: 150);
+              Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.588);
           return Form(
             key: _formKey,
             child: Column(
@@ -342,22 +345,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  autofillHints: const [AutofillHints.email],
                   decoration: InputDecoration(
                     labelText: strings.t('Email'),
                     prefixIcon: const Icon(Icons.email_outlined),
                   ),
-                  validator: (v) => v != null && v.contains('@')
+                  validator: (v) => isValidEmail(v)
                       ? null
                       : strings.t('Enter a valid email'),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _passwordController,
+                  obscureText: _obscure,
+                  autofillHints: const [AutofillHints.password],
                   decoration: InputDecoration(
                     labelText: strings.t('Password'),
                     prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      tooltip: _obscure
+                          ? strings.t('Show password')
+                          : strings.t('Hide password'),
+                      icon: Icon(_obscure
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined),
+                      onPressed: () => setState(() => _obscure = !_obscure),
+                    ),
                   ),
-                  obscureText: true,
                   validator: (v) => v != null && v.length >= 6
                       ? null
                       : strings.t('Min 6 characters'),
@@ -379,7 +394,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           color: scheme.errorContainer,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                              color: scheme.error.withValues(alpha: 90)),
+                              color: scheme.error.withValues(alpha: 0.353)),
                         ),
                         child: Text(
                           _error!,
@@ -407,14 +422,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Row(
                   children: [
                     Expanded(
-                        child: Divider(color: muted.withValues(alpha: 90))),
+                        child: Divider(color: muted.withValues(alpha: 0.353))),
                     const SizedBox(width: 12),
                     Text(strings.t('or'),
                         style: Theme.of(context).textTheme.bodySmall),
                     const SizedBox(width: 12),
                     Expanded(
-                        child: Divider(color: muted.withValues(alpha: 90))),
+                        child: Divider(color: muted.withValues(alpha: 0.353))),
                   ],
+                ),
+                const SizedBox(height: 16),
+                GoogleSignInButton(
+                  onSignedIn: (user) {
+                    if (!mounted) return;
+                    _didRedirect = true;
+                    _goHome(user);
+                  },
+                  onError: (msg) => setState(() => _error = msg),
                 ),
                 const SizedBox(height: 16),
                 Text(

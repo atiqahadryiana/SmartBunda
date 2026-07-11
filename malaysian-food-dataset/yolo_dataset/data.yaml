@@ -1,0 +1,11 @@
+# SmartBunda YOLOv8 Dataset Configuration
+path: C:\Users\adryi\Desktop\FYP\Smartbunda\malaysian-food-dataset\yolo_dataset
+train: images/train
+val: images/val
+test: images/test
+
+# Number of classes
+nc: 52
+
+# Class names
+names: ["ayam percik", "barley drink", "burger ramly", "capati", "cendol", "char kuey teow", "curry mee", "hainanese chicken rice", "hokkien mee", "ikan bakar", "ketupat", "kopi o ais", "kuih lapis", "kuih seri muka", "laksa johor", "laksa kedah", "laksa kelantan", "laksa perlis", "laksa sarawak", "lemang", "limau ais", "loh mee", "masala dosa", "mee bandung", "milo ais", "murtabak ayam", "murtabak daging", "nasi dagang", "nasi kerabu", "nasi lemak", "oblong burger", "otak otak", "pan mee", "putu mayam", "rendang ayam", "rendang daging", "rendang kerang", "rendang paru", "roti canai", "roti naan", "roti telur", "roti tisu", "satay ayam", "satay daging", "satay hati", "satay perut", "sirap bandung", "teh ais", "teh tarik", "tosai", "vadai", "yong tau foo"]

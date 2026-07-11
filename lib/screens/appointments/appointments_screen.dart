@@ -12,7 +12,7 @@ import 'package:smartbunda/services/appointment_filter_service.dart';
 import 'package:smartbunda/services/service_providers.dart';
 import 'package:smartbunda/theme/app_theme.dart';
 import 'package:smartbunda/widgets/empty_state.dart';
-import 'package:smartbunda/widgets/screen_header.dart';
+import 'package:smartbunda/theme/app_components.dart';
 
 class AppointmentsScreen extends ConsumerStatefulWidget {
   const AppointmentsScreen({
@@ -58,24 +58,36 @@ class _AppointmentsScreenState extends ConsumerState<AppointmentsScreen> {
 
     return Scaffold(
       appBar: showAppBar ? AppBar(title: Text(strings.t('Appointments'))) : null,
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ScreenHeader(
-              title: strings.t('Appointments'),
-              subtitle: strings.t('Schedule and track upcoming clinic visits.'),
-              icon: Icons.event_available,
-              action: canSchedule
-                  ? FilledButton.icon(
-                      onPressed: () => _showCreateDialog(context, ref, user),
-                      icon: const Icon(Icons.add),
-                      label: Text(strings.t('New')),
-                    )
-                  : null,
-            ),
-            const SizedBox(height: 16),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SbHeaderBanner(
+            title: strings.t('Appointments'),
+            subtitle: strings.t('Schedule and track upcoming clinic visits.'),
+            icon: Icons.event_available,
+            safeAreaTop: !showAppBar,
+            action: canSchedule
+                ? IconButton.filledTonal(
+                    tooltip: strings.t('New'),
+                    onPressed: () => _showCreateDialog(context, ref, user),
+                    icon: const Icon(Icons.add),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Theme.of(context)
+                          .colorScheme
+                          .surface
+                          .withValues(alpha: 0.6),
+                      foregroundColor:
+                          Theme.of(context).colorScheme.onPrimaryContainer,
+                    ),
+                  )
+                : null,
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
             Expanded(
               child: appointmentsAsync.when(
                 data: (appointments) {
@@ -176,8 +188,11 @@ class _AppointmentsScreenState extends ConsumerState<AppointmentsScreen> {
                 error: (e, _) => Center(child: Text('Error: $e')),
               ),
             ),
-          ],
-        ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -689,7 +704,7 @@ class _NextAppointmentBanner extends StatelessWidget {
         border: Border.all(color: const Color(0xFFF8BBD0)),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryPink.withValues(alpha: 30),
+            color: AppTheme.primaryPink.withValues(alpha: 0.118),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -752,10 +767,10 @@ class _NextAppointmentBanner extends StatelessWidget {
             padding:
                 const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: AppTheme.darkPink.withValues(alpha: 20),
+              color: AppTheme.darkPink.withValues(alpha: 0.078),
               borderRadius: BorderRadius.circular(999),
               border: Border.all(
-                  color: AppTheme.darkPink.withValues(alpha: 80)),
+                  color: AppTheme.darkPink.withValues(alpha: 0.314)),
             ),
             child: Text(
               countdown,
@@ -858,13 +873,14 @@ class _EnhancedAppointmentCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: isNext
-              ? AppTheme.primaryPink.withValues(alpha: 120)
+              ? AppTheme.primaryPink.withValues(alpha: 0.471)
               : const Color(0xFFF8BBD0),
           width: isNext ? 1.5 : 1.0,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryPink.withValues(alpha: isNext ? 20 : 10),
+            color:
+                AppTheme.primaryPink.withValues(alpha: isNext ? 0.078 : 0.039),
             blurRadius: isNext ? 14 : 8,
             offset: const Offset(0, 4),
           ),
@@ -879,7 +895,7 @@ class _EnhancedAppointmentCard extends StatelessWidget {
               width: 48,
               padding: const EdgeInsets.symmetric(vertical: 8),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 18),
+                color: color.withValues(alpha: 0.071),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -915,7 +931,11 @@ class _EnhancedAppointmentCard extends StatelessWidget {
                           style: Theme.of(context)
                               .textTheme
                               .titleSmall
-                              ?.copyWith(fontWeight: FontWeight.w800),
+                              ?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                // Card is always white → pin to dark text.
+                                color: AppTheme.primaryText,
+                              ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -925,10 +945,10 @@ class _EnhancedAppointmentCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: color.withValues(alpha: 18),
+                          color: color.withValues(alpha: 0.071),
                           borderRadius: BorderRadius.circular(999),
                           border:
-                              Border.all(color: color.withValues(alpha: 70)),
+                              Border.all(color: color.withValues(alpha: 0.275)),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,

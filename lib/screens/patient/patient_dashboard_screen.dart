@@ -1,21 +1,21 @@
-import 'dart:math' as math;
-
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import 'package:smartbunda/theme/app_theme.dart';
 
+import 'package:smartbunda/models/alert_item.dart';
 import 'package:smartbunda/models/app_user.dart';
 import 'package:smartbunda/models/appointment.dart';
-import 'package:smartbunda/screens/appointments/appointments_screen.dart';
-import 'package:smartbunda/screens/food/hydration_screen.dart';
-import 'package:smartbunda/screens/log/log_screen.dart';
+import 'package:smartbunda/screens/food/food_scan_screen.dart';
+import 'package:smartbunda/screens/patient/notifications_screen.dart';
 import 'package:smartbunda/models/food_entry.dart';
 import 'package:smartbunda/models/hydration_entry.dart';
 import 'package:smartbunda/models/pregnancy.dart';
 import 'package:smartbunda/models/profile.dart';
 import 'package:smartbunda/providers/app_providers.dart';
+import 'package:smartbunda/services/service_providers.dart';
 import 'package:smartbunda/utils/nutrition_guides.dart';
 
 class PatientDashboardScreen extends ConsumerWidget {
@@ -23,12 +23,14 @@ class PatientDashboardScreen extends ConsumerWidget {
     super.key,
     required this.onOpenTab,
     required this.onOpenRiskAssessment,
+    required this.onOpenAssessments,
     required this.onOpenEducation,
     required this.onLogout,
   });
 
   final ValueChanged<int> onOpenTab;
   final VoidCallback onOpenRiskAssessment;
+  final VoidCallback onOpenAssessments;
   final VoidCallback onOpenEducation;
   final VoidCallback onLogout;
 
@@ -43,6 +45,9 @@ class PatientDashboardScreen extends ConsumerWidget {
         const <HydrationEntry>[];
     final appointments =
         ref.watch(appointmentsProvider).valueOrNull ?? const <Appointment>[];
+    final alerts = ref.watch(alertsProvider).valueOrNull ?? const <AlertItem>[];
+    final unreadAlerts =
+        alerts.where((a) => a.status.toUpperCase() != 'READ').length;
     final todayEntries =
         entries.where((entry) => _isToday(entry.date)).toList();
     final todayWater = hydration
@@ -58,73 +63,70 @@ class PatientDashboardScreen extends ConsumerWidget {
         .toList()
       ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
 
+    // Raise a notification when today's calories exceed the target. Idempotent:
+    // one alert per patient per day (deterministic id), guarded so a rebuild
+    // doesn't re-write it.
+    final caloriesTarget = targets.calories.round();
+    if (user != null &&
+        caloriesTarget > 0 &&
+        totals.calories > caloriesTarget) {
+      _maybeRaiseCalorieAlert(
+        ref,
+        userId: user.id,
+        calories: totals.calories,
+        target: caloriesTarget,
+      );
+    }
+
+    // Keep the daily meal-log reminders in sync with what's been logged today:
+    // skip a slot's reminder for today once that meal is recorded. Runs whenever
+    // the patient opens the dashboard; scheduling is idempotent.
+    if (user != null) {
+      final loggedMealTypes = todayEntries
+          .map((e) => e.mealType)
+          .whereType<String>()
+          .toSet();
+      _syncMealReminders(ref, loggedMealTypes);
+    }
+
     return Scaffold(
       body: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
-            child: _HeroHeader(
-              name: user?.displayName ?? user?.email ?? 'Mother',
+            child: _TodayOverview(
+              user: user,
               profile: profile,
               pregnancy: pregnancy,
-              onOpenEducation: onOpenEducation,
-              onLogout: onLogout,
+              totals: totals,
+              targets: targets,
+              todayWater: todayWater,
+              waterTarget: waterTarget,
+              upcoming: upcoming,
+              unreadAlerts: unreadAlerts,
+              onOpenNotifications: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const NotificationsScreen(),
+                ),
+              ),
             ),
           ),
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             sliver: SliverList.list(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _MetricCard(
-                        icon: Icons.local_fire_department_outlined,
-                        title: 'Calories',
-                        value: '${totals.calories}',
-                        unit: 'kcal',
-                        progress: _ratio(totals.calories, targets.calories),
-                        color: AppTheme.darkPink,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _MetricCard(
-                        icon: Icons.water_drop_outlined,
-                        title: 'Water',
-                        value: '${(todayWater / 1000).toStringAsFixed(1)}L',
-                        unit: '/ ${(waterTarget / 1000).toStringAsFixed(1)}L',
-                        progress: _ratio(todayWater, waterTarget),
-                        color: AppTheme.healthcareTeal,
-                      ),
-                    ),
-                  ],
+                _QuickActions(onOpenTab: onOpenTab),
+                const SizedBox(height: 16),
+                _NutritionSummary(
+                  totals: totals,
+                  targets: targets,
                 ),
                 const SizedBox(height: 16),
-                _QuickActionsBar(onOpenTab: onOpenTab),
+                _AssessmentsBanner(onOpen: onOpenAssessments),
                 const SizedBox(height: 16),
-                _ReadinessCard(
-                  profile: profile,
-                  pregnancy: pregnancy,
-                  onOpen: onOpenRiskAssessment,
+                _RecentMeals(
+                  entries: todayEntries,
+                  onOpenTab: onOpenTab,
                 ),
-                const SizedBox(height: 16),
-                _ClinicalAlertsCard(profile: profile, pregnancy: pregnancy),
-                const SizedBox(height: 16),
-                _NutritionCard(totals: totals, targets: targets),
-                const SizedBox(height: 16),
-                _AppointmentCard(
-                  appointment: upcoming.isEmpty ? null : upcoming.first,
-                  onView: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          const AppointmentsScreen(role: UserRole.patient),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _ActivityCard(entries: todayEntries, waterMl: todayWater),
-                const SizedBox(height: 16),
-                const _TipCard(),
               ],
             ),
           ),
@@ -139,62 +141,495 @@ class PatientDashboardScreen extends ConsumerWidget {
         date.month == now.month &&
         date.day == now.day;
   }
-
-  static double _ratio(num value, num target) {
-    if (target <= 0) return 0;
-    return (value / target).clamp(0.0, 1.0).toDouble();
-  }
 }
 
-class _HeroHeader extends StatelessWidget {
-  const _HeroHeader({
-    required this.name,
+double _ratio(num value, num target) {
+  if (target <= 0) return 0;
+  return (value / target).clamp(0.0, 1.0).toDouble();
+}
+
+/// Builds the dashboard header subtitle from only the segments that have real
+/// data, so missing profile/pregnancy info doesn't surface raw placeholders
+/// like "Week 0" or "BMI --". Falls back to a setup prompt when nothing is set.
+String _headerSubtitle(int gestationalWeek, String? riskLabel, String bmi) {
+  // [riskLabel] is the clinical tier already formatted as "… Risk"
+  // (e.g. "Low Risk"); null when no risk level is set.
+  final parts = <String>[
+    if (gestationalWeek > 0) 'Week $gestationalWeek',
+    if (riskLabel != null && riskLabel.isNotEmpty) riskLabel,
+    if (bmi != '--' && bmi.isNotEmpty) 'BMI $bmi',
+  ];
+  if (parts.isEmpty) return 'Complete your pregnancy profile to personalise this';
+  return parts.join(' • ');
+}
+
+/// Per-session guard so the calorie alert is written at most once per day per
+/// patient even as the dashboard rebuilds. The Firestore doc id is also
+/// deterministic (date-keyed), so repeats are idempotent regardless.
+final Set<String> _raisedCalorieAlertKeys = <String>{};
+
+void _maybeRaiseCalorieAlert(
+  WidgetRef ref, {
+  required String userId,
+  required int calories,
+  required int target,
+}) {
+  final now = DateTime.now();
+  final dayKey =
+      '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  final key = '${userId}_calorie-exceeded_$dayKey';
+  if (_raisedCalorieAlertKeys.contains(key)) return;
+  _raisedCalorieAlertKeys.add(key);
+
+  final overBy = calories - target;
+  final alert = AlertItem(
+    id: key,
+    userId: userId,
+    message: "You've exceeded your daily calorie target by $overBy kcal "
+        '($calories / $target kcal). Consider lighter meals for the rest of '
+        'the day.',
+    severity: AlertSeverity.medium,
+    type: AlertType.deficiencyAlert,
+    createdAt: now,
+    status: 'SENT',
+  );
+  // Fire-and-forget; failures shouldn't disrupt the dashboard. A re-write with
+  // the same id just refreshes the existing alert.
+  ref.read(alertRepositoryProvider).addAlert(alert).catchError((_) {});
+}
+
+/// Guards meal-reminder reconciliation so it runs only when today's set of
+/// logged meal slots actually changes (not on every dashboard rebuild).
+String? _lastMealReminderSyncKey;
+
+/// (Re)schedules the daily meal-log reminders, suppressing today's reminder for
+/// any meal slot already logged. Fire-and-forget; the scheduler is mobile-only
+/// and a no-op on web.
+void _syncMealReminders(WidgetRef ref, Set<String> loggedMealTypesToday) {
+  final now = DateTime.now();
+  final dayKey =
+      '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  final sorted = loggedMealTypesToday.toList()..sort();
+  final key = '${dayKey}_${sorted.join(',')}';
+  if (_lastMealReminderSyncKey == key) return;
+  _lastMealReminderSyncKey = key;
+
+  ref
+      .read(mealReminderServiceProvider)
+      .reconcileForToday(loggedMealTypesToday)
+      .catchError((_) {});
+}
+
+class _TodayOverview extends StatelessWidget {
+  const _TodayOverview({
+    required this.user,
     required this.profile,
     required this.pregnancy,
-    required this.onOpenEducation,
-    required this.onLogout,
+    required this.totals,
+    required this.targets,
+    required this.todayWater,
+    required this.waterTarget,
+    required this.upcoming,
+    required this.unreadAlerts,
+    required this.onOpenNotifications,
   });
 
-  final String name;
+  final AppUser? user;
   final Profile? profile;
   final Pregnancy? pregnancy;
-  final VoidCallback onOpenEducation;
-  final VoidCallback onLogout;
+  final _DailyTotals totals;
+  final RecommendedTargets targets;
+  final int todayWater;
+  final int waterTarget;
+  final List<Appointment> upcoming;
+  final int unreadAlerts;
+  final VoidCallback onOpenNotifications;
 
   @override
   Widget build(BuildContext context) {
+    final gestationalWeek = pregnancy?.gestationalWeek ?? 0;
+    // Risk level is stored as an MOH colour code (e.g. 'green'); show its
+    // clinical tier (No / Low / High / Extremely High Risk), not the colour.
+    final riskLabel = PregnancyRiskLevel.fromCode(pregnancy?.riskLevel)?.riskLabel;
+    final bmi = profile?.bmi.toStringAsFixed(1) ?? '--';
+    final caloriesTarget = targets.calories.round();
+    final caloriesProgress = _ratio(totals.calories, targets.calories);
+
+    final scheme = Theme.of(context).colorScheme;
+    final onHeader = scheme.onPrimaryContainer;
+
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 22),
-      decoration: const BoxDecoration(
-        gradient: AppTheme.heroGradient,
+      // Distinct header banner — pink-palette gradient that differs from the
+      // page background but stays within the MD3 scheme (adapts to dark mode).
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            scheme.primaryContainer,
+            Color.alphaBlend(
+              scheme.primary.withValues(alpha: 0.18),
+              scheme.primaryContainer,
+            ),
+          ],
+        ),
+        borderRadius: const BorderRadius.vertical(
+          bottom: Radius.circular(28),
+        ),
       ),
-      child: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      padding: EdgeInsets.fromLTRB(
+        16,
+        MediaQuery.of(context).padding.top + 16,
+        16,
+        20,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Hi, ${user?.displayName ?? user?.email ?? 'Mother'}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: onHeader,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _headerSubtitle(gestationalWeek, riskLabel, bmi),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: onHeader.withValues(alpha: 0.8),
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ),
+              ),
+              const SizedBox(width: 8),
+              // Settings moved to the Profile tab only; the header keeps the
+              // notification bell.
+              _NotificationBell(
+                unread: unreadAlerts,
+                onTap: onOpenNotifications,
+                onHeader: onHeader,
+                surface: scheme.surface,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _OverviewMetric(
+                  title: 'Today Calories Target',
+                  value: '$caloriesTarget kcal',
+                  progress: caloriesProgress,
+                  color: AppTheme.darkPink,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _OverviewMetric(
+                  title: 'Today Water Target',
+                  value: '${(waterTarget / 1000).toStringAsFixed(1)}L',
+                  progress: _ratio(todayWater, waterTarget),
+                  color: AppTheme.healthcareTeal,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Header notification bell with an unread-count badge.
+class _NotificationBell extends StatelessWidget {
+  const _NotificationBell({
+    required this.unread,
+    required this.onTap,
+    required this.onHeader,
+    required this.surface,
+  });
+
+  final int unread;
+  final VoidCallback onTap;
+  final Color onHeader;
+  final Color surface;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        IconButton.filledTonal(
+          tooltip: 'Notifications',
+          onPressed: onTap,
+          icon: Icon(
+            unread > 0
+                ? Icons.notifications_active_outlined
+                : Icons.notifications_none_outlined,
+          ),
+          style: IconButton.styleFrom(
+            backgroundColor: surface.withValues(alpha: 0.6),
+            foregroundColor: onHeader,
+            minimumSize: const Size(48, 48),
+          ),
+        ),
+        if (unread > 0)
+          Positioned(
+            right: 4,
+            top: 4,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+              constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+              decoration: BoxDecoration(
+                color: AppTheme.errorColor,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: Colors.white, width: 1.5),
+              ),
+              child: Text(
+                unread > 9 ? '9+' : '$unread',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  height: 1.2,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _OverviewMetric extends StatelessWidget {
+  const _OverviewMetric({
+    required this.title,
+    required this.value,
+    required this.progress,
+    required this.color,
+  });
+
+  final String title;
+  final String value;
+  final double progress;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final valueColor = isDark
+        ? Color.alphaBlend(color.withValues(alpha: 0.6), scheme.onSurface)
+        : color;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurface.withValues(alpha: 0.9),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w900,
+              color: valueColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 4,
+            child: LinearProgressIndicator(
+              value: progress,
+              color: color,
+              backgroundColor: color.withValues(alpha: 0.039),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickActions extends StatelessWidget {
+  const _QuickActions({required this.onOpenTab});
+
+  final ValueChanged<int> onOpenTab;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Quick Actions',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+        ),
+        const SizedBox(height: 12),
+        Row(
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+            Expanded(
+              child: _QuickActionTile(
+                icon: Icons.center_focus_strong,
+                label: 'Scan Food',
+                color: AppTheme.darkPink,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const FoodScanScreen()),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _QuickActionTile(
+                icon: Icons.restaurant_menu,
+                label: 'Log Meal',
+                color: AppTheme.info,
+                onTap: () => onOpenTab(1), // Log tab
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _QuickActionTile(
+                icon: Icons.water_drop_outlined,
+                label: 'Log Water',
+                color: AppTheme.healthcareTeal,
+                onTap: () => onOpenTab(1), // Log tab (hydration lives here)
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickActionTile extends StatelessWidget {
+  const _QuickActionTile({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final iconColor = isDark
+        ? Color.alphaBlend(color.withValues(alpha: 0.7), scheme.onSurface)
+        : color;
+    return Semantics(
+      button: true,
+      label: label,
+      child: Material(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: color.withValues(alpha: 0.4)),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: isDark ? 0.28 : 0.14),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(icon, color: iconColor, size: 24),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurface,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AssessmentsBanner extends StatelessWidget {
+  const _AssessmentsBanner({required this.onOpen});
+
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Digital Assessments',
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: onOpen,
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: AppTheme.blushGradient,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                  color: AppTheme.primaryPink.withValues(alpha: 0.196)),
+            ),
+            child: Row(
               children: [
                 Container(
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 225),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.darkPink.withValues(alpha: 25),
-                        blurRadius: 14,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.favorite,
                     color: AppTheme.darkPink,
-                    size: 22,
+                    borderRadius: BorderRadius.circular(14),
                   ),
+                  child: const Icon(Icons.assignment_outlined,
+                      color: Colors.white, size: 24),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -202,99 +637,27 @@ class _HeroHeader extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Hi, $name',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w900,
-                              color: const Color(0xFF253144),
+                        'Digital Assessments',
+                        // Banner uses a fixed light-pink gradient in both
+                        // themes, so pin the text to dark for legibility.
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.primaryText,
                             ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
-                        'Your health and nutrition overview for today.',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        'Check gestational diabetes, nutrition & more',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: const Color(0xFF59677D),
-                              height: 1.35,
                             ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 10),
-                _HeaderIconButton(
-                  tooltip: 'Education',
-                  icon: Icons.menu_book_outlined,
-                  onPressed: onOpenEducation,
-                ),
-                const SizedBox(width: 8),
-                _HeaderIconButton(
-                  tooltip: 'Logout',
-                  icon: Icons.logout,
-                  onPressed: onLogout,
-                ),
+                const Icon(Icons.chevron_right, color: AppTheme.darkPink),
               ],
             ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                _StatusPill(
-                  icon: Icons.monitor_weight_outlined,
-                  label: profile == null
-                      ? 'Profile pending'
-                      : '${profile!.currentWeightKg.toStringAsFixed(1)} kg',
-                  color: AppTheme.primaryPink,
-                ),
-                _StatusPill(
-                  icon: Icons.pregnant_woman_outlined,
-                  label: pregnancy == null
-                      ? 'Pregnancy not set'
-                      : 'Week ${pregnancy!.gestationalWeek}',
-                  color: AppTheme.info,
-                ),
-                _StatusPill(
-                  icon: Icons.verified_outlined,
-                  label: pregnancy?.riskLevel ?? 'Stable',
-                  color: AppTheme.healthcareTeal,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HeaderIconButton extends StatelessWidget {
-  const _HeaderIconButton({
-    required this.tooltip,
-    required this.icon,
-    required this.onPressed,
-  });
-
-  final String tooltip;
-  final IconData icon;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: Colors.white.withValues(alpha: 215),
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(14),
-          child: SizedBox(
-            width: 42,
-            height: 42,
-            child: Icon(icon, size: 21, color: const Color(0xFF302333)),
           ),
         ),
       ),
@@ -302,140 +665,87 @@ class _HeaderIconButton extends StatelessWidget {
   }
 }
 
-class _MetricCard extends StatelessWidget {
-  const _MetricCard({
-    required this.icon,
-    required this.title,
-    required this.value,
-    required this.unit,
-    required this.progress,
-    required this.color,
+class _NutritionSummary extends StatelessWidget {
+  const _NutritionSummary({
+    required this.totals,
+    required this.targets,
   });
-
-  final IconData icon;
-  final String title;
-  final String value;
-  final String unit;
-  final double progress;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return _SoftCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color),
-          const SizedBox(height: 10),
-          Text(title, style: Theme.of(context).textTheme.labelLarge),
-          const SizedBox(height: 4),
-          Wrap(
-            crossAxisAlignment: WrapCrossAlignment.end,
-            children: [
-              Text(
-                value,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
-              ),
-              const SizedBox(width: 4),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text(unit),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          LinearProgressIndicator(
-            value: progress,
-            color: color,
-            backgroundColor: color.withValues(alpha: 28),
-            borderRadius: BorderRadius.circular(999),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NutritionCard extends StatelessWidget {
-  const _NutritionCard({required this.totals, required this.targets});
 
   final _DailyTotals totals;
   final RecommendedTargets targets;
 
   @override
   Widget build(BuildContext context) {
+    final caloriesTarget = targets.calories.round();
     final proteinTarget = targets.protein;
     final carbsTarget = (targets.calories * targets.carbPct / 4).round();
     final fatTarget = (targets.calories * targets.fatPct / 9).round();
 
-    return _SoftCard(
+    // Over-target detection: warn once today's intake passes the daily target.
+    final caloriesOver = caloriesTarget > 0 && totals.calories > caloriesTarget;
+    final caloriesOverBy = totals.calories - caloriesTarget;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _SectionTitle(
-              icon: Icons.pie_chart_outline, title: 'Nutrition progress'),
-          const SizedBox(height: 18),
+          Text(
+            'Nutrition Summary',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          if (caloriesOver) ...[
+            const SizedBox(height: 12),
+            _CalorieWarningBanner(overBy: caloriesOverBy),
+          ],
+          const SizedBox(height: 16),
+          // Macro split as a donut: Protein / Carbs / Fat by their calorie
+          // contribution (P×4, C×4, F×9), with today's total calories shown in
+          // the centre. The chips below act as an exact-value legend.
+          _MacroDonut(
+            totals: totals,
+            caloriesTarget: caloriesTarget,
+            caloriesOver: caloriesOver,
+          ),
+          const SizedBox(height: 16),
           Row(
             children: [
-              SizedBox(
-                width: 128,
-                height: 128,
-                child: CustomPaint(
-                  painter: _MacroPiePainter(
-                    protein: totals.protein,
-                    carbs: totals.carbs,
-                    fat: totals.fat,
-                  ),
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '${totals.calories}',
-                          style:
-                              Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                        ),
-                        Text(
-                          'kcal',
-                          style:
-                              Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                  ),
-                        ),
-                      ],
-                    ),
-                  ),
+              Expanded(
+                child: _NutrientChip(
+                  label: 'Calories',
+                  value: '${totals.calories}',
+                  target: '$caloriesTarget',
+                  color: AppTheme.darkPink,
+                  exceeded: caloriesOver,
                 ),
               ),
-              const SizedBox(width: 18),
+              const SizedBox(width: 8),
               Expanded(
-                child: Column(
-                  children: [
-                    _MacroLegendRow(
-                      label: 'Protein',
-                      value: totals.protein,
-                      target: proteinTarget,
-                      color: AppTheme.healthcareTeal,
-                    ),
-                    _MacroLegendRow(
-                      label: 'Carbs',
-                      value: totals.carbs,
-                      target: carbsTarget,
-                      color: AppTheme.info,
-                    ),
-                    _MacroLegendRow(
-                      label: 'Fats',
-                      value: totals.fat,
-                      target: fatTarget,
-                      color: AppTheme.darkPink,
-                    ),
-                  ],
+                child: _NutrientChip(
+                  label: 'Protein',
+                  value: '${totals.protein}g',
+                  target: '$proteinTarget g',
+                  color: AppTheme.healthcareTeal,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _NutrientChip(
+                  label: 'Carbs',
+                  value: '${totals.carbs}g',
+                  target: '$carbsTarget g',
+                  color: AppTheme.info,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _NutrientChip(
+                  label: 'Fat',
+                  value: '${totals.fat}g',
+                  target: '$fatTarget g',
+                  color: AppTheme.primaryPink,
                 ),
               ),
             ],
@@ -446,633 +756,261 @@ class _NutritionCard extends StatelessWidget {
   }
 }
 
-class _MacroLegendRow extends StatelessWidget {
-  const _MacroLegendRow({
+/// Donut pie chart of the macro split (Protein / Carbs / Fat by calorie
+/// contribution) with today's total calories in the centre. Renders an empty
+/// neutral ring with a "No meals logged yet" hint when nothing is logged.
+class _MacroDonut extends StatelessWidget {
+  const _MacroDonut({
+    required this.totals,
+    required this.caloriesTarget,
+    required this.caloriesOver,
+  });
+
+  final _DailyTotals totals;
+  final int caloriesTarget;
+  final bool caloriesOver;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    // Macro energy contributions (kcal). Protein & carbs are 4 kcal/g, fat 9.
+    final proteinKcal = (totals.protein * 4).toDouble();
+    final carbsKcal = (totals.carbs * 4).toDouble();
+    final fatKcal = (totals.fat * 9).toDouble();
+    final macroKcal = proteinKcal + carbsKcal + fatKcal;
+    final empty = macroKcal <= 0;
+
+    final slices = <_MacroSlice>[
+      _MacroSlice('Protein', proteinKcal, AppTheme.healthcareTeal),
+      _MacroSlice('Carbs', carbsKcal, AppTheme.info),
+      _MacroSlice('Fat', fatKcal, AppTheme.primaryPink),
+    ];
+    final caloriesColor = caloriesOver
+        ? (Theme.of(context).brightness == Brightness.dark
+            ? AppTheme.errorDark
+            : AppTheme.errorColor)
+        : scheme.onSurface;
+
+    // Screen-reader summary for the otherwise purely-visual donut.
+    final semanticsLabel = empty
+        ? 'No meals logged yet. ${totals.calories} of $caloriesTarget kcal.'
+        : '${totals.calories} of $caloriesTarget kilocalories. '
+            'Protein ${totals.protein} grams, carbs ${totals.carbs} grams, '
+            'fat ${totals.fat} grams.';
+
+    return Semantics(
+      label: semanticsLabel,
+      child: SizedBox(
+      height: 170,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          PieChart(
+            PieChartData(
+              sectionsSpace: empty ? 0 : 2,
+              centerSpaceRadius: 52,
+              startDegreeOffset: -90,
+              sections: empty
+                  ? [
+                      PieChartSectionData(
+                        value: 1,
+                        color: scheme.onSurface.withValues(alpha: 0.08),
+                        radius: 26,
+                        showTitle: false,
+                      ),
+                    ]
+                  : [
+                      for (final s in slices)
+                        if (s.value > 0)
+                          PieChartSectionData(
+                            value: s.value,
+                            color: s.color,
+                            radius: 26,
+                            title:
+                                '${(s.value / macroKcal * 100).round()}%',
+                            titleStyle: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                    ],
+            ),
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '${totals.calories}',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: caloriesColor,
+                    ),
+              ),
+              Text(
+                empty ? 'No meals yet' : '/ $caloriesTarget kcal',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      ),
+    );
+  }
+}
+
+class _MacroSlice {
+  const _MacroSlice(this.label, this.value, this.color);
+  final String label;
+  final double value;
+  final Color color;
+}
+
+class _NutrientChip extends StatelessWidget {
+  const _NutrientChip({
     required this.label,
     required this.value,
     required this.target,
     required this.color,
+    this.exceeded = false,
   });
 
   final String label;
-  final int value;
-  final int target;
+  final String value;
+  final String target;
   final Color color;
 
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 12,
-            height: 12,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-          ),
-          Text(
-            '$value / $target g',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MacroPiePainter extends CustomPainter {
-  const _MacroPiePainter({
-    required this.protein,
-    required this.carbs,
-    required this.fat,
-  });
-
-  final int protein;
-  final int carbs;
-  final int fat;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = size.center(Offset.zero);
-    final strokeWidth = size.shortestSide * 0.18;
-    final radius = (size.shortestSide - strokeWidth) / 2;
-    final rect = Rect.fromCircle(center: center, radius: radius);
-    final basePaint = Paint()
-      ..color = const Color(0xFFFCE4EC)
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = strokeWidth;
-    canvas.drawCircle(center, radius, basePaint);
-
-    final values = [
-      protein * 4.0,
-      carbs * 4.0,
-      fat * 9.0,
-    ];
-    final total = values.fold<double>(0, (sum, item) => sum + item);
-    if (total <= 0) return;
-
-    final colors = [
-      AppTheme.healthcareTeal,
-      AppTheme.info,
-      AppTheme.darkPink,
-    ];
-    var start = -math.pi / 2;
-    for (var i = 0; i < values.length; i++) {
-      final sweep = values[i] / total * math.pi * 2;
-      if (sweep <= 0) continue;
-      final paint = Paint()
-        ..color = colors[i]
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round
-        ..strokeWidth = strokeWidth;
-      canvas.drawArc(rect, start, sweep, false, paint);
-      start += sweep;
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _MacroPiePainter oldDelegate) {
-    return oldDelegate.protein != protein ||
-        oldDelegate.carbs != carbs ||
-        oldDelegate.fat != fat;
-  }
-}
-
-class _AppointmentCard extends StatelessWidget {
-  const _AppointmentCard({required this.appointment, required this.onView});
-
-  final Appointment? appointment;
-  final VoidCallback onView;
+  /// When true the intake has passed the target — the chip is recoloured to a
+  /// warning tone to draw attention.
+  final bool exceeded;
 
   @override
   Widget build(BuildContext context) {
-    return _SoftCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _SectionTitle(
-              icon: Icons.event_available, title: 'Upcoming appointment'),
-          const SizedBox(height: 10),
-          if (appointment == null)
-            Text('No upcoming appointment. Book a visit when you need support.',
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant))
-          else
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const CircleAvatar(
-                  child: Icon(Icons.medical_services_outlined)),
-              title: Text(appointment!.type),
-              subtitle: Text(
-                DateFormat('EEE, d MMM, h:mm a').format(appointment!.dateTime),
-              ),
-              trailing: Text(appointment!.status),
-            ),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-                onPressed: onView, child: const Text('View appointment')),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActivityCard extends StatelessWidget {
-  const _ActivityCard({required this.entries, required this.waterMl});
-
-  final List<FoodEntry> entries;
-  final int waterMl;
-
-  @override
-  Widget build(BuildContext context) {
-    return _SoftCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _SectionTitle(
-              icon: Icons.history, title: 'Recent health activity'),
-          const SizedBox(height: 10),
-          _ActivityRow(
-              icon: Icons.restaurant_outlined,
-              title: '${entries.length} meals logged today',
-              subtitle: entries.isEmpty
-                  ? 'Start by logging breakfast or lunch.'
-                  : entries.last.meal),
-          _ActivityRow(
-              icon: Icons.water_drop_outlined,
-              title: '$waterMl ml water logged',
-              subtitle: 'Keep sipping through the day.'),
-        ],
-      ),
-    );
-  }
-}
-
-class _TipCard extends StatelessWidget {
-  const _TipCard();
-
-  @override
-  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // When over target, the chip turns RED to flag it. Use a brighter red in
+    // dark mode for legibility.
+    final baseTone = exceeded
+        ? (isDark ? AppTheme.errorDark : AppTheme.errorColor)
+        : color;
+    final tone = isDark
+        ? Color.alphaBlend(baseTone.withValues(alpha: 0.55), scheme.onSurface)
+        : baseTone;
+    // The value text is red when exceeded, otherwise the normal surface text.
+    final valueColor = exceeded ? tone : scheme.onSurface;
     return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: AppTheme.blushGradient,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppTheme.primaryPink.withValues(alpha: 60)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.lightbulb_outline, color: AppTheme.darkPink),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Tip: Pair iron-rich foods with vitamin C to support better absorption.',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(height: 1.45),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ReadinessCard extends StatelessWidget {
-  const _ReadinessCard({
-    required this.profile,
-    required this.pregnancy,
-    required this.onOpen,
-  });
-
-  final Profile? profile;
-  final Pregnancy? pregnancy;
-  final VoidCallback onOpen;
-
-  @override
-  Widget build(BuildContext context) {
-    final bmi = profile?.bmi;
-    final riskLabel = pregnancy?.riskLevel.trim().isNotEmpty == true
-        ? pregnancy!.riskLevel
-        : _bmiRiskLabel(bmi);
-    final riskColor = riskLabel.toLowerCase().contains('high')
-        ? AppTheme.errorColor
-        : riskLabel.toLowerCase().contains('review') ||
-                riskLabel.toLowerCase().contains('moderate')
-            ? AppTheme.warning
-            : AppTheme.healthcareTeal;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onOpen,
-        borderRadius: BorderRadius.circular(22),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppTheme.cardBackground,
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: const Color(0xFFF8BBD0)),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.primaryPink.withValues(alpha: 20),
-                blurRadius: 16,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: riskColor.withValues(alpha: 24),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Icon(Icons.health_and_safety_outlined, color: riskColor),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Pre-pregnancy readiness',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w900,
-                          ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Assess risks, pregnancy intention, referrals, and follow-up before conception.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: const Color(0xFF59677D),
-                            height: 1.35,
-                          ),
-                    ),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _MiniChip(
-                          icon: Icons.monitor_weight_outlined,
-                          label: bmi == null
-                              ? 'BMI pending'
-                              : 'BMI ${bmi.toStringAsFixed(1)}',
-                        ),
-                        _MiniChip(
-                          icon: Icons.flag_outlined,
-                          label: riskLabel,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.chevron_right),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  static String _bmiRiskLabel(double? bmi) {
-    if (bmi == null) return 'Assessment needed';
-    if (bmi >= 30) return 'Risk review';
-    if (bmi < 18.5) return 'Nutrition review';
-    return 'Stable';
-  }
-}
-
-class _MiniChip extends StatelessWidget {
-  const _MiniChip({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceBase,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppTheme.primaryPink.withValues(alpha: 60)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 15, color: AppTheme.darkPink),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatusPill extends StatelessWidget {
-  const _StatusPill(
-      {required this.icon, required this.label, required this.color});
-  final IconData icon;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 220),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withValues(alpha: 70)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: 17),
-          const SizedBox(width: 7),
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
-        ],
-      ),
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.icon, required this.title});
-  final IconData icon;
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, color: Theme.of(context).colorScheme.primary),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            title,
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.w800),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ActivityRow extends StatelessWidget {
-  const _ActivityRow(
-      {required this.icon, required this.title, required this.subtitle});
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
-      title: Text(title),
-      subtitle: Text(subtitle),
-    );
-  }
-}
-
-class _SoftCard extends StatelessWidget {
-  const _SoftCard({required this.child});
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.cardBackground,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFF8BBD0)),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primaryPink.withValues(alpha: 15),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: child,
-    );
-  }
-}
-
-// ── Quick Actions bar ─────────────────────────────────────────────────────────
-
-class _QuickActionsBar extends StatelessWidget {
-  const _QuickActionsBar({required this.onOpenTab});
-
-  final ValueChanged<int> onOpenTab;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          flex: 3,
-          child: _QuickAction(
-            icon: Icons.center_focus_strong,
-            label: 'Scan Food',
-            isPrimary: true,
-            onTap: () => onOpenTab(1), // tab 1 = Scan
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          flex: 2,
-          child: _QuickAction(
-            icon: Icons.restaurant_outlined,
-            label: 'Log Meal',
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const LogScreen()),
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          flex: 2,
-          child: _QuickAction(
-            icon: Icons.water_drop_outlined,
-            label: 'Log Water',
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const HydrationScreen()),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _QuickAction extends StatelessWidget {
-  const _QuickAction({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.isPrimary = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool isPrimary;
-
-  @override
-  Widget build(BuildContext context) {
-    if (isPrimary) {
-      return Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: Ink(
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            decoration: BoxDecoration(
-              gradient: AppTheme.primaryGradient,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.darkPink.withValues(alpha: 60),
-                  blurRadius: 12,
-                  offset: const Offset(0, 5),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, color: Colors.white, size: 20),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Material(
-      color: AppTheme.cardBackground,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFF8BBD0)),
-          ),
-          child: Column(
-            children: [
-              Icon(icon, color: AppTheme.darkPink, size: 20),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: AppTheme.darkPink,
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ClinicalAlert {
-  const _ClinicalAlert({
-    required this.icon,
-    required this.title,
-    required this.body,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String title;
-  final String body;
-  final Color color;
-}
-
-class _AlertTile extends StatelessWidget {
-  const _AlertTile({required this.alert});
-
-  final _ClinicalAlert alert;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: alert.color.withValues(alpha: 20),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: alert.color.withValues(alpha: 70)),
+        color: baseTone.withValues(alpha: isDark ? 0.20 : 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: baseTone.withValues(alpha: 0.45)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              // Legend dot — links this chip to its slice in the macro donut.
+              Container(
+                width: 8,
+                height: 8,
+                margin: const EdgeInsets.only(right: 6),
+                decoration: BoxDecoration(
+                  color: baseTone,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              Flexible(
+                child: Text(
+                  label,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: exceeded
+                        ? tone
+                        : scheme.onSurface.withValues(alpha: 0.9),
+                  ),
+                ),
+              ),
+              if (exceeded) ...[
+                const SizedBox(width: 3),
+                Icon(Icons.warning_amber_rounded, size: 13, color: tone),
+              ],
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                value,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: valueColor,
+                ),
+              ),
+              Text(
+                target,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Warning banner shown on the Nutrition Summary when today's calorie intake
+/// exceeds the recommended daily target.
+class _CalorieWarningBanner extends StatelessWidget {
+  const _CalorieWarningBanner({required this.overBy});
+
+  /// How many kcal over the target the user is (always > 0 when shown).
+  final int overBy;
+
+  @override
+  Widget build(BuildContext context) {
+    // "Exceeded" is a warning the user must notice → solid red banner with
+    // white text, legible in both light and dark themes.
+    const fill = AppTheme.errorColor;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: fill,
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(alert.icon, color: alert.color, size: 20),
+          const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  alert.title,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    color: alert.color,
-                  ),
+                  'Calorie target exceeded',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
                 ),
-                const SizedBox(height: 3),
-                Text(alert.body, style: const TextStyle(fontSize: 13)),
+                const SizedBox(height: 2),
+                Text(
+                  "You're $overBy kcal over your daily target. Consider "
+                  'lighter meals or a short walk, and check with your '
+                  'dietitian if this is frequent.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.95),
+                        height: 1.4,
+                      ),
+                ),
               ],
             ),
           ),
@@ -1082,70 +1020,170 @@ class _AlertTile extends StatelessWidget {
   }
 }
 
-class _ClinicalAlertsCard extends StatelessWidget {
-  const _ClinicalAlertsCard({required this.profile, required this.pregnancy});
+class _RecentMeals extends StatelessWidget {
+  const _RecentMeals({
+    required this.entries,
+    required this.onOpenTab,
+  });
 
-  final Profile? profile;
-  final Pregnancy? pregnancy;
+  final List<FoodEntry> entries;
+  final ValueChanged<int> onOpenTab;
 
   @override
   Widget build(BuildContext context) {
-    final alerts = _buildAlerts();
-    if (alerts.isEmpty) return const SizedBox.shrink();
-    return _SoftCard(
+    final todayEntries = entries.where((entry) => _isToday(entry.date)).toList();
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _SectionTitle(
-            icon: Icons.notifications_active_outlined,
-            title: 'Clinical alerts',
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Recent Meals',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              TextButton(
+                onPressed: () => onOpenTab(1), // Log tab
+                child: Text(
+                  'View All',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: AppTheme.darkPink,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
-          ...alerts.map((alert) => _AlertTile(alert: alert)),
+          const SizedBox(height: 12),
+          todayEntries.isEmpty
+              ? Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppTheme.cardBackground,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.restaurant_outlined,
+                        size: 32,
+                        color: AppTheme.darkPink.withValues(alpha: 0.118),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'No meals logged today',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Tap Log to add your first meal',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: todayEntries.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final entry = todayEntries[index];
+                    return _MealItem(
+                      meal: entry.meal,
+                      calories: entry.calories,
+                      time: _formatTime(entry.date),
+                    );
+                  },
+                ),
         ],
       ),
     );
   }
 
-  List<_ClinicalAlert> _buildAlerts() {
-    final alerts = <_ClinicalAlert>[];
-    final hb = profile?.hemoglobinGdl;
+  String _formatTime(DateTime date) {
+    return DateFormat('h:mm a').format(date);
+  }
 
-    // IDA: Hb < 11.0 g/dL → 120 mg elemental iron
-    if (hb != null && hb < 11.0) {
-      alerts.add(const _ClinicalAlert(
-        icon: Icons.bloodtype_outlined,
-        title: 'Iron Deficiency Anaemia',
-        body:
-            'Hb < 11.0 g/dL detected. Increase daily oral iron to 120 mg of elemental iron. Follow up with your doctor.',
-        color: AppTheme.darkPink,
-      ));
-    }
+  bool _isToday(DateTime date) {
+    final now = DateTime.now();
+    return date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day;
+  }
+}
 
-    // Gestational diabetes → specific macro distribution
-    if (profile?.medicalConditions
-            .contains(MedicalCondition.gestationalDiabetes) ??
-        false) {
-      alerts.add(const _ClinicalAlert(
-        icon: Icons.monitor_heart_outlined,
-        title: 'Gestational Diabetes',
-        body:
-            'Recommended macros: 45–60% carbohydrates · 15–20% protein · 25–35% fat.',
-        color: AppTheme.warning,
-      ));
-    }
+class _MealItem extends StatelessWidget {
+  const _MealItem({
+    required this.meal,
+    required this.calories,
+    required this.time,
+  });
 
-    // General pregnancy supplement reminder
-    if (pregnancy != null) {
-      alerts.add(const _ClinicalAlert(
-        icon: Icons.medication_outlined,
-        title: 'Pregnancy Supplements',
-        body: 'Take 30–60 mg iron · 200 μg iodine · 1000 mg calcium daily.',
-        color: AppTheme.healthcareTeal,
-      ));
-    }
+  final String meal;
+  final int calories;
+  final String time;
 
-    return alerts;
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.cardBackground,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFF8BBD0)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  meal,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$calories kcal',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.darkPink,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppTheme.darkPink.withValues(alpha: 0.039),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              time,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: AppTheme.darkPink,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

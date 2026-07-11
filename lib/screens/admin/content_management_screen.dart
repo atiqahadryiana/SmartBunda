@@ -6,6 +6,7 @@ import 'package:smartbunda/firestore_paths.dart';
 import 'package:smartbunda/models/firestore_doc.dart';
 import 'package:smartbunda/providers/app_providers.dart';
 import 'package:smartbunda/services/service_providers.dart';
+import 'package:smartbunda/theme/app_components.dart';
 import 'package:smartbunda/widgets/empty_state.dart';
 import 'package:smartbunda/widgets/require_sign_in.dart';
 import 'package:smartbunda/widgets/screen_header.dart';
@@ -142,7 +143,11 @@ class _ContentTab extends ConsumerWidget {
                   },
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => ListView.separated(
+                itemCount: 5,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (context, index) => const _ContentItemSkeleton(),
+              ),
               error: (e, _) => Center(child: Text('Error: $e')),
             ),
           ),
@@ -628,5 +633,39 @@ class _ContentTab extends ConsumerWidget {
   String _truncate(String value, int max) {
     if (value.length <= max) return value;
     return '${value.substring(0, max - 3)}...';
+  }
+}
+
+class _ContentItemSkeleton extends StatelessWidget {
+  const _ContentItemSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Card(
+      child: ListTile(
+        title: SbSkeletonLoader(
+          height: 16,
+          width: 200,
+        ),
+        subtitle: SbSkeletonLoader(
+          height: 12,
+          width: 300,
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SbSkeletonLoader(
+              width: 40,
+              height: 20,
+            ),
+            SizedBox(width: 8),
+            SbSkeletonLoader(
+              width: 24,
+              height: 24,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

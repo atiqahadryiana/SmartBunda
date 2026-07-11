@@ -9,6 +9,10 @@ class FoodItem {
     required this.fatG,
     required this.ironMg,
     required this.folateMcg,
+    this.calciumMg = 0,
+    this.vitaminDMcg = 0,
+    this.vitaminB12Mcg = 0,
+    this.sodiumMg = 0,
   });
 
   final String id;
@@ -20,6 +24,10 @@ class FoodItem {
   final int fatG;
   final double ironMg;
   final double folateMcg;
+  final double calciumMg;
+  final double vitaminDMcg;
+  final double vitaminB12Mcg;
+  final double sodiumMg;
 
   int get calories => caloriesPerServing;
   int get protein => proteinG;
@@ -36,6 +44,10 @@ class FoodItem {
     int? fatG,
     double? ironMg,
     double? folateMcg,
+    double? calciumMg,
+    double? vitaminDMcg,
+    double? vitaminB12Mcg,
+    double? sodiumMg,
   }) {
     return FoodItem(
       id: id ?? this.id,
@@ -47,6 +59,10 @@ class FoodItem {
       fatG: fatG ?? this.fatG,
       ironMg: ironMg ?? this.ironMg,
       folateMcg: folateMcg ?? this.folateMcg,
+      calciumMg: calciumMg ?? this.calciumMg,
+      vitaminDMcg: vitaminDMcg ?? this.vitaminDMcg,
+      vitaminB12Mcg: vitaminB12Mcg ?? this.vitaminB12Mcg,
+      sodiumMg: sodiumMg ?? this.sodiumMg,
     );
   }
 
@@ -120,6 +136,50 @@ class FoodItem {
           json['folateMcg'],
           json['folate_mcg'],
           json['folate'],
+        ]),
+      ),
+      calciumMg: _doubleFrom(
+        _firstNonNull([
+          nutrients['calcium_mg'],
+          nutrients['calcium'],
+          json['nutrients.calcium_mg'],
+          json['nutrients.calcium'],
+          json['calciumMg'],
+          json['calcium_mg'],
+          json['calcium'],
+        ]),
+      ),
+      vitaminDMcg: _doubleFrom(
+        _firstNonNull([
+          nutrients['vitamin_d_mcg'],
+          nutrients['vitamin_d'],
+          json['nutrients.vitamin_d_mcg'],
+          json['nutrients.vitamin_d'],
+          json['vitaminDMcg'],
+          json['vitamin_d_mcg'],
+          json['vitamin_d'],
+        ]),
+      ),
+      vitaminB12Mcg: _doubleFrom(
+        _firstNonNull([
+          nutrients['vitamin_b12_mcg'],
+          nutrients['vitamin_b12'],
+          json['nutrients.vitamin_b12_mcg'],
+          json['nutrients.vitamin_b12'],
+          json['vitaminB12Mcg'],
+          json['vitamin_b12_mcg'],
+          json['vitamin_b12'],
+        ]),
+      ),
+      sodiumMg: _doubleFrom(
+        _firstNonNull([
+          nutrients['sodium_mg'],
+          nutrients['sodium'],
+          json['nutrients.sodium_mg'],
+          json['nutrients.sodium'],
+          json['sodiumMg'],
+          json['sodium_mg'],
+          json['sodium'],
         ]),
       ),
     );

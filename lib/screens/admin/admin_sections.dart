@@ -14,6 +14,7 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:smartbunda/models/activity_log.dart';
 import 'package:smartbunda/models/app_user.dart';
 import 'package:smartbunda/models/appointment.dart';
+import 'package:smartbunda/models/assessment_catalog.dart';
 import 'package:smartbunda/models/firestore_doc.dart';
 import 'package:smartbunda/models/food_catalog_entry.dart';
 import 'package:smartbunda/models/food_entry.dart';
@@ -179,7 +180,7 @@ class AdminOverviewSection extends ConsumerWidget {
                         leading: CircleAvatar(
                           radius: 16,
                           backgroundColor:
-                              AppTheme.primaryPink.withValues(alpha: 36),
+                              AppTheme.primaryPink.withValues(alpha: 0.141),
                           child: const Icon(Icons.bolt,
                               size: 16, color: AppTheme.darkPink),
                         ),
@@ -323,18 +324,14 @@ class _AdminPatientsSectionState extends ConsumerState<AdminPatientsSection> {
               subtitle: Text(user.email),
             ),
             const Divider(height: 1),
-            const ListTile(
-                leading: Icon(Icons.person_outline),
-                title: Text('View Profile')),
-            const ListTile(
-                leading: Icon(Icons.fact_check_outlined),
-                title: Text('View Assessments')),
-            const ListTile(
-                leading: Icon(Icons.folder_shared_outlined),
-                title: Text('View Reports')),
-            const ListTile(
-                leading: Icon(Icons.forum_outlined),
-                title: Text('View Consultation History')),
+            ListTile(
+              leading: const Icon(Icons.person_outline),
+              title: const Text('View Profile'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                showAdminUserProfile(context, user);
+              },
+            ),
             const SizedBox(height: 8),
           ],
         ),
@@ -445,17 +442,7 @@ class _AdminProfessionalsSectionState
           IconButton(
             tooltip: 'View Profile',
             icon: const Icon(Icons.visibility_outlined, size: 18),
-            onPressed: () {},
-          ),
-          IconButton(
-            tooltip: 'Edit Profile',
-            icon: const Icon(Icons.edit_outlined, size: 18),
-            onPressed: () {},
-          ),
-          IconButton(
-            tooltip: 'View Schedule',
-            icon: const Icon(Icons.calendar_month_outlined, size: 18),
-            onPressed: () {},
+            onPressed: () => showAdminUserProfile(context, user),
           ),
         ],
       )),
@@ -531,7 +518,7 @@ class AdminAdministratorsSection extends ConsumerWidget {
                 DataCell(IconButton(
                   tooltip: 'View',
                   icon: const Icon(Icons.visibility_outlined, size: 18),
-                  onPressed: () {},
+                  onPressed: () => showAdminUserProfile(context, user),
                 )),
               ]),
           ],
@@ -585,26 +572,27 @@ class _AdminAppointmentListSectionState
       children: [
         AdminPanel(
           title: 'Filters',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          // Status / Session / Type as three dropdowns in a single row. On
+          // narrow widths they wrap rather than overflow.
+          child: Wrap(
+            spacing: 12,
+            runSpacing: 12,
             children: [
-              _FilterRow<AppointmentStatusFilter>(
+              _FilterDropdown<AppointmentStatusFilter>(
                 label: 'Status',
                 values: AppointmentStatusFilter.values,
                 selected: _status,
                 labelOf: (v) => v.label,
                 onSelected: (v) => setState(() => _status = v),
               ),
-              const SizedBox(height: 8),
-              _FilterRow<SessionSlotFilter>(
+              _FilterDropdown<SessionSlotFilter>(
                 label: 'Session',
                 values: SessionSlotFilter.values,
                 selected: _slot,
                 labelOf: (v) => v.label,
                 onSelected: (v) => setState(() => _slot = v),
               ),
-              const SizedBox(height: 8),
-              _FilterRow<AppointmentTypeFilter>(
+              _FilterDropdown<AppointmentTypeFilter>(
                 label: 'Type',
                 values: AppointmentTypeFilter.values,
                 selected: _type,
@@ -704,7 +692,7 @@ class _AdminAppointmentCalendarSectionState
             onPageChanged: (focused) => _focusedDay = focused,
             calendarStyle: CalendarStyle(
               todayDecoration: BoxDecoration(
-                color: AppTheme.primaryPink.withValues(alpha: 120),
+                color: AppTheme.primaryPink.withValues(alpha: 0.471),
                 shape: BoxShape.circle,
               ),
               selectedDecoration: const BoxDecoration(
@@ -756,10 +744,10 @@ class _AdminAppointmentCalendarSectionState
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// ASSESSMENT MANAGEMENT (data pending)
+// ASSESSMENT MANAGEMENT — connected to FS.assessmentResults
 // ════════════════════════════════════════════════════════════════════════════
 
-class AdminAssessmentSection extends StatelessWidget {
+class AdminAssessmentSection extends ConsumerStatefulWidget {
   const AdminAssessmentSection({
     super.key,
     required this.title,
@@ -778,44 +766,145 @@ class AdminAssessmentSection extends StatelessWidget {
   final bool showRiskFilter;
 
   @override
+  ConsumerState<AdminAssessmentSection> createState() =>
+      _AdminAssessmentSectionState();
+}
+
+class _AdminAssessmentSectionState
+    extends ConsumerState<AdminAssessmentSection> {
+  RiskBand? _bandFilter; // null = All
+
+  @override
   Widget build(BuildContext context) {
+    final resultsAsync = ref.watch(allAssessmentResultsProvider);
+    final users = ref.watch(usersProvider).valueOrNull ?? const <AppUser>[];
+
     return AdminPage(
-      title: title,
-      subtitle: subtitle,
-      children: [
-        if (showRiskFilter) ...[
-          AdminPanel(
-            title: 'Risk Level',
-            child: Wrap(
-              spacing: 8,
-              children: [
-                for (final r in const ['All', 'Low Risk', 'Moderate Risk', 'High Risk'])
-                  FilterChip(
-                    label: Text(r),
-                    selected: r == 'All',
-                    onSelected: (_) {},
-                  ),
-              ],
-            ),
+      title: widget.title,
+      subtitle: widget.subtitle,
+      children: resultsAsync.when(
+        loading: () => const [
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 48),
+            child: Center(child: CircularProgressIndicator()),
           ),
-          const SizedBox(height: 16),
         ],
-        AdminEmptyState(
-          icon: icon,
-          title: emptyTitle,
-          message: emptyMessage,
-          pending: true,
-        ),
-      ],
+        error: (e, _) => [
+          AdminEmptyState(
+            icon: Icons.error_outline,
+            title: 'Could not load assessments',
+            message: '$e',
+          ),
+        ],
+        data: (all) {
+          final results = widget.showRiskFilter && _bandFilter != null
+              ? all.where((r) => r.band == _bandFilter).toList()
+              : all;
+
+          final low = all.where((r) => r.band == RiskBand.low).length;
+          final moderate =
+              all.where((r) => r.band == RiskBand.moderate).length;
+          final high = all.where((r) => r.band == RiskBand.high).length;
+
+          return [
+            AdminMetricGrid(metrics: [
+              AdminMetric(
+                icon: Icons.fact_check_outlined,
+                label: 'Total Assessments',
+                value: '${all.length}',
+                color: AppTheme.darkPink,
+              ),
+              AdminMetric(
+                icon: Icons.check_circle_outline,
+                label: 'Low Risk',
+                value: '$low',
+                color: AppTheme.success,
+              ),
+              AdminMetric(
+                icon: Icons.warning_amber_outlined,
+                label: 'Moderate Risk',
+                value: '$moderate',
+                color: AppTheme.warning,
+              ),
+              AdminMetric(
+                icon: Icons.error_outline,
+                label: 'High Risk',
+                value: '$high',
+                color: AppTheme.errorColor,
+              ),
+            ]),
+            const SizedBox(height: 20),
+            if (widget.showRiskFilter) ...[
+              AdminPanel(
+                title: 'Risk Level',
+                child: Wrap(
+                  spacing: 8,
+                  children: [
+                    _riskChip('All', null),
+                    for (final b in RiskBand.values) _riskChip(b.label, b),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+            if (results.isEmpty)
+              AdminEmptyState(
+                icon: widget.icon,
+                title: widget.emptyTitle,
+                message: widget.emptyMessage,
+              )
+            else
+              AdminTable(
+                minWidth: 820,
+                columns: const [
+                  'Date',
+                  'Patient',
+                  'Assessment',
+                  'Score',
+                  'Risk',
+                ],
+                rows: [
+                  for (final r in results.take(100))
+                    DataRow(cells: [
+                      DataCell(Text(
+                          DateFormat('d MMM yyyy').format(r.completedAt))),
+                      DataCell(Text(_nameForId(users, r.patientId))),
+                      DataCell(Text(r.assessmentTitle)),
+                      DataCell(Text('${r.score} / ${r.maxScore}')),
+                      DataCell(AdminStatusPill(
+                        label: r.band.label,
+                        color: _riskColor(r.band),
+                      )),
+                    ]),
+                ],
+              ),
+          ];
+        },
+      ),
+    );
+  }
+
+  Widget _riskChip(String label, RiskBand? band) {
+    return FilterChip(
+      label: Text(label),
+      selected: _bandFilter == band,
+      showCheckmark: false,
+      onSelected: (_) => setState(() => _bandFilter = band),
     );
   }
 }
 
+Color _riskColor(RiskBand band) => switch (band) {
+      RiskBand.low => AppTheme.success,
+      RiskBand.moderate => AppTheme.warning,
+      RiskBand.high => AppTheme.errorColor,
+    };
+
 // ════════════════════════════════════════════════════════════════════════════
-// CONSULTATION MANAGEMENT (data pending)
+// CONSULTATION MANAGEMENT — connected to FS.consultations
 // ════════════════════════════════════════════════════════════════════════════
 
-class AdminConsultationSection extends StatelessWidget {
+class AdminConsultationSection extends ConsumerWidget {
   const AdminConsultationSection({
     super.key,
     required this.title,
@@ -830,18 +919,92 @@ class AdminConsultationSection extends StatelessWidget {
   final String emptyMessage;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notesAsync = ref.watch(allClinicalNotesProvider);
+    final users = ref.watch(usersProvider).valueOrNull ?? const <AppUser>[];
+
     return AdminPage(
       title: title,
       subtitle: subtitle,
-      children: [
-        AdminEmptyState(
-          icon: icon,
-          title: 'No consultation data yet',
-          message: emptyMessage,
-          pending: true,
-        ),
-      ],
+      children: notesAsync.when(
+        loading: () => const [
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 48),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+        ],
+        error: (e, _) => [
+          AdminEmptyState(
+            icon: Icons.error_outline,
+            title: 'Could not load consultations',
+            message: '$e',
+          ),
+        ],
+        data: (notes) {
+          if (notes.isEmpty) {
+            return [
+              AdminEmptyState(
+                icon: icon,
+                title: 'No consultation data yet',
+                message: emptyMessage,
+              ),
+            ];
+          }
+          final providers = notes.map((n) => n.professionalId).toSet().length;
+          final patients = notes.map((n) => n.patientId).toSet().length;
+          return [
+            AdminMetricGrid(metrics: [
+              AdminMetric(
+                icon: Icons.medical_information_outlined,
+                label: 'Total Records',
+                value: '${notes.length}',
+                color: AppTheme.darkPink,
+              ),
+              AdminMetric(
+                icon: Icons.medical_services_outlined,
+                label: 'Providers',
+                value: '$providers',
+                color: AppTheme.info,
+              ),
+              AdminMetric(
+                icon: Icons.people_outline,
+                label: 'Patients Seen',
+                value: '$patients',
+                color: AppTheme.success,
+              ),
+            ]),
+            const SizedBox(height: 20),
+            AdminTable(
+              minWidth: 860,
+              columns: const [
+                'Date',
+                'Patient',
+                'Provider',
+                'Clinical Note',
+              ],
+              rows: [
+                for (final n in notes.take(100))
+                  DataRow(cells: [
+                    DataCell(
+                        Text(DateFormat('d MMM yyyy').format(n.createdAt))),
+                    DataCell(Text(_nameForId(users, n.patientId))),
+                    DataCell(Text(n.professionalName.isNotEmpty
+                        ? n.professionalName
+                        : _nameForId(users, n.professionalId))),
+                    DataCell(SizedBox(
+                      width: 320,
+                      child: Text(
+                        n.clinicalNote,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    )),
+                  ]),
+              ],
+            ),
+          ];
+        },
+      ),
     );
   }
 }
@@ -1048,26 +1211,24 @@ class AdminReportsSection extends ConsumerWidget {
                   color: adminStatusColor(
                       r.data['status']?.toString() ?? 'completed'),
                 )),
-                DataCell(Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      tooltip: 'View Report',
-                      icon: const Icon(Icons.visibility_outlined, size: 18),
-                      onPressed: () {},
+                DataCell(
+                  IconButton(
+                    tooltip: 'View report details',
+                    icon: const Icon(Icons.visibility_outlined, size: 18),
+                    onPressed: () => _showReportDetails(
+                      context,
+                      title: r.title ??
+                          r.data['reportType']?.toString() ??
+                          'Report',
+                      patient: _nameForId(
+                          users,
+                          r.data['patientId']?.toString() ??
+                              r.data['userId']?.toString()),
+                      timestamp: r.timestamp,
+                      data: r.data,
                     ),
-                    IconButton(
-                      tooltip: 'Download PDF',
-                      icon: const Icon(Icons.download_outlined, size: 18),
-                      onPressed: () {},
-                    ),
-                    IconButton(
-                      tooltip: 'Share Report',
-                      icon: const Icon(Icons.share_outlined, size: 18),
-                      onPressed: () {},
-                    ),
-                  ],
-                )),
+                  ),
+                ),
               ]),
           ],
         ),
@@ -1080,6 +1241,83 @@ class AdminReportsSection extends ConsumerWidget {
           ),
         ],
       ],
+    );
+  }
+
+  /// Opens a read-only dialog with the report's stored fields. Replaces the
+  /// former dead View/Download/Share icons — those promised a PDF artifact the
+  /// report docs don't carry, so they were silent no-ops.
+  void _showReportDetails(
+    BuildContext context, {
+    required String title,
+    required String patient,
+    required DateTime? timestamp,
+    required Map<String, dynamic> data,
+  }) {
+    // Surface the report's own fields, skipping the id/raw keys already shown
+    // in the table, in a stable order.
+    const hidden = {'patientId', 'userId', 'reportType', 'title', 'timestamp'};
+    final entries = data.entries
+        .where((e) => !hidden.contains(e.key) && e.value != null)
+        .toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: SizedBox(
+          width: 420,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _reportDetailRow(ctx, 'Patient', patient),
+                _reportDetailRow(
+                  ctx,
+                  'Generated',
+                  timestamp == null
+                      ? '--'
+                      : DateFormat('d MMM yyyy, h:mm a').format(timestamp),
+                ),
+                if (entries.isNotEmpty) const Divider(height: 24),
+                for (final e in entries)
+                  _reportDetailRow(ctx, e.key, '${e.value}'),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).maybePop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _reportDetailRow(BuildContext context, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(child: Text(value)),
+        ],
+      ),
     );
   }
 }
@@ -1244,7 +1482,7 @@ class AdminProfileSettingsSection extends ConsumerWidget {
             children: [
               CircleAvatar(
                 radius: 32,
-                backgroundColor: AppTheme.primaryPink.withValues(alpha: 40),
+                backgroundColor: AppTheme.primaryPink.withValues(alpha: 0.157),
                 child: const Icon(Icons.admin_panel_settings_outlined,
                     color: AppTheme.darkPink, size: 30),
               ),
@@ -1302,8 +1540,122 @@ class AdminProfileSettingsSection extends ConsumerWidget {
 // Shared helpers + small widgets
 // ════════════════════════════════════════════════════════════════════════════
 
-class _FilterRow<T> extends StatelessWidget {
-  const _FilterRow({
+/// Shows a read-only profile dialog for an admin-managed [AppUser], populated
+/// from the live Firestore-backed user record. Used by the "View Profile" /
+/// "View" actions across the admin user-management tables.
+void showAdminUserProfile(BuildContext context, AppUser user) {
+  showDialog<void>(
+    context: context,
+    builder: (ctx) {
+      final scheme = Theme.of(ctx).colorScheme;
+      return AlertDialog(
+        title: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: AppTheme.accentPink.withValues(alpha: 0.15),
+              child: Text(
+                (user.displayName ?? user.email).characters.first.toUpperCase(),
+                style: const TextStyle(
+                    color: AppTheme.accentPink, fontWeight: FontWeight.w700),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                user.displayName ?? user.email,
+                style: Theme.of(ctx).textTheme.titleMedium,
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _ProfileField(label: 'Role', value: user.role.label),
+              _ProfileField(label: 'Email', value: user.email),
+              if ((user.phone ?? '').trim().isNotEmpty)
+                _ProfileField(label: 'Phone', value: user.phone!.trim()),
+              if (user.role == UserRole.doctor ||
+                  user.role == UserRole.nurse ||
+                  user.role == UserRole.dietitian) ...[
+                _ProfileField(
+                    label: 'Specialization',
+                    value: user.effectiveSpecialization),
+                if ((user.mmcNumber ?? '').trim().isNotEmpty)
+                  _ProfileField(
+                      label: 'MMC Number', value: user.mmcNumber!.trim()),
+              ],
+              _ProfileField(
+                label: 'Status',
+                value: user.isActive ? 'Active' : 'Inactive',
+                valueColor:
+                    user.isActive ? AppTheme.success : AppTheme.errorColor,
+              ),
+              _ProfileField(
+                label: 'User ID',
+                value: user.id,
+                valueColor: scheme.onSurfaceVariant,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+class _ProfileField extends StatelessWidget {
+  const _ProfileField({
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
+
+  final String label;
+  final String value;
+  final Color? valueColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(color: valueColor),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A labelled dropdown for a single appointment filter (Status / Session /
+/// Type). Sized to sit alongside the others in one row, wrapping on narrow
+/// widths.
+class _FilterDropdown<T> extends StatelessWidget {
+  const _FilterDropdown({
     required this.label,
     required this.values,
     required this.selected,
@@ -1319,31 +1671,41 @@ class _FilterRow<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w700,
-              ),
-        ),
-        const SizedBox(height: 6),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final v in values)
-              FilterChip(
-                label: Text(labelOf(v)),
-                selected: selected == v,
-                showCheckmark: false,
-                onSelected: (_) => onSelected(v),
-              ),
-          ],
-        ),
-      ],
+    return SizedBox(
+      width: 220,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 6),
+          DropdownButtonFormField<T>(
+            initialValue: selected,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              isDense: true,
+              border: OutlineInputBorder(),
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            ),
+            items: [
+              for (final v in values)
+                DropdownMenuItem<T>(
+                  value: v,
+                  child: Text(labelOf(v), overflow: TextOverflow.ellipsis),
+                ),
+            ],
+            onChanged: (v) {
+              if (v != null) onSelected(v);
+            },
+          ),
+        ],
+      ),
     );
   }
 }

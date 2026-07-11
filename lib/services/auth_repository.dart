@@ -28,6 +28,23 @@ abstract class AuthRepository {
     required String email,
   });
 
+  /// Sign in (or create a patient account on first use) with Google.
+  ///
+  /// First-time Google users are created with `role = patient` to preserve the
+  /// patient-only self-registration guarantee. Throws on cancellation, network
+  /// failure, or when an existing account uses different credentials.
+  Future<AppUser> signInWithGoogle();
+
+  /// Whether the currently signed-in Firebase user has a verified email.
+  /// Google accounts are considered verified.
+  bool get isEmailVerified;
+
+  /// Send (or resend) a verification email to the signed-in user.
+  Future<void> sendEmailVerification();
+
+  /// Reload the Firebase user and return the latest email-verified status.
+  Future<bool> reloadEmailVerified();
+
   Future<AppUser> register({
     required String email,
     required String password,
@@ -86,6 +103,10 @@ abstract class AuthRepository {
     required Map<String, dynamic> settings,
   });
 
+  /// Read the per-user `settings` map back (empty when none saved). Used to
+  /// restore screens like consultation availability on open.
+  Future<Map<String, dynamic>> loadUserSettings(String userId);
+
   /// Change the signed-in user's password, re-authenticating with the current
   /// password first.
   Future<void> changePassword({
@@ -94,6 +115,16 @@ abstract class AuthRepository {
   });
 
   Future<void> adminResetPassword({
+    required String email,
+    required String newPassword,
+  });
+
+  /// Admin sets another user's password DIRECTLY (no email round-trip), via a
+  /// privileged Cloud Function (`adminSetUserPassword`). Requires the caller to
+  /// be an admin; the function re-checks the role server-side. Throws on
+  /// permission/validation/network failure.
+  Future<void> adminSetUserPassword({
+    required String uid,
     required String email,
     required String newPassword,
   });

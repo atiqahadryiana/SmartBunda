@@ -81,6 +81,17 @@ class FoodCatalogRepository {
     _emitCatalog();
   }
 
+  /// Removes orphaned seeded foods — old `seed-*` entries not in
+  /// [currentSeedIds]. Custom/admin foods are preserved. Returns how many were
+  /// deleted.
+  Future<int> removeOrphanedSeedFoods(Set<String> currentSeedIds) async {
+    final removed = await _database.deleteOrphanedSeedFoods(currentSeedIds);
+    if (removed > 0) {
+      await refresh();
+    }
+    return removed;
+  }
+
   Future<void> setItemActive(String id, bool isActive) async {
     if (_customEntries.containsKey(id)) {
       final entry = _customEntries[id]!;

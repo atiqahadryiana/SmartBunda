@@ -42,7 +42,9 @@ extension AppThemeModeX on AppThemeMode {
       case 'system':
         return AppThemeMode.system;
       default:
-        return AppThemeMode.system;
+        // No saved preference → default to light mode on web and mobile.
+        // (Users can still switch to dark or system in Settings.)
+        return AppThemeMode.light;
     }
   }
 }

@@ -141,7 +141,7 @@ class AdminPanel extends StatelessWidget {
         border: Border.all(color: adminBorder(context)),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.darkPink.withValues(alpha: 12),
+            color: AppTheme.darkPink.withValues(alpha: 0.047),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -265,7 +265,7 @@ class AdminMetricCard extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 28),
+              color: color.withValues(alpha: 0.11),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(metric.icon, color: color, size: 20),
@@ -308,22 +308,48 @@ class AdminStatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final semantic = Theme.of(context).extension<SmartBundaColors>()!;
+    IconData icon = Icons.circle;
+    
+    // Determine icon based on color similarity to semantic colors
+    if (_isSimilarColor(color, semantic.success)) {
+      icon = Icons.check_circle;
+    } else if (_isSimilarColor(color, semantic.warning)) {
+      icon = Icons.warning;
+    } else if (_isSimilarColor(color, semantic.info)) {
+      icon = Icons.info;
+    }
+    
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 28),
+        color: color.withValues(alpha: 0.11),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withValues(alpha: 90)),
+        border: Border.all(color: color.withValues(alpha: 0.353)),
       ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
+  }
+  
+  bool _isSimilarColor(Color a, Color b) {
+    const tolerance = 30;
+    return ((a.r * 255.0).round() - (b.r * 255.0).round()).abs() < tolerance &&
+           ((a.g * 255.0).round() - (b.g * 255.0).round()).abs() < tolerance &&
+           ((a.b * 255.0).round() - (b.b * 255.0).round()).abs() < tolerance;
   }
 }
 
@@ -377,7 +403,7 @@ class AdminTable extends StatelessWidget {
         builder: (context, constraints) {
           final table = DataTable(
             headingRowColor: WidgetStatePropertyAll(
-              AppTheme.primaryPink.withValues(alpha: 26),
+              AppTheme.primaryPink.withValues(alpha: 0.102),
             ),
             headingTextStyle: theme.textTheme.labelLarge?.copyWith(
               fontWeight: FontWeight.w800,
@@ -427,7 +453,7 @@ class AdminIdentityCell extends StatelessWidget {
       children: [
         CircleAvatar(
           radius: 16,
-          backgroundColor: c.withValues(alpha: 36),
+          backgroundColor: c.withValues(alpha: 0.141),
           child: Text(
             _initials(name),
             style: TextStyle(

@@ -1,0 +1,1 @@
+I'm in **Explore Mode** — a codebase investigation mode. I can analyze code and produce documentation, but I can't implement changes here. To fix the CNN model, switch to **Act Mode** using the mode selector at the bottom of the chat. Once you switch, I can help identify the issue and make the correction.
